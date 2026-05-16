@@ -153,6 +153,21 @@ export const saleService = {
     const response = await api.get(`/sales/date-range?startDate=${startDate}&endDate=${endDate}`);
     return response.data;
   },
+
+  getSummary: async (range = '1Y') => {
+    const response = await api.get(`/sales/summary?range=${range}`);
+    return response.data;
+  },
+
+  getTrend: async (range = '1Y') => {
+    const response = await api.get(`/sales/summary/trend?range=${range}`);
+    return response.data;
+  },
+
+  getTop: async (range = 'week', limit = 6) => {
+    const response = await api.get(`/sales/top?range=${range}&limit=${limit}`);
+    return response.data;
+  },
 };
 
 export const userService = {

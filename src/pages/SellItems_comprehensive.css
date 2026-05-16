@@ -1,11 +1,11 @@
-/* Sell Items Page - Multi Mode Layout */
+/* Sell Items Page - Matte */
 .sell-container {
   padding: 2rem;
   max-width: 100%;
   height: calc(100vh - 80px);
   overflow: auto;
-  background: linear-gradient(135deg, #f8f9fa 0%, #e8eef5 100%);
-}
+  background: var(--bg-page);
+} 
 
 /* Mode Selector */
 .mode-selector {
@@ -13,11 +13,11 @@
   gap: 1rem;
   margin-bottom: 1.5rem;
   justify-content: center;
-  background: white;
+  background: var(--bg-surface);
   padding: 1rem;
   border-radius: 12px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
+  box-shadow: none;
+} 
 
 .mode-btn {
   padding: 0.75rem 2rem;
@@ -33,16 +33,16 @@
 }
 
 .mode-btn:hover {
-  background: var(--color-primary-light);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(74, 144, 226, 0.2);
-}
+  background: transparent;
+  transform: none;
+  box-shadow: none;
+} 
 
 .mode-btn.active {
-  background: var(--color-primary);
+  background: var(--primary);
   color: white;
-  box-shadow: 0 4px 12px rgba(74, 144, 226, 0.3);
-}
+  box-shadow: none;
+} 
 
 /* Main Layout for Cash/Installment Sales */
 .sell-items-container {
@@ -61,9 +61,9 @@
   border-radius: 8px;
   font-size: 1rem;
   margin-bottom: 1rem;
-  transition: all 0.3s ease;
-  background: white;
-}
+  transition: none;
+  background: var(--bg-surface);
+} 
 
 .search-input:focus {
   outline: none;
@@ -79,12 +79,12 @@
 .categories-panel {
   background: white;
   border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: none;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border: 2px solid var(--color-accent);
-}
+  border: 2px solid var(--surface-border);
+} 
 
 .categories-panel h3 {
   background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-secondary) 100%);
@@ -110,32 +110,32 @@
 }
 
 .category-card-sell {
-  background: linear-gradient(135deg, #f8f9fa 0%, #e8eef5 100%);
-  border: 2px solid var(--color-border);
+  background: var(--bg-surface);
+  border: 2px solid var(--surface-border);
   border-radius: 10px;
   padding: 1rem;
   text-align: center;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: none;
   min-height: 80px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-}
+} 
 
-.category-card-sell:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
-  border-color: var(--color-accent);
-}
+..category-card-sell:hover {
+  transform: none;
+  box-shadow: none;
+  border-color: var(--primary);
+} 
 
-.category-card-sell.active {
-  background: linear-gradient(135deg, var(--color-accent-light) 0%, var(--color-primary-light) 100%);
-  border-color: var(--color-accent);
-  box-shadow: 0 4px 12px rgba(123, 104, 238, 0.3);
-}
+..category-card-sell.active {
+  background: var(--bg-surface);
+  border-color: var(--primary);
+  box-shadow: none;
+} 
 
 .category-icon-sell {
   font-size: 2rem;
@@ -149,14 +149,14 @@
 
 /* Items Panel (Center) */
 .items-panel {
-  background: white;
+  background: var(--bg-surface);
   border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: none;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border: 2px solid var(--color-primary-light);
-}
+  border: 2px solid var(--surface-border);
+} 
 
 .items-panel-header {
   background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
@@ -184,21 +184,21 @@
   gap: 0.75rem;
 }
 
-.item-card-sell {
-  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-  border: 2px solid var(--color-border);
+..item-card-sell {
+  background: var(--bg-surface);
+  border: 2px solid var(--surface-border);
   border-radius: 10px;
   padding: 1rem;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: none;
   min-height: 60px;
-}
+} 
 
-.item-card-sell:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
-  border-color: var(--color-primary);
-}
+..item-card-sell:hover {
+  transform: none;
+  box-shadow: none;
+  border-color: var(--primary);
+} 
 
 .item-header-sell {
   display: flex;
@@ -255,10 +255,10 @@
   min-height: 44px;
 }
 
-.add-item-btn:hover {
-  background: var(--color-primary-dark);
-  transform: scale(1.05);
-}
+..add-item-btn:hover {
+  background: var(--primary-dark);
+  transform: none;
+} 
 
 /* Empty States */
 .empty-items,
@@ -289,21 +289,21 @@
 
 /* Bill Panel (Right) */
 .bill-panel-right {
-  background: white;
+  background: var(--bg-surface);
   border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: none;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border: 2px solid var(--color-success);
-}
+  border: 2px solid var(--surface-border);
+} 
 
 .bill-header {
-  background: linear-gradient(135deg, var(--color-success) 0%, var(--color-success-dark) 100%);
-  color: white;
+  background: transparent;
+  color: var(--text-default);
   padding: 1rem;
   text-align: center;
-}
+} 
 
 .bill-header h3 {
   margin: 0;
@@ -320,16 +320,16 @@
 }
 
 .bill-item {
-  background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
-  border: 2px solid var(--color-border);
+  background: var(--bg-surface);
+  border: 2px solid var(--surface-border);
   border-radius: 8px;
   padding: 0.75rem;
-  transition: all 0.3s ease;
-}
+  transition: none;
+} 
 
 .bill-item:hover {
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-}
+  box-shadow: none;
+} 
 
 .bill-item-header {
   display: flex;
@@ -374,11 +374,11 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  background: white;
-  border: 2px solid var(--color-border);
+  background: var(--bg-surface);
+  border: 2px solid var(--surface-border);
   border-radius: 6px;
   padding: 0.25rem;
-}
+} 
 
 .qty-btn {
   width: 36px;

@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
+import PosLayout from './components/PosLayout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Inventory from './pages/Inventory';
@@ -12,6 +13,7 @@ import SalesReport from './pages/SalesReport';
 import Users from './pages/Users';
 import InstallmentPlans from './pages/InstallmentPlans';
 import InstallmentPayments from './pages/InstallmentPayments';
+import Settings from './pages/Settings';
 import './index.css';
 
 function AppRoutes() {
@@ -44,6 +46,16 @@ function AppRoutes() {
         }
       />
       <Route
+        path="/settings"
+        element={
+          <ProtectedRoute requireAdmin={true}>
+            <Layout>
+              <Settings />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/categories"
         element={
           <ProtectedRoute requireAdmin={true}>
@@ -57,9 +69,9 @@ function AppRoutes() {
         path="/sell"
         element={
           <ProtectedRoute>
-            <Layout>
+            <PosLayout>
               <SellItems />
-            </Layout>
+            </PosLayout>
           </ProtectedRoute>
         }
       />

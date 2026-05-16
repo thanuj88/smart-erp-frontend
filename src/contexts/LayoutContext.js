@@ -12,13 +12,20 @@ export const useLayout = () => {
 
 export const LayoutProvider = ({ children }) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const toggleSidebar = () => {
+    if (typeof window !== 'undefined' && window.innerWidth < 992) {
+      setMobileMenuOpen((open) => !open);
+      return;
+    }
     setSidebarCollapsed(!sidebarCollapsed);
   };
 
+  const closeMobileMenu = () => setMobileMenuOpen(false);
+
   return (
-    <LayoutContext.Provider value={{ sidebarCollapsed, toggleSidebar }}>
+    <LayoutContext.Provider value={{ sidebarCollapsed, mobileMenuOpen, toggleSidebar, closeMobileMenu }}>
       {children}
     </LayoutContext.Provider>
   );

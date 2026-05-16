@@ -32,14 +32,34 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
+  // Authorization methods
+  const hasFeature = (featureCode) => {
+    if (!user || !user.features) return false;
+    return user.features.includes(featureCode);
+  };
+
+  const hasRole = (roleOrRoles) => {
+    if (!user) return false;
+    const roles = Array.isArray(roleOrRoles) ? roleOrRoles : [roleOrRoles];
+    return roles.includes(user.role);
+  };
+
+  const canAccess = (featureCode, requiredRole) => {
+    return hasFeature(featureCode) && hasRole(requiredRole);
+  };
+
   const value = {
     user,
     login,
     logout,
     loading,
     isAuthenticated: !!user,
-    isAdmin: user?.role === 'admin',
-    isTeller: user?.role === 'teller',
+    isAdmin: user?.role === 'ADMIN',
+    isTeller: user?.role === 'TELLER',
+    isSuperAdmin: user?.role === 'SUPER_ADMIN',
+    hasFeature,
+    hasRole,
+    canAccess
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

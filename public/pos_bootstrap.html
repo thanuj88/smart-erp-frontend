@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POS Register - Bright Mart12</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dashboard: #0f172a;
+            --bg-panel: #f8fafc;
+            --bg-surface: #ffffff;
+            --surface-border: rgba(15, 23, 42, 0.08);
+            --text-muted: #64748b;
+            --primary-soft: #e0f2fe;
+            --primary: #2563eb;
+            --accent: #f97316;
+        }
+
+        body {
+            background: #e2e8f0;
+            color: #0f172a;
+            font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+
+        .app-shell {
+            min-height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 280px;
+            background: linear-gradient(180deg, #111827 0%, #0f172a 100%);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 2rem 1.5rem;
+        }
+
+        .sidebar h2 {
+            font-size: 1.5rem;
+            letter-spacing: 0.03em;
+        }
+
+        .sidebar .nav-button {
+            width: 100%;
+            border-radius: 1rem;
+            text-align: left;
+            padding: 1rem 1.25rem;
+            border: none;
+            color: white;
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 20px 45px rgba(15, 23, 42, 0.15);
+            transition: background 0.25s ease, transform 0.25s ease;
+        }
+
+        .sidebar .nav-button:hover,
+        .sidebar .nav-button.active {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-1px);
+        }
+
+        .sidebar .user-card {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 1rem;
+            padding: 1rem;
+        }
+
+        .sidebar .user-card .avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: #2563eb;
+            color: white;
+            margin-right: 0.75rem;
+        }
+
+        .content {
+            flex: 1;
+            padding: 1.75rem;
+            overflow-y: auto;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .page-header .badge {
+            background: #e2e8f0;
+            color: #0f172a;
+            font-size: 0.85rem;
+            padding: 0.55rem 0.8rem;
+            border-radius: 9999px;
+        }
+
+        .pos-panel {
+            background: var(--bg-surface);
+            border: 1px solid var(--surface-border);
+            border-radius: 1.25rem;
+            padding: 1.5rem;
+            height: calc(100vh - 4rem);
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .pos-panel h5 {
+            margin-bottom: 1rem;
+        }
+
+        .search-box {
+            background: white;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            border-radius: 1rem;
+            padding: 1rem 1.25rem;
+            box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+        }
+
+        .category-pill {
+            border-radius: 999px;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            color: #0f172a;
+            background: white;
+            padding: 0.55rem 1rem;
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .category-pill.active,
+        .category-pill:hover {
+            color: #2563eb;
+            border-color: rgba(37, 99, 235, 0.2);
+            background: #eff6ff;
+        }
+
+        .product-card {
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            border-radius: 1.25rem;
+            min-height: 180px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 1rem;
+            background: white;
+            transition: box-shadow 0.25s ease, transform 0.25s ease;
+            cursor: pointer;
+        }
+
+        .product-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+        }
+
+        .product-card .icon {
+            width: 40px;
+            height: 40px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 0.85rem;
+            background: #eff6ff;
+            color: #2563eb;
+            margin-bottom: 0.85rem;
+        }
+
+        .product-card .price {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .product-card .meta {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+        }
+
+        .sale-summary {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .sale-summary .card {
+            border-radius: 1rem;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+        }
+
+        .payment-options .btn {
+            height: 3.5rem;
+            border-radius: 1rem;
+            text-align: left;
+        }
+
+        .payment-options .btn.active {
+            background: #eff6ff;
+            border-color: #bfdbfe;
+            color: #2563eb;
+        }
+
+        .totals-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.95rem;
+            color: #334155;
+        }
+
+        .totals-row strong {
+            font-weight: 700;
+        }
+
+        .checkout-btn {
+            border-radius: 1rem;
+            padding: 1rem 1.25rem;
+            font-size: 1rem;
+            background: #2563eb;
+            border: none;
+        }
+
+        .checkout-btn:hover {
+            background: #1d4ed8;
+        }
+
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 1rem;
+        }
+
+        @media (max-width: 1200px) {
+            .product-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 768px) {
+            .app-shell {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                min-height: auto;
+                padding: 1.5rem;
+            }
+
+            .content {
+                padding: 1rem;
+            }
+
+            .page-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .pos-panel {
+                height: auto;
+            }
+
+            .row-cols-2 > .col,
+            .row-cols-3 > .col {
+                flex: 0 0 100%;
+                max-width: 100%;
+            }
+
+            .product-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-shell">
+        <aside class="sidebar">
+            <div>
+                <div class="d-flex align-items-center gap-3 mb-5">
+                    <div class="bg-white text-primary rounded-3 p-2">
+                        <i class="bi bi-shop fs-4"></i>
+                    </div>
+                    <div>
+                        <h2 class="mb-0">Bright Mart12</h2>
+                        <small class="text-muted">Point of Sale</small>
+                    </div>
+                </div>
+                <button class="nav-button active mb-3">
+                    <i class="bi bi-journal-check me-2"></i> POS Register
+                </button>
+            </div>
+            <div class="user-card d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center">
+                    <div class="avatar">C</div>
+                    <div>
+                        <div class="fw-semibold">Cashier One</div>
+                        <small class="text-muted">Teller</small>
+                    </div>
+                </div>
+                <button class="btn btn-outline-light btn-sm">
+                    <i class="bi bi-box-arrow-right me-1"></i> Sign out
+                </button>
+            </div>
+        </aside>
+
+        <main class="content">
+            <div class="page-header">
+                <div>
+                    <h3 class="mb-1">Point of Sale</h3>
+                </div>
+                <div class="d-flex gap-2 align-items-center">
+                    <span class="badge"><i class="bi bi-calendar me-1"></i> Sun, Apr 19</span>
+                    <span class="badge bg-white text-secondary shadow-sm"><i class="bi bi-person-circle me-1"></i> Cashier One</span>
+                </div>
+            </div>
+
+            <div class="row gy-4">
+                <div class="col-xl-8">
+                    <div class="search-box mb-4">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="text-primary fs-4"><i class="bi bi-upc-scan"></i></div>
+                            <input id="productSearch" type="text" class="form-control border-0 shadow-none" placeholder="Scan barcode or search products..." oninput="filterProducts()">
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <div class="d-flex flex-wrap">
+                            <button class="category-pill active" onclick="setCategory('All')">All</button>
+                            <button class="category-pill" onclick="setCategory('Beverages')">Beverages</button>
+                            <button class="category-pill" onclick="setCategory('Snacks')">Snacks</button>
+                            <button class="category-pill" onclick="setCategory('Bakery')">Bakery</button>
+                            <button class="category-pill" onclick="setCategory('Dairy')">Dairy</button>
+                            <button class="category-pill" onclick="setCategory('Produce')">Produce</button>
+                            <button class="category-pill" onclick="setCategory('Household')">Household</button>
+                        </div>
+                    </div>
+
+                    <div id="productGrid" class="product-grid mb-4">
+                        <div class="product-card" onclick="addProduct('Espresso Coffee', 3.50)">
+                            <div>
+                                <div class="icon"><i class="bi bi-cup-straw"></i></div>
+                                <h6 class="mb-2">Espresso Coffee</h6>
+                                <div class="price">Rs3.50</div>
+                            </div>
+                            <div class="meta">48 cup</div>
+                        </div>
+                        <div class="product-card" onclick="addProduct('Cappuccino', 4.25)">
+                            <div>
+                                <div class="icon"><i class="bi bi-cup-straw"></i></div>
+                                <h6 class="mb-2">Cappuccino</h6>
+                                <div class="price">Rs4.25</div>
+                            </div>
+                            <div class="meta">32 cup</div>
+                        </div>
+                        <div class="product-card" onclick="addProduct('Iced Latte', 4.75)">
+                            <div>
+                                <div class="icon"><i class="bi bi-cup-straw"></i></div>
+                                <h6 class="mb-2">Iced Latte</h6>
+                                <div class="price">Rs4.75</div>
+                            </div>
+                            <div class="meta">19 cup</div>
+                        </div>
+                        <div class="product-card" onclick="addProduct('Green Tea', 2.75)">
+                            <div>
+                                <div class="icon"><i class="bi bi-cup-straw"></i></div>
+                                <h6 class="mb-2">Green Tea</h6>
+                                <div class="price">Rs2.75</div>
+                            </div>
+                            <div class="meta">55 cup</div>
+                        </div>
+                        <div class="product-card" onclick="addProduct('Orange Juice', 3.95)">
+                            <div>
+                                <div class="icon"><i class="bi bi-droplet"></i></div>
+                                <h6 class="mb-2">Orange Juice</h6>
+                                <div class="price">Rs3.95</div>
+                            </div>
+                            <div class="meta">18 bottle</div>
+                        </div>
+                        <div class="product-card" onclick="addProduct('Potato Chips', 2.25)">
+                            <div>
+                                <div class="icon"><i class="bi bi-bag"></i></div>
+                                <h6 class="mb-2">Potato Chips</h6>
+                                <div class="price">Rs2.25</div>
+                            </div>
+                            <div class="meta">80 pack</div>
+                        </div>
+                        <div class="product-card" onclick="addProduct('Chocolate Bar', 1.75)">
+                            <div>
+                                <div class="icon"><i class="bi bi-gem"></i></div>
+                                <h6 class="mb-2">Chocolate Bar</h6>
+                                <div class="price">Rs1.75</div>
+                            </div>
+                            <div class="meta">120 bar</div>
+                        </div>
+                        <div class="product-card" onclick="addProduct('Granola Mix', 4.50)">
+                            <div>
+                                <div class="icon"><i class="bi bi-box-seam"></i></div>
+                                <h6 class="mb-2">Granola Mix</h6>
+                                <div class="price">Rs4.50</div>
+                            </div>
+                            <div class="meta">25 box</div>
+                        </div>
+                        <div class="product-card" onclick="addProduct('Trail Mix', 5.25)">
+                            <div>
+                                <div class="icon"><i class="bi bi-basket3"></i></div>
+                                <h6 class="mb-2">Trail Mix</h6>
+                                <div class="price">Rs5.25</div>
+                            </div>
+                            <div class="meta">14 pack</div>
+                        </div>
+                        <div class="product-card" onclick="addProduct('Croissant', 2.95)">
+                            <div>
+                                <div class="icon"><i class="bi bi-moon"></i></div>
+                                <h6 class="mb-2">Croissant</h6>
+                                <div class="price">Rs2.95</div>
+                            </div>
+                            <div class="meta">22 pc</div>
+                        </div>
+                        <div class="product-card" onclick="addProduct('Sourdough Loaf', 6.50)">
+                            <div>
+                                <div class="icon"><i class="bi bi-basket"></i></div>
+                                <h6 class="mb-2">Sourdough Loaf</h6>
+                                <div class="price">Rs6.50</div>
+                            </div>
+                            <div class="meta">9 loaf</div>
+                        </div>
+                        <div class="product-card" onclick="addProduct('Blueberry Muffin', 3.25)">
+                            <div>
+                                <div class="icon"><i class="bi bi-flower1"></i></div>
+                                <h6 class="mb-2">Blueberry Muffin</h6>
+                                <div class="price">Rs3.25</div>
+                            </div>
+                            <div class="meta">28 pc</div>
+                        </div>
+                        <div class="product-card" onclick="addProduct('Bagel', 2.50)">
+                            <div>
+                                <div class="icon"><i class="bi bi-circle-half"></i></div>
+                                <h6 class="mb-2">Bagel</h6>
+                                <div class="price">Rs2.50</div>
+                            </div>
+                            <div class="meta">35 pc</div>
+                        </div>
+                        <div class="product-card" onclick="addProduct('Whole Milk', 3.75)">
+                            <div>
+                                <div class="icon"><i class="bi bi-droplet"></i></div>
+                                <h6 class="mb-2">Whole Milk</h6>
+                                <div class="price">Rs3.75</div>
+                            </div>
+                            <div class="meta">40 bottle</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-xl-4">
+                    <div class="pos-panel">
+                        <div>
+                            <h5>Current Sale</h5>
+                            <div id="currentSale" class="text-center py-5 text-muted">
+                                <i class="bi bi-cart fs-2 mb-3"></i>
+                                <p class="mb-0">Tap a product to start.</p>
+                            </div>
+                        </div>
+
+                        <div class="card p-3">
+                            <div class="mb-3">
+                                <label class="form-label small text-uppercase text-muted">Discount (Rs)</label>
+                                <input type="number" class="form-control form-control-sm" id="discountInput" value="0" min="0" onchange="updateTotals()">
+                            </div>
+                            <div class="payment-options d-grid gap-2">
+                                <button type="button" class="btn btn-outline-secondary active" onclick="setPayment('Cash', this)">
+                                    <i class="bi bi-wallet2 me-2"></i> Cash
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary" onclick="setPayment('Card', this)">
+                                    <i class="bi bi-credit-card-2-front me-2"></i> Card
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary" onclick="setPayment('Wallet', this)">
+                                    <i class="bi bi-wallet me-2"></i> Wallet
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary" onclick="setPayment('UPI/QR', this)">
+                                    <i class="bi bi-qr-code-scan me-2"></i> UPI/QR
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="sale-summary">
+                            <div class="card p-3">
+                                <div class="totals-row"><span>Subtotal</span><span id="subtotalText">Rs0.00</span></div>
+                                <div class="totals-row"><span>Discount</span><span id="discountText">-Rs0.00</span></div>
+                                <div class="totals-row"><span>Tax (8%)</span><span id="taxText">Rs0.00</span></div>
+                                <hr>
+                                <div class="totals-row"><strong>Total</strong><strong id="totalText">Rs0.00</strong></div>
+                            </div>
+                            <button type="button" class="btn btn-primary checkout-btn w-100" onclick="checkoutSale()">
+                                <i class="bi bi-check-circle me-2"></i> Charge Rs0.00
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const products = [
+            { name: 'Espresso Coffee', price: 3.50, category: 'Beverages', label: '48 cup' },
+            { name: 'Cappuccino', price: 4.25, category: 'Beverages', label: '32 cup' },
+            { name: 'Iced Latte', price: 4.75, category: 'Beverages', label: '19 cup' },
+            { name: 'Green Tea', price: 2.75, category: 'Beverages', label: '55 cup' },
+            { name: 'Orange Juice', price: 3.95, category: 'Beverages', label: '18 bottle' },
+            { name: 'Potato Chips', price: 2.25, category: 'Snacks', label: '80 pack' },
+            { name: 'Chocolate Bar', price: 1.75, category: 'Snacks', label: '120 bar' },
+            { name: 'Granola Mix', price: 4.50, category: 'Bakery', label: '25 box' },
+            { name: 'Trail Mix', price: 5.25, category: 'Snacks', label: '14 pack' },
+            { name: 'Croissant', price: 2.95, category: 'Bakery', label: '22 pc' },
+            { name: 'Sourdough Loaf', price: 6.50, category: 'Bakery', label: '9 loaf' },
+            { name: 'Blueberry Muffin', price: 3.25, category: 'Bakery', label: '28 pc' },
+            { name: 'Bagel', price: 2.50, category: 'Bakery', label: '35 pc' },
+            { name: 'Whole Milk', price: 3.75, category: 'Dairy', label: '40 bottle' }
+        ];
+
+        let selectedCategory = 'All';
+        let cart = [];
+        let selectedPayment = 'Cash';
+
+        function setCategory(category) {
+            selectedCategory = category;
+            document.querySelectorAll('.category-pill').forEach(btn => {
+                btn.classList.toggle('active', btn.textContent === category);
+            });
+            filterProducts();
+        }
+
+        function filterProducts() {
+            const search = document.getElementById('productSearch').value.toLowerCase();
+            const grid = document.getElementById('productGrid');
+            grid.innerHTML = '';
+
+            const filtered = products.filter(product => {
+                const matchesCategory = selectedCategory === 'All' || product.category === selectedCategory;
+                const matchesSearch = product.name.toLowerCase().includes(search);
+                return matchesCategory && matchesSearch;
+            });
+
+            if (filtered.length === 0) {
+                grid.innerHTML = '<div class="text-center p-5 text-muted">No items match your search.</div>';
+                return;
+            }
+
+            filtered.forEach(product => {
+                const card = document.createElement('div');
+                card.className = 'product-card';
+                card.innerHTML = `
+                    <div>
+                        <div class="icon"><i class="bi bi-cup-straw"></i></div>
+                        <h6 class="mb-2">${product.name}</h6>
+                        <div class="price">Rs${product.price.toFixed(2)}</div>
+                    </div>
+                    <div class="meta">${product.label}</div>
+                `;
+                card.onclick = () => addProduct(product.name, product.price);
+                grid.appendChild(card);
+            });
+        }
+
+        function addProduct(name, price) {
+            const existing = cart.find(item => item.name === name);
+            if (existing) {
+                existing.quantity += 1;
+            } else {
+                cart.push({ name, price, quantity: 1 });
+            }
+            renderSale();
+        }
+
+        function renderSale() {
+            const saleContainer = document.getElementById('currentSale');
+            saleContainer.innerHTML = '';
+            if (cart.length === 0) {
+                saleContainer.innerHTML = '<div class="text-center py-5 text-muted"><i class="bi bi-cart fs-2 mb-3"></i><p class="mb-0">Tap a product to start.</p></div>';
+                updateTotals();
+                return;
+            }
+
+            const list = document.createElement('div');
+            cart.forEach((item, index) => {
+                const row = document.createElement('div');
+                row.className = 'd-flex justify-content-between align-items-center mb-3';
+                row.innerHTML = `
+                    <div>
+                        <div class="fw-semibold">${item.name}</div>
+                        <div class="text-muted small">Rs${item.price.toFixed(2)} x ${item.quantity}</div>
+                    </div>
+                    <div class="d-flex gap-2 align-items-center">
+                        <button class="btn btn-sm btn-outline-secondary" onclick="changeQuantity(event, ${index}, -1)">-</button>
+                        <span>${item.quantity}</span>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="changeQuantity(event, ${index}, 1)">+</button>
+                    </div>
+                `;
+                list.appendChild(row);
+            });
+            saleContainer.appendChild(list);
+            updateTotals();
+        }
+
+        function changeQuantity(event, index, delta) {
+            event.stopPropagation();
+            cart[index].quantity += delta;
+            if (cart[index].quantity <= 0) {
+                cart.splice(index, 1);
+            }
+            renderSale();
+        }
+
+        function setPayment(method, button) {
+            selectedPayment = method;
+            document.querySelectorAll('.payment-options .btn').forEach(btn => btn.classList.remove('active'));
+            button.classList.add('active');
+        }
+
+        function updateTotals() {
+            const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+            const discountValue = parseFloat(document.getElementById('discountInput').value) || 0;
+            const tax = Math.max((subtotal - discountValue) * 0.08, 0);
+            const total = Math.max(subtotal - discountValue + tax, 0);
+
+            document.getElementById('subtotalText').textContent = `Rs${subtotal.toFixed(2)}`;
+            document.getElementById('discountText').textContent = `-Rs${discountValue.toFixed(2)}`;
+            document.getElementById('taxText').textContent = `Rs${tax.toFixed(2)}`;
+            document.getElementById('totalText').textContent = `Rs${total.toFixed(2)}`;
+            document.querySelector('.checkout-btn').innerHTML = `<i class="bi bi-check-circle me-2"></i> Charge Rs${total.toFixed(2)}`;
+        }
+
+        function checkoutSale() {
+            if (cart.length === 0) {
+                alert('Add a product before checking out.');
+                return;
+            }
+            alert(`Sale charged successfully with ${selectedPayment}. Total is Rs${document.getElementById('totalText').textContent.replace('Rs', '')}`);
+            cart = [];
+            renderSale();
+        }
+
+        filterProducts();
+    </script>
+</body>
+</html>

@@ -81,7 +81,7 @@ const SalesReport = () => {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6 matte-page report-page">
       <div className="flex items-center gap-3 mb-6">
         <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
           <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
