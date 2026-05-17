@@ -983,3 +983,74 @@ body {
   color: var(--dreams-text-muted);
   margin-bottom: 0;
 }
+
+/* Sales report */
+.report-page .report-section-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--dreams-text);
+}
+
+.report-page .report-period-icon {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.5rem;
+  background: var(--dreams-orange-soft);
+  color: var(--dreams-orange);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.report-page .report-stat-pill {
+  background: #f8f9fb;
+  border: 1px solid var(--dreams-border);
+  border-radius: 0.65rem;
+  padding: 0.75rem 0.85rem;
+}
+
+.report-page .report-stat-pill small {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--dreams-text-muted);
+  margin-bottom: 0.2rem;
+}
+
+.report-page .report-stat-pill strong {
+  display: block;
+  font-size: 1rem;
+  color: var(--dreams-text);
+}
+
+.report-page .report-stat-pill span {
+  font-size: 0.78rem;
+  color: var(--dreams-text-muted);
+}
+
+.report-page .report-stat-pill-highlight {
+  background: var(--dreams-orange-soft);
+  border-color: rgba(255, 159, 67, 0.35);
+}
+
+.report-page .report-stat-pill-highlight strong {
+  color: var(--dreams-orange-dark);
+}
+
+.report-page .report-filters .form-label {
+  margin-bottom: 0.35rem;
+}
+
+.report-page .pagination .page-link {
+  color: var(--dreams-text);
+  border-color: var(--dreams-border);
+}
+
+.report-page .pagination .page-item.active .page-link {
+  background: var(--dreams-orange);
+  border-color: var(--dreams-orange);
+}
+
+.report-page .pagination .page-link:hover {
+  background: var(--dreams-orange-soft);
+  color: var(--dreams-orange-dark);
+}
