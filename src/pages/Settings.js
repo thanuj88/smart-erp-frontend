@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import PageHeader from '../components/PageHeader';
+import AdminAlerts from '../components/AdminAlerts';
 import { useTranslation } from 'react-i18next';
 
 const Settings = () => {
@@ -25,18 +27,17 @@ const Settings = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="page-heading">
-        <div>
-          <p className="page-overview-title">Store Settings</p>
-          <h1 className="page-title">Customize your business information, currency and tax behavior.</h1>
-        </div>
-      </div>
+    <div className="container-fluid py-4 matte-page admin-page">
+      <PageHeader
+        title="Store Settings"
+        subtitle="Customize your business information, currency and tax behavior."
+      />
 
-      <div className="card">
-        <form className="settings-grid" onSubmit={handleSubmit}>
-          <div>
-            <label className="form-label">Business name</label>
+      <AdminAlerts success={success} onClearSuccess={() => setSuccess('')} />
+
+      <div className="card mb-4">
+        <form className="row g-3" onSubmit={handleSubmit}>
+          <div className="col-md-6"><label className="form-label">Business name</label>
             <input
               type="text"
               name="businessName"
@@ -45,8 +46,7 @@ const Settings = () => {
               onChange={handleChange}
             />
           </div>
-          <div>
-            <label className="form-label">Currency</label>
+          <div className="col-md-6"><label className="form-label">Currency</label>
             <select
               name="currency"
               className="form-control"
@@ -58,8 +58,7 @@ const Settings = () => {
               <option>LKR (Rs)</option>
             </select>
           </div>
-          <div>
-            <label className="form-label">Currency symbol</label>
+          <div className="col-md-6"><label className="form-label">Currency symbol</label>
             <input
               type="text"
               name="currencySymbol"
@@ -68,8 +67,7 @@ const Settings = () => {
               onChange={handleChange}
             />
           </div>
-          <div>
-            <label className="form-label">Tax rate (%)</label>
+          <div className="col-md-6"><label className="form-label">Tax rate (%)</label>
             <input
               type="number"
               name="taxRate"
@@ -78,8 +76,7 @@ const Settings = () => {
               onChange={handleChange}
             />
           </div>
-          <div>
-            <label className="form-label">Low stock threshold</label>
+          <div className="col-md-6"><label className="form-label">Low stock threshold</label>
             <input
               type="number"
               name="lowStockThreshold"
@@ -88,8 +85,7 @@ const Settings = () => {
               onChange={handleChange}
             />
           </div>
-          <div>
-            <label className="form-label">Receipt footer</label>
+          <div className="col-md-6"><label className="form-label">Receipt footer</label>
             <input
               type="text"
               name="receiptFooter"
@@ -98,7 +94,7 @@ const Settings = () => {
               onChange={handleChange}
             />
           </div>
-          <div className="settings-actions">
+          <div className="col-12">
             <button type="submit" className="btn btn-primary">
               Save settings
             </button>
@@ -119,22 +115,22 @@ const Settings = () => {
             <thead>
               <tr>
                 <th>USERNAME</th>
-                <th>PASSWORD</th>
-                <th>ROLE</th>
-                <th>ACCESS</th>
+                <th className="border-0 fw-semibold">PASSWORD</th>
+                <th className="border-0 fw-semibold">ROLE</th>
+                <th className="border-0 fw-semibold">ACCESS</th>
               </tr>
             </thead>
             <tbody>
               <tr>
                 <td>admin</td>
                 <td>admin123</td>
-                <td><span className="badge tag-primary">admin</span></td>
+                <td><span className="badge bg-primary">admin</span></td>
                 <td>Dashboard, POS, Inventory, Settings</td>
               </tr>
               <tr>
                 <td>teller</td>
                 <td>teller123</td>
-                <td><span className="badge tag-muted">teller</span></td>
+                <td><span className="badge bg-secondary">teller</span></td>
                 <td>POS only</td>
               </tr>
             </tbody>
@@ -142,11 +138,6 @@ const Settings = () => {
         </div>
       </div>
 
-      {success && (
-        <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">
-          {success}
-        </div>
-      )}
     </div>
   );
 };

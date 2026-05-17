@@ -300,67 +300,7 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className="col-12 col-xl-4">
-          <div className="row g-4">
-            <div className="col-12">
-              <div className="card shadow-sm rounded-4 h-100">
-                <div className="card-body">
-                  <div className="d-flex align-items-center justify-content-between mb-3">
-                    <h5 className="card-title mb-0">Low Stock Alerts</h5>
-                    <a href="/inventory" className="text-decoration-none small text-primary">Manage →</a>
-                  </div>
-                  <div className="list-group list-group-flush">
-                    {lowStock.length === 0 ? (
-                      <div className="text-muted">No low stock alerts at the moment.</div>
-                    ) : (
-                      lowStock.slice(0, 5).map((item) => (
-                        <div key={item.id} className="list-group-item px-0 border-0 d-flex justify-content-between align-items-center py-3">
-                          <div>{item.name}</div>
-                          <span className="badge bg-warning text-dark rounded-pill">{item.quantity} left</span>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="col-12">
-              <div className="card shadow-sm rounded-4 h-100">
-                <div className="card-body">
-                  <div className="d-flex align-items-center justify-content-between mb-3">
-                    <h5 className="card-title mb-0">Top Products</h5>
-                    <i className="bi bi-award-fill text-primary fs-4"></i>
-                  </div>
-                  <div className="list-group list-group-flush top-products">
-                    <div className="d-flex justify-content-between align-items-center mb-2">
-                      <div className="small text-muted">Top Selling Products</div>
-                      <div>
-                        <select className="form-select form-select-sm" value={topRange} onChange={(e) => setTopRange(e.target.value)} style={{ width: '9rem' }}>
-                          <option value="week">This Week</option>
-                          <option value="month">This Month</option>
-                          <option value="overall">Overall</option>
-                        </select>
-                      </div>
-                    </div>
-                    {topProducts.length === 0 ? (
-                      <div className="text-muted">No sales data available.</div>
-                    ) : (
-                      topProducts.map((p, idx) => (
-                        <div key={p.name} className="list-group-item px-0 border-0 d-flex justify-content-between align-items-center py-3">
-                          <div>
-                            <strong>{p.name}</strong>
-                            <div className="text-muted small">{p.qty} sold</div>
-                          </div>
-                          <span className={`badge ${idx === 0 ? 'bg-primary' : 'bg-secondary'} rounded-pill`}>#{idx + 1}</span>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        
       </div>
     </div>
   );

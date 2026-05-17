@@ -160,15 +160,12 @@ const Inventory = () => {
   }
 
   return (
-    <div className="container-fluid py-4 matte-page inventory-page">
+    <div className="container-fluid py-4 matte-page admin-page inventory-page">
       {/* Header */}
       <div className="row mb-4">
         <div className="col-12">
           <div className="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between">
             <div className="d-flex align-items-center mb-3 mb-lg-0">
-              <div className="bg-primary bg-opacity-25 rounded-3 d-flex align-items-center justify-content-center me-3" style={{ width: 48, height: 48 }}>
-                <i className="bi bi-box-seam-fill fs-4 text-primary"></i>
-              </div>
               <div>
                 <h1 className="h3 mb-1">Inventory Management</h1>
                 <p className="text-muted small mb-0">Manage products, stock levels and pricing in one place.</p>

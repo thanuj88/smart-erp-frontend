@@ -1,4 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import PageHeader from '../components/PageHeader';
+import AdminAlerts from '../components/AdminAlerts';
+import AdminLoading from '../components/AdminLoading';
 import { saleService } from '../services';
 
 const SalesReport = () => {
@@ -70,32 +73,17 @@ const SalesReport = () => {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading sales report...</p>
-        </div>
-      </div>
-    );
+    return <AdminLoading message="Loading sales report..." />;
   }
 
   return (
-    <div className="p-6 space-y-6 matte-page report-page">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
-          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-          </svg>
-        </div>
-        <h1 className="text-2xl font-bold text-gray-900">Sales Report</h1>
-      </div>
+    <div className="container-fluid py-4 matte-page admin-page report-page">
+      <PageHeader
+        title="Sales Report"
+        subtitle="View sales performance, revenue, and transaction history."
+      />
 
-      {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-sm text-red-700">{error}</p>
-        </div>
-      )}
+      <AdminAlerts error={error} onClearError={() => setError('')} />
 
       {/* Today's Statistics */}
       <div className="card">
@@ -288,7 +276,7 @@ const SalesReport = () => {
             <input
               id="startDate"
               type="date"
-              className="input"
+              className="form-control"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
             />
@@ -301,7 +289,7 @@ const SalesReport = () => {
             <input
               id="endDate"
               type="date"
-              className="input"
+              className="form-control"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
             />
@@ -311,7 +299,7 @@ const SalesReport = () => {
             Apply Filter
           </button>
 
-          <button onClick={handleClearFilter} className="btn btn-ghost">
+          <button onClick={handleClearFilter} className="btn btn-outline-secondary">
             Clear
           </button>
         </div>

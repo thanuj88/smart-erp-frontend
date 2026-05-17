@@ -38,10 +38,15 @@ export const AuthProvider = ({ children }) => {
     return user.features.includes(featureCode);
   };
 
+  const normalizeRole = (role) => {
+    return typeof role === 'string' ? role.toUpperCase() : role;
+  };
+
   const hasRole = (roleOrRoles) => {
     if (!user) return false;
-    const roles = Array.isArray(roleOrRoles) ? roleOrRoles : [roleOrRoles];
-    return roles.includes(user.role);
+    const currentRole = normalizeRole(user.role);
+    const roles = (Array.isArray(roleOrRoles) ? roleOrRoles : [roleOrRoles]).map(normalizeRole);
+    return roles.includes(currentRole);
   };
 
   const canAccess = (featureCode, requiredRole) => {
@@ -54,9 +59,9 @@ export const AuthProvider = ({ children }) => {
     logout,
     loading,
     isAuthenticated: !!user,
-    isAdmin: user?.role === 'ADMIN',
-    isTeller: user?.role === 'TELLER',
-    isSuperAdmin: user?.role === 'SUPER_ADMIN',
+    isAdmin: normalizeRole(user?.role) === 'ADMIN',
+    isTeller: normalizeRole(user?.role) === 'TELLER',
+    isSuperAdmin: normalizeRole(user?.role) === 'SUPER_ADMIN',
     hasFeature,
     hasRole,
     canAccess

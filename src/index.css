@@ -87,6 +87,23 @@ body {
   box-shadow: var(--shadow-card);
 }
 
+/* Ensure modals appear below the top navbar and are vertically offset
+   so the modal top meets the bottom of the header */
+.modal.show.d-block {
+  z-index: 1200; /* higher than .top-navbar (1100) */
+}
+
+.modal.show .modal-dialog {
+  /* push modal down so it sits right below the top navbar */
+  margin-top: calc(var(--dreams-topbar-height) + 12px);
+}
+
+/* Also cover custom full-screen overlays (tailwind-style) used elsewhere */
+.fixed.inset-0.bg-black.bg-opacity-50 {
+  z-index: 1200;
+}
+
+
 .top-navbar-left,
 .top-navbar-right {
   display: flex;
@@ -829,4 +846,140 @@ body {
   .sp-bar-track {
     height: 160px;
   }
+}
+
+/* ========================================
+   Admin pages (Inventory-style)
+   ======================================== */
+
+.admin-page {
+  padding-top: 0;
+}
+
+.admin-page-title {
+  font-weight: 700;
+  color: var(--dreams-text);
+  letter-spacing: -0.01em;
+}
+
+.admin-page .card {
+  border: 1px solid var(--dreams-border);
+  border-radius: 0.75rem;
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+
+.admin-page .btn-primary {
+  background: var(--dreams-orange);
+  border-color: var(--dreams-orange);
+  font-weight: 600;
+}
+
+.admin-page .btn-primary:hover {
+  background: var(--dreams-orange-dark);
+  border-color: var(--dreams-orange-dark);
+}
+
+.admin-page .btn-outline-primary {
+  color: var(--dreams-orange);
+  border-color: var(--dreams-orange);
+}
+
+.admin-page .btn-outline-primary:hover {
+  background: var(--dreams-orange-soft);
+  color: var(--dreams-orange-dark);
+  border-color: var(--dreams-orange);
+}
+
+.admin-page .btn-outline-danger {
+  font-weight: 500;
+}
+
+.admin-table {
+  margin-bottom: 0;
+}
+
+.admin-table thead th {
+  background: #f8f9fb;
+  border-bottom: 1px solid var(--dreams-border);
+  color: var(--dreams-text-muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0.85rem 1rem;
+  white-space: nowrap;
+}
+
+.admin-table tbody td {
+  padding: 0.85rem 1rem;
+  vertical-align: middle;
+  border-bottom: 1px solid #f0f2f5;
+  font-size: 0.9rem;
+}
+
+.admin-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.admin-table tbody tr:hover {
+  background: #fafbfc;
+}
+
+.admin-empty {
+  text-align: center;
+  padding: 3rem 1.5rem;
+}
+
+.admin-empty i {
+  font-size: 2.5rem;
+  color: var(--dreams-text-muted);
+  opacity: 0.5;
+}
+
+.admin-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.admin-tabs .btn {
+  border-radius: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.45rem 1rem;
+}
+
+.admin-tabs .btn-primary {
+  background: var(--dreams-orange);
+  border-color: var(--dreams-orange);
+}
+
+.admin-tabs .btn-outline-secondary {
+  background: #fff;
+  border-color: var(--dreams-border);
+  color: var(--dreams-text-muted);
+}
+
+.admin-tabs .btn-outline-secondary:hover {
+  background: var(--dreams-orange-soft);
+  border-color: var(--dreams-orange);
+  color: var(--dreams-orange);
+}
+
+.admin-modal .modal-content {
+  border-radius: 0.75rem;
+  border: 1px solid var(--dreams-border);
+}
+
+.admin-section-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--dreams-text);
+  margin-bottom: 0.25rem;
+}
+
+.admin-section-subtitle {
+  font-size: 0.82rem;
+  color: var(--dreams-text-muted);
+  margin-bottom: 0;
 }

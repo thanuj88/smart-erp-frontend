@@ -1,4 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import PageHeader from '../components/PageHeader';
+import AdminAlerts from '../components/AdminAlerts';
+import AdminLoading from '../components/AdminLoading';
 import { installmentPlanService, installmentPaymentService, installmentSettingsService } from '../services';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -7,7 +10,7 @@ const InstallmentPlans = () => {
   const { isAdmin } = useAuth();
   const [plans, setPlans] = useState([]);
   const [selectedPlan, setSelectedPlan] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [mainTab, setMainTab] = useState('plans'); // 'plans' or 'settings'
   const [plansTab, setPlansTab] = useState('all'); // 'all', 'active', 'completed'
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -24,6 +27,12 @@ const InstallmentPlans = () => {
   const [settingMonths, setSettingMonths] = useState('');
   const [settingInterestRate, setSettingInterestRate] = useState('');
 
+  // Load data when component mounts
+  useEffect(() => {
+    loadPlans();
+  }, []);
+
+  // Load data when tabs change
   useEffect(() => {
     if (mainTab === 'plans') {
       loadPlans();
@@ -34,6 +43,7 @@ const InstallmentPlans = () => {
 
   const loadPlans = async () => {
     setLoading(true);
+    setError('');
     try {
       let data;
       if (plansTab === 'active') {
@@ -43,9 +53,11 @@ const InstallmentPlans = () => {
       } else {
         data = await installmentPlanService.getAll();
       }
-      setPlans(data);
+      console.log('Loaded plans:', data);
+      setPlans(data || []);
     } catch (error) {
-      setError('Failed to load installment plans');
+      console.error('Error loading installment plans:', error);
+      setError('Failed to load installment plans: ' + (error.message || 'Unknown error'));
     } finally {
       setLoading(false);
     }
@@ -193,104 +205,89 @@ const InstallmentPlans = () => {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
-          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-          </svg>
-        </div>
-        <h1 className="text-2xl font-bold text-gray-900">Installment Management</h1>
-      </div>
+    <div className="container-fluid py-4 matte-page admin-page">
+      <PageHeader
+        title="Installment Management"
+        subtitle="Manage installment plans, payments, and interest rate settings."
+      />
 
-      {success && (
-        <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-          <p className="text-sm text-green-700">{success}</p>
-        </div>
-      )}
+      <AdminAlerts
+        success={success}
+        error={error}
+        onClearSuccess={() => setSuccess('')}
+        onClearError={() => setError('')}
+      />
 
-      {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-sm text-red-700">{error}</p>
-        </div>
-      )}
-
-      {/* Main Tabs */}
-      <div className="flex gap-2 mb-6">
-        <button
-          className={`btn ${mainTab === 'plans' ? 'btn-primary' : 'btn-ghost'}`}
-          onClick={() => setMainTab('plans')}
-        >
-          Installment Plans
-        </button>
-        {isAdmin && (
-          <button
-            className={`btn ${mainTab === 'settings' ? 'btn-primary' : 'btn-ghost'}`}
-            onClick={() => setMainTab('settings')}
-          >
-            Interest Rate Settings
+      <ul className="nav nav-tabs admin-tabs mb-4">
+        <li className="nav-item">
+          <button type="button" className={`nav-link ${mainTab === 'plans' ? 'active' : ''}`} onClick={() => setMainTab('plans')}>
+            Installment Plans
           </button>
+        </li>
+        {isAdmin && (
+          <li className="nav-item">
+            <button type="button" className={`nav-link ${mainTab === 'settings' ? 'active' : ''}`} onClick={() => setMainTab('settings')}>
+              Interest Rate Settings
+            </button>
+          </li>
         )}
-      </div>
+      </ul>
 
-      {/* Plans Tab Content */}
+            {/* Plans Tab Content */}
       {mainTab === 'plans' && (
         <>
           {/* Sub-tabs for Plans */}
-          <div className="flex gap-2 mb-6">
-            <button
-              className={`btn ${plansTab === 'all' ? 'btn-primary' : 'btn-ghost'}`}
-              onClick={() => setPlansTab('all')}
-            >
-              All Plans
-            </button>
-            <button
-              className={`btn ${plansTab === 'active' ? 'btn-primary' : 'btn-ghost'}`}
-              onClick={() => setPlansTab('active')}
-            >
-              Active
-            </button>
-            <button
-              className={`btn ${plansTab === 'completed' ? 'btn-primary' : 'btn-ghost'}`}
-              onClick={() => setPlansTab('completed')}
-            >
-              Completed
-            </button>
-          </div>
+          <ul className="nav nav-pills mb-3">
+            <li className="nav-item"><button type="button" className={`nav-link ${plansTab === 'all' ? 'active' : ''}`} onClick={() => setPlansTab('all')}>All Plans</button></li>
+            <li className="nav-item"><button type="button" className={`nav-link ${plansTab === 'active' ? 'active' : ''}`} onClick={() => setPlansTab('active')}>Active</button></li>
+            <li className="nav-item"><button type="button" className={`nav-link ${plansTab === 'completed' ? 'active' : ''}`} onClick={() => setPlansTab('completed')}>Completed</button></li>
+          </ul>
 
           <div className="card">
+            {/* Section Header */}
+            <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Installment Plans</h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  {plansTab === 'active' ? 'Active installment plans' : plansTab === 'completed' ? 'Completed installment plans' : 'All installment plans'}
+                </p>
+              </div>
+              <div className="bg-cyan-500 text-white rounded-full px-4 py-1 text-sm font-semibold">
+                {plans.length} total
+              </div>
+            </div>
+
+            {/* Table */}
             {plans.length === 0 ? (
               <p className="text-gray-500 text-center py-8">No installment plans found.</p>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50">
+              <div className="table-responsive"><table className="table table-hover admin-table mb-0"><thead className="table-light">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="border-0 fw-semibold">
                         Plan #
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="border-0 fw-semibold">
                         Customer
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="border-0 fw-semibold">
                         Phone
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="border-0 fw-semibold">
                         Total Amount
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="border-0 fw-semibold">
                         Paid Amount
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="border-0 fw-semibold">
                         Remaining
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="border-0 fw-semibold">
                         Monthly Payment
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="border-0 fw-semibold">
                         Status
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="border-0 fw-semibold">
                         Actions
                       </th>
                     </tr>
@@ -327,9 +324,9 @@ const InstallmentPlans = () => {
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           <button
                             onClick={() => loadPlanDetails(plan.id)}
-                            className="btn btn-primary btn-sm"
+                            className="btn btn-outline-primary btn-sm"
                           >
-                            View Details
+                            <i className="bi bi-eye me-1"></i>View Details
                           </button>
                         </td>
                       </tr>
@@ -348,7 +345,7 @@ const InstallmentPlans = () => {
           <div className="card">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h2 className="text-xl font-semibold text-gray-900 mb-2">Interest Rate Configuration</h2>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">Interest Rate Configuration</h3>
                 <p className="text-gray-600 text-sm">
                   Configure interest rates for different installment periods. These rates will be available when creating new installment sales.
                 </p>
@@ -365,19 +362,19 @@ const InstallmentPlans = () => {
                 <table className="w-full">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="border-0 fw-semibold">
                         Months
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="border-0 fw-semibold">
                         Interest Rate
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="border-0 fw-semibold">
                         Example: $1000 Item
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="border-0 fw-semibold">
                         Last Updated
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="border-0 fw-semibold">
                         Actions
                       </th>
                     </tr>
