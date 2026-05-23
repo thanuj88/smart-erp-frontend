@@ -60,7 +60,7 @@
   margin-bottom: 1rem;
 }
 
-..icon-preview-btn {
+.icon-preview-btn {
   display: flex;
   align-items: center;
   gap: 1rem;
@@ -196,4 +196,33 @@
   .icon-picker {
     grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
   }
+}
+
+.category-icon-cell,
+.category-icon-preview {
+  color: var(--dreams-orange, var(--color-primary));
+}
+
+.category-icon-picker {
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.category-icon-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
+  gap: 0.35rem;
+}
+
+.category-icon-picker-btn {
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.category-icon-preview-btn .category-icon-preview {
+  margin-bottom: 0.25rem;
 }

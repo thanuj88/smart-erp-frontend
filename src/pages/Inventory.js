@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { itemService, categoryService } from '../services';
+import CategoryIcon from '../components/CategoryIcon';
+import { resolveCategoryIconKey } from '../config/categoryIcons';
 
 const Inventory = () => {
   const [items, setItems] = useState([]);
@@ -183,7 +185,7 @@ const Inventory = () => {
                   <option value="all">All Categories</option>
                   {categories.map((category) => (
                     <option key={category.id} value={category.id}>
-                      {category.icon} {category.name}
+                      {category.name}
                     </option>
                   ))}
                 </select>
@@ -249,8 +251,17 @@ const Inventory = () => {
                         <small className="text-muted">{item.description || 'No description'}</small>
                       </td>
                       <td>
-                        {item.category_icon && <span className="me-1">{item.category_icon}</span>}
-                        {item.category_name || item.category || '—'}
+                        <span className="d-inline-flex align-items-center gap-1">
+                          <CategoryIcon
+                            name={resolveCategoryIconKey(
+                              item.category_icon,
+                              categories,
+                              item.category_id
+                            )}
+                            size={18}
+                          />
+                          {item.category_name || item.category || '—'}
+                        </span>
                       </td>
                       <td className="text-muted">{item.barcode || '—'}</td>
                       <td className="fw-semibold">${item.price?.toFixed(2) || '0.00'}</td>
@@ -336,7 +347,7 @@ const Inventory = () => {
                         <option value="">Select a category...</option>
                         {categories.map((category) => (
                           <option key={category.id} value={category.id}>
-                            {category.icon} {category.name}
+                            {category.name}
                           </option>
                         ))}
                       </select>

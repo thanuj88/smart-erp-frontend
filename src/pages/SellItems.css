@@ -246,8 +246,14 @@
   line-height: 1.2;
 }
 
-.pos-cat-item i {
+.pos-cat-item i,
+.pos-cat-icon {
   font-size: 1.25rem;
+  color: #67748e;
+}
+
+.pos-cat-item.active .pos-cat-icon {
+  color: #ff9f43;
 }
 
 .pos-cat-item:hover {
@@ -407,7 +413,7 @@
   align-items: center;
   justify-content: center;
   margin-bottom: 0.65rem;
-  font-size: 2.5rem;
+  color: #ff9f43;
 }
 
 .pos-product-cat {
@@ -608,7 +614,7 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  font-size: 1.1rem;
+  color: #ff9f43;
 }
 
 .pos-order-item-name {

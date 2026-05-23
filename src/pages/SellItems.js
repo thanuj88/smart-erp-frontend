@@ -10,27 +10,14 @@ import {
   installmentPaymentService,
   installmentPlanService,
 } from '../services';
+import CategoryIcon from '../components/CategoryIcon';
+import { resolveCategoryIconKey } from '../config/categoryIcons';
 import './SellItems.css';
 
 const HOLD_KEY = 'pos-held-order';
 
-const getCategoryIcon = (name) => {
-  const n = (name || '').toLowerCase();
-  if (n.includes('head') || n.includes('audio')) return 'bi-headphones';
-  if (n.includes('shoe') || n.includes('foot')) return 'bi-bag';
-  if (n.includes('mobile') || n.includes('phone')) return 'bi-phone';
-  if (n.includes('watch')) return 'bi-smartwatch';
-  if (n.includes('laptop') || n.includes('computer')) return 'bi-laptop';
-  if (n.includes('appliance') || n.includes('home')) return 'bi-house';
-  if (n.includes('food') || n.includes('grocery')) return 'bi-cart3';
-  return 'bi-box-seam';
-};
-
-const getProductEmoji = (item, categories) => {
-  if (item.category_icon) return item.category_icon;
-  const cat = categories.find((c) => c.id === item.category_id);
-  return cat?.icon || '🛍️';
-};
+const getItemCategoryIcon = (item, categories) =>
+  resolveCategoryIconKey(item.category_icon, categories, item.category_id);
 
 function SellItems() {
   const { t } = useTranslation();
@@ -183,7 +170,7 @@ function SellItems() {
           quantity: 1,
           maxQuantity: item.quantity,
           total: price,
-          emoji: getProductEmoji(item, categories),
+          categoryIcon: getItemCategoryIcon(item, categories),
         },
       ]);
     }
@@ -540,7 +527,9 @@ function SellItems() {
               bill.map((item) => (
                 <div key={item.id} className="pos-order-item">
                   <div className="pos-order-item-info">
-                    <span className="pos-order-item-thumb">{item.emoji || '🛍️'}</span>
+                    <span className="pos-order-item-thumb">
+                      <CategoryIcon name={item.categoryIcon} size={22} />
+                    </span>
                     <span className="pos-order-item-name">{item.name}</span>
                   </div>
                   <div className="pos-order-item-qty">
@@ -692,7 +681,7 @@ function SellItems() {
                 className={`pos-cat-item${selectedCategory?.id === cat.id ? ' active' : ''}`}
                 onClick={() => handleCategorySelect(cat)}
               >
-                <i className={`bi ${getCategoryIcon(cat.name)}`}></i>
+                <CategoryIcon name={cat.icon} size={22} className="pos-cat-icon" />
                 {cat.name}
               </button>
             ))}
@@ -752,7 +741,9 @@ function SellItems() {
                         onClick={() => addToBill(item)}
                       >
                         <span className="pos-product-check"><i className="bi bi-check-lg"></i></span>
-                        <div className="pos-product-image">{getProductEmoji(item, categories)}</div>
+                        <div className="pos-product-image">
+                          <CategoryIcon name={getItemCategoryIcon(item, categories)} size={36} />
+                        </div>
                         <div className="pos-product-cat">{cat?.name || 'General'}</div>
                         <div className="pos-product-name">{item.name}</div>
                         <div className="pos-product-price">${(item.selling_price || item.price).toFixed(2)}</div>
