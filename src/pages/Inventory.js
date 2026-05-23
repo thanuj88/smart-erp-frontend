@@ -112,23 +112,41 @@ const Inventory = () => {
     setSuccess('');
   };
 
+  const buildPayload = () => ({
+    name: formData.name.trim(),
+    description: formData.description?.trim() || '',
+    buyingPrice: formData.buyingPrice === '' ? 0 : Number(formData.buyingPrice),
+    sellingPrice: Number(formData.sellingPrice),
+    quantity: parseInt(formData.quantity, 10),
+    category: formData.category || '',
+    categoryId: formData.categoryId || null,
+  });
+
+  const formatSaveError = (err) => {
+    const data = err.response?.data;
+    if (!data) return 'Failed to save item';
+    const detail = data.details?.map((d) => d.msg).join(', ');
+    return detail ? `${data.error}: ${detail}` : data.error || 'Failed to save item';
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
     try {
+      const payload = buildPayload();
       if (editingItem) {
-        await itemService.update(editingItem.id, formData);
+        await itemService.update(editingItem.id, payload);
         setSuccess('Item updated successfully');
       } else {
-        await itemService.create(formData);
+        await itemService.create(payload);
         setSuccess('Item added successfully');
       }
       setShowModal(false);
       loadItems();
       setTimeout(() => setSuccess(''), 3000);
-    } catch (error) {
-      setError(error.response?.data?.error || 'Failed to save item');
+    } catch (err) {
+      setError(formatSaveError(err));
     }
   };
 
