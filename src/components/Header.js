@@ -36,11 +36,6 @@ const Header = () => {
           </span>
           <span className="top-navbar-brand-text">{APP_NAME}</span>
         </div>
-        <div className="top-navbar-search d-none d-md-flex">
-          <i className="bi bi-search"></i>
-          <input type="search" placeholder={t('search') || 'Search'} aria-label="Search" />
-          <kbd className="d-none d-xl-inline">⌘ K</kbd>
-        </div>
       </div>
 
       <div className="top-navbar-right">
