@@ -45,13 +45,20 @@ const resources = {
       
       // Login
       shopInventory: "Shop Inventory",
+      welcomeBack: "Welcome Back",
+      signInToAccount: "Sign in to your account",
       username: "Username",
       password: "Password",
+      enterUsername: "Enter your username",
+      enterPassword: "Enter your password",
       login: "Login",
+      signIn: "Sign In",
+      signingIn: "Signing In...",
       loggingIn: "Logging in...",
       defaultCredentials: "Default Credentials",
       admin: "Admin",
       forgotPassword: "Forgot Password?",
+      welcomeMessage: "Manage your shop inventory efficiently",
       
       // Common
       loading: "Loading...",
@@ -191,13 +198,20 @@ const resources = {
       
       // Login - Sinhala
       shopInventory: 'වෙළඳ ඉන්වෙන්ටරි',
+      welcomeBack: 'නැවත සාදරයෙන් පිළිගනිමු',
+      signInToAccount: 'ඔබගේ ගිණුමට ඇතුල් වන්න',
       username: 'පරිශීලක නාමය',
       password: 'මුරපදය',
+      enterUsername: 'ඔබගේ පරිශීලක නාමය ඇතුල් කරන්න',
+      enterPassword: 'ඔබගේ මුරපදය ඇතුල් කරන්න',
       login: 'ඇතුල් වන්න',
+      signIn: 'ඇතුල් වන්න',
+      signingIn: 'ඇතුල් වෙමින්...',
       loggingIn: 'ඇතුල් වෙමින්...',
       defaultCredentials: 'පෙරනිමි අක්තපත්‍ර',
       admin: 'පරිපාලක',
       forgotPassword: 'මුරපදය අමතක ද?',
+      welcomeMessage: 'ඔබගේ වෙළඳ ඉන්වෙන්ටරි කාර්යක්ෂමව කළමනාකරණය කරන්න',
       
       // Common - Sinhala
       loading: 'පූරණය වෙමින්...',

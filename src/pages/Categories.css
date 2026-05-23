@@ -6,21 +6,21 @@
   margin-top: 1.5rem;
 }
 
-/* Category Card - Clean White with Border */
+/* Category Card - Matte surface */
 .category-card {
-  background: #FFFFFF;
-  border: 1px solid var(--color-border);
+  background: var(--bg-surface);
+  border: 1px solid var(--surface-border);
   border-radius: 12px;
   padding: 2rem 1.5rem;
   text-align: center;
-  transition: all 0.2s ease;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.02);
+  transition: none;
+  box-shadow: none;
 }
 
 .category-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-  border-color: var(--color-primary);
+  transform: none;
+  box-shadow: none;
+  border-color: var(--primary);
 }
 
 .category-icon-large {
@@ -60,17 +60,17 @@
   margin-bottom: 1rem;
 }
 
-.icon-preview-btn {
+..icon-preview-btn {
   display: flex;
   align-items: center;
   gap: 1rem;
   padding: 1rem;
-  background: #FFFFFF;
-  border: 1px solid var(--color-border);
+  background: var(--bg-surface);
+  border: 1px solid var(--surface-border);
   border-radius: 12px;
   cursor: pointer;
   width: 100%;
-  transition: all 0.2s ease;
+  transition: none;
 }
 
 .icon-preview-btn:hover {
@@ -98,39 +98,37 @@
   max-height: 300px;
   overflow-y: auto;
   padding: 1rem;
-  background-color: #FFFFFF;
+  background-color: var(--bg-surface);
   border-radius: 12px;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--surface-border);
   margin-top: 0.5rem;
 }
 
 .icon-option {
   font-size: 2rem;
   padding: 0.75rem;
-  background-color: #FFFFFF;
-  border: 1px solid var(--color-border);
+  background-color: var(--bg-surface);
+  border: 1px solid var(--surface-border);
   border-radius: 8px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: none;
   min-height: 50px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-primary);
+  color: var(--primary);
 }
 
 .icon-option:hover {
-  transform: scale(1.05);
-  border-color: var(--color-primary);
-  background-color: var(--color-bg-hover);
+  transform: none;
+  border-color: var(--primary);
+  background-color: transparent;
 }
 
 .icon-option.selected {
-  background: var(--color-primary);
-  border-color: var(--color-primary);
+  background: var(--primary);
+  border-color: var(--primary);
   color: white;
-  box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.1);
-  transform: scale(1.05);
 }
 
 /* Empty State */
@@ -145,16 +143,7 @@
 }
 
 /* Animation */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: scale(0.8);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
+@keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
 
 /* Responsive */
 @media (max-width: 768px) {

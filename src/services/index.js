@@ -1,18 +1,57 @@
 import api from './api';
 
+function persistAuth(data) {
+  const access = data.accessToken || data.token;
+  if (access) localStorage.setItem('token', access);
+  if (data.refreshToken) localStorage.setItem('refreshToken', data.refreshToken);
+  if (data.user) localStorage.setItem('user', JSON.stringify(data.user));
+}
+
 export const authService = {
   login: async (username, password) => {
     const response = await api.post('/auth/login', { username, password });
-    if (response.data.token) {
-      localStorage.setItem('token', response.data.token);
-      localStorage.setItem('user', JSON.stringify(response.data.user));
-    }
+    persistAuth(response.data);
     return response.data;
   },
 
-  logout: () => {
+  loginPin: async (username, pin, tenantId, branchId) => {
+    const response = await api.post('/auth/login/pin', { username, pin, tenantId, branchId });
+    persistAuth(response.data);
+    return response.data;
+  },
+
+  register: async (payload) => {
+    const response = await api.post('/auth/register', payload);
+    return response.data;
+  },
+
+  verifyEmail: async (token) => {
+    const response = await api.post('/auth/verify-email', { token });
+    return response.data;
+  },
+
+  forgotPassword: async (email) => {
+    const response = await api.post('/auth/forgot-password', { email });
+    return response.data;
+  },
+
+  resetPassword: async (token, newPassword) => {
+    const response = await api.post('/auth/reset-password', { token, newPassword });
+    return response.data;
+  },
+
+  logout: async () => {
+    const refreshToken = localStorage.getItem('refreshToken');
     localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
+    if (refreshToken) {
+      try {
+        await api.post('/auth/logout', { refreshToken });
+      } catch {
+        /* session cleared locally regardless */
+      }
+    }
   },
 
   getCurrentUser: () => {
@@ -22,6 +61,7 @@ export const authService = {
 
   getProfile: async () => {
     const response = await api.get('/auth/profile');
+    localStorage.setItem('user', JSON.stringify(response.data));
     return response.data;
   },
 
@@ -32,6 +72,91 @@ export const authService = {
     });
     return response.data;
   },
+
+  listBranches: async (tenantId) => {
+    const response = await api.get(`/auth/branches?tenantId=${tenantId}`);
+    return response.data;
+  },
+};
+
+export const platformService = {
+  getReports: async () => {
+    const response = await api.get('/platform/reports');
+    return response.data;
+  },
+  listTenants: async () => {
+    const response = await api.get('/platform/tenants');
+    return response.data;
+  },
+  createTenant: async (payload) => {
+    const response = await api.post('/platform/tenants', payload);
+    return response.data;
+  },
+  assignTenantPlan: async (tenantId, planCode) => {
+    const response = await api.put(`/platform/tenants/${tenantId}/plan`, { planCode });
+    return response.data;
+  },
+  listPlans: async () => {
+    const response = await api.get('/platform/plans');
+    return response.data;
+  },
+  createPlan: async (payload) => {
+    const response = await api.post('/platform/plans', payload);
+    return response.data;
+  },
+  listUsers: async () => {
+    const response = await api.get('/platform/users');
+    return response.data;
+  },
+  createUser: async (payload) => {
+    const response = await api.post('/platform/users', payload);
+    return response.data;
+  },
+  updateUser: async (id, payload) => {
+    const response = await api.put(`/platform/users/${id}`, payload);
+    return response.data;
+  },
+  listPermissions: async () => {
+    const response = await api.get('/platform/permissions');
+    return response.data;
+  },
+  createPermission: async (payload) => {
+    const response = await api.post('/platform/permissions', payload);
+    return response.data;
+  },
+  listRoles: async () => {
+    const response = await api.get('/platform/roles');
+    return response.data;
+  },
+  createRole: async (payload) => {
+    const response = await api.post('/platform/roles', payload);
+    return response.data;
+  },
+  getRole: async (code) => {
+    const response = await api.get(`/platform/roles/${code}`);
+    return response.data;
+  },
+  updateRolePermissions: async (code, permissions) => {
+    const response = await api.put(`/platform/roles/${code}/permissions`, { permissions });
+    return response.data;
+  },
+};
+
+/** Capability codes used for UI gating (must match backend PERMISSIONS) */
+export const PERMISSIONS = {
+  SALES_CREATE: 'sales:create',
+  SALES_VIEW: 'sales:view',
+  INVENTORY_MANAGE: 'inventory:manage',
+  INVENTORY_VIEW: 'inventory:view',
+  REPORTS_VIEW: 'reports:view',
+  USERS_VIEW: 'users:view',
+  USERS_MANAGE: 'users:manage',
+  SETTINGS_MANAGE: 'settings:manage',
+  SUBSCRIPTION_MANAGE: 'subscription:manage',
+  PLATFORM_MANAGE: 'platform:manage',
+  TENANTS_VIEW: 'tenants:view',
+  TENANTS_MANAGE: 'tenants:manage',
+  ROLES_MANAGE: 'roles:manage',
 };
 
 export const itemService = {
@@ -151,6 +276,21 @@ export const saleService = {
 
   getByDateRange: async (startDate, endDate) => {
     const response = await api.get(`/sales/date-range?startDate=${startDate}&endDate=${endDate}`);
+    return response.data;
+  },
+
+  getSummary: async (range = '1Y') => {
+    const response = await api.get(`/sales/summary?range=${range}`);
+    return response.data;
+  },
+
+  getTrend: async (range = '1Y') => {
+    const response = await api.get(`/sales/summary/trend?range=${range}`);
+    return response.data;
+  },
+
+  getTop: async (range = 'week', limit = 6) => {
+    const response = await api.get(`/sales/top?range=${range}&limit=${limit}`);
     return response.data;
   },
 };

@@ -1,16 +1,78 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { saleService } from '../services';
 
+const PAGE_SIZE = 10;
+
+const MetricCard = ({ label, value, sub, variant = 'metric-orange', icon }) => (
+  <div className={`metric-card ${variant}`}>
+    <div className="metric-info">
+      <small>{label}</small>
+      <h3>{value}</h3>
+      {sub && <div className="metric-sub">{sub}</div>}
+    </div>
+    <div className="metric-icon">
+      <i className={`bi ${icon} fs-4`}></i>
+    </div>
+  </div>
+);
+
+const PeriodPanel = ({ title, icon, summary }) => {
+  if (!summary) return null;
+  return (
+    <div className="card shadow-sm rounded-4 h-100">
+      <div className="card-body">
+        <div className="d-flex align-items-center gap-2 mb-3">
+          <span className="report-period-icon">
+            <i className={`bi ${icon}`}></i>
+          </span>
+          <h5 className="card-title mb-0">{title}</h5>
+        </div>
+        <div className="row g-3">
+          <div className="col-6">
+            <div className="report-stat-pill">
+              <small>Cash sales</small>
+              <strong>{summary.total_sales || 0}</strong>
+              <span>${(summary.total_revenue || 0).toFixed(2)}</span>
+            </div>
+          </div>
+          <div className="col-6">
+            <div className="report-stat-pill">
+              <small>Down payments</small>
+              <strong>${(summary.down_payment_income || 0).toFixed(2)}</strong>
+            </div>
+          </div>
+          <div className="col-6">
+            <div className="report-stat-pill">
+              <small>Installments</small>
+              <strong>${(summary.installment_income || 0).toFixed(2)}</strong>
+            </div>
+          </div>
+          <div className="col-6">
+            <div className="report-stat-pill report-stat-pill-highlight">
+              <small>Total income</small>
+              <strong>${(summary.total_actual_income || 0).toFixed(2)}</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const SalesReport = () => {
-  const [sales, setSales] = useState([]);
+  const [allSales, setAllSales] = useState([]);
   const [overallSummary, setOverallSummary] = useState(null);
   const [dailySummary, setDailySummary] = useState(null);
   const [weeklySummary, setWeeklySummary] = useState(null);
   const [monthlySummary, setMonthlySummary] = useState(null);
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  const [filterItem, setFilterItem] = useState('');
+  const [filterTeller, setFilterTeller] = useState('');
+  const [filterStartDate, setFilterStartDate] = useState('');
+  const [filterEndDate, setFilterEndDate] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
 
   const loadData = useCallback(async () => {
     try {
@@ -21,11 +83,12 @@ const SalesReport = () => {
         saleService.getWeeklySummary(),
         saleService.getMonthlySummary(),
       ]);
-      setSales(salesData);
+      setAllSales(salesData || []);
       setOverallSummary(summaryData);
       setDailySummary(daily);
       setWeeklySummary(weekly);
       setMonthlySummary(monthly);
+      setError('');
     } catch (err) {
       console.error('Error loading sales report:', err);
       setError('Failed to load sales report');
@@ -36,350 +99,415 @@ const SalesReport = () => {
 
   useEffect(() => {
     loadData();
-    // Auto-refresh data every 10 seconds
-    const interval = setInterval(() => {
-      loadData();
-    }, 10000);
+    const interval = setInterval(loadData, 10000);
     return () => clearInterval(interval);
   }, [loadData]);
 
-  const handleDateFilter = async () => {
-    if (!startDate || !endDate) {
-      setError('Please select both start and end dates');
-      return;
-    }
+  const itemOptions = useMemo(() => {
+    const names = [...new Set(allSales.map((s) => s.item_name).filter(Boolean))];
+    return names.sort((a, b) => a.localeCompare(b));
+  }, [allSales]);
 
-    setLoading(true);
-    setError('');
+  const tellerOptions = useMemo(() => {
+    const names = [...new Set(allSales.map((s) => s.teller_name).filter(Boolean))];
+    return names.sort((a, b) => a.localeCompare(b));
+  }, [allSales]);
 
-    try {
-      const data = await saleService.getByDateRange(startDate, endDate);
-      setSales(data);
-    } catch (err) {
-      console.error('Error filtering sales:', err);
-      setError('Failed to filter sales');
-    } finally {
-      setLoading(false);
+  const filteredSales = useMemo(() => {
+    return allSales.filter((sale) => {
+      if (filterItem && sale.item_name !== filterItem) return false;
+
+      if (filterTeller && sale.teller_name !== filterTeller) return false;
+
+      if (filterStartDate) {
+        const saleDay = new Date(sale.sale_date).toISOString().slice(0, 10);
+        if (saleDay < filterStartDate) return false;
+      }
+
+      if (filterEndDate) {
+        const saleDay = new Date(sale.sale_date).toISOString().slice(0, 10);
+        if (saleDay > filterEndDate) return false;
+      }
+
+      return true;
+    });
+  }, [allSales, filterItem, filterTeller, filterStartDate, filterEndDate]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredSales.length / PAGE_SIZE));
+
+  const paginatedSales = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return filteredSales.slice(start, start + PAGE_SIZE);
+  }, [filteredSales, currentPage]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterItem, filterTeller, filterStartDate, filterEndDate]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
     }
+  }, [currentPage, totalPages]);
+
+  const handleClearFilters = () => {
+    setFilterItem('');
+    setFilterTeller('');
+    setFilterStartDate('');
+    setFilterEndDate('');
+    setCurrentPage(1);
   };
 
-  const handleClearFilter = () => {
-    setStartDate('');
-    setEndDate('');
-    loadData();
-  };
+  const hasActiveFilters = filterItem || filterTeller || filterStartDate || filterEndDate;
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="d-flex align-items-center justify-content-center min-vh-100">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading sales report...</p>
+          <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Loading...</span>
+          </div>
+          <p className="text-muted mt-2">Loading sales report...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
-          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-          </svg>
+    <div className="container-fluid py-4 matte-page admin-page report-page">
+      <div className="row mb-4">
+        <div className="col-12">
+          <div className="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between">
+            <div className="mb-3 mb-lg-0">
+              <h1 className="h3 mb-1">Sales Report</h1>
+              <p className="text-muted small mb-0">
+                View sales performance, revenue, and transaction history.
+              </p>
+            </div>
+            <div className="text-muted small">
+              <i className="bi bi-calendar3 me-1"></i>
+              {new Date().toLocaleDateString(undefined, {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+              })}
+            </div>
+          </div>
         </div>
-        <h1 className="text-2xl font-bold text-gray-900">Sales Report</h1>
       </div>
 
       {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-sm text-red-700">{error}</p>
+        <div className="alert alert-danger alert-dismissible fade show" role="alert">
+          <i className="bi bi-exclamation-triangle-fill me-2"></i>
+          {error}
+          <button type="button" className="btn-close" onClick={() => setError('')} aria-label="Close"></button>
         </div>
       )}
 
-      {/* Today's Statistics */}
-      <div className="card">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-6 h-6 bg-blue-100 rounded-lg flex items-center justify-center">
-            <span className="text-lg">📊</span>
-          </div>
-          <h2 className="text-xl font-semibold text-gray-900">Today's Statistics</h2>
+      <h5 className="report-section-title mb-3">Today&apos;s Statistics</h5>
+      <div className="row g-4 mb-4">
+        <div className="col-12 col-sm-6 col-xl-3">
+          <MetricCard
+            label="Cash Sales Today"
+            value={dailySummary?.total_sales || 0}
+            sub={`$${(dailySummary?.total_revenue || 0).toFixed(2)} revenue`}
+            variant="metric-orange"
+            icon="bi-basket3"
+          />
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-            <div className="text-sm font-medium text-green-800 mb-1">Cash Sales Today</div>
-            <div className="text-2xl font-bold text-green-900">{dailySummary?.total_sales || 0}</div>
-            <div className="text-sm text-green-600 mt-1">
-              ${(dailySummary?.total_revenue || 0).toFixed(2)}
-            </div>
-          </div>
-
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <div className="text-sm font-medium text-blue-800 mb-1">💰 Down Payments</div>
-            <div className="text-2xl font-bold text-blue-900">
-              ${(dailySummary?.down_payment_income || 0).toFixed(2)}
-            </div>
-          </div>
-
-          <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-            <div className="text-sm font-medium text-orange-800 mb-1">📅 Installment Collections</div>
-            <div className="text-2xl font-bold text-orange-900">
-              ${(dailySummary?.installment_income || 0).toFixed(2)}
-            </div>
-          </div>
-
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-            <div className="text-sm font-medium text-green-800 mb-1">💵 Total Actual Income</div>
-            <div className="text-2xl font-bold text-green-900">
-              ${(dailySummary?.total_actual_income || 0).toFixed(2)}
-            </div>
-          </div>
+        <div className="col-12 col-sm-6 col-xl-3">
+          <MetricCard
+            label="Down Payments"
+            value={`$${(dailySummary?.down_payment_income || 0).toFixed(2)}`}
+            sub="Installment down payments"
+            variant="metric-blue"
+            icon="bi-cash-stack"
+          />
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-            <div className="text-sm font-medium text-green-800 mb-1">Today's Profit (Cash Sales)</div>
-            <div className="text-2xl font-bold text-green-900">
-              ${(dailySummary?.total_profit || 0).toFixed(2)}
-            </div>
-          </div>
-
-          <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-            <div className="text-sm font-medium text-orange-800 mb-1">Items Sold Today</div>
-            <div className="text-2xl font-bold text-orange-900">
-              {dailySummary?.total_items_sold || 0}
-            </div>
-          </div>
+        <div className="col-12 col-sm-6 col-xl-3">
+          <MetricCard
+            label="Installment Collections"
+            value={`$${(dailySummary?.installment_income || 0).toFixed(2)}`}
+            sub="Payments collected today"
+            variant="metric-teal"
+            icon="bi-calendar-check"
+          />
+        </div>
+        <div className="col-12 col-sm-6 col-xl-3">
+          <MetricCard
+            label="Total Actual Income"
+            value={`$${(dailySummary?.total_actual_income || 0).toFixed(2)}`}
+            sub={`${dailySummary?.total_items_sold || 0} items sold`}
+            variant="metric-dark"
+            icon="bi-graph-up-arrow"
+          />
         </div>
       </div>
 
-      {/* Weekly & Monthly Stats */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="card">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-6 h-6 bg-blue-100 rounded-lg flex items-center justify-center">
-              <span className="text-lg">📅</span>
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900">This Week</h3>
-          </div>
-
-          <div className="space-y-3 mb-4">
-            <div>
-              <div className="text-sm text-gray-600 mb-1">Cash Sales</div>
-              <div className="text-xl font-bold text-blue-900">
-                {weeklySummary?.total_sales || 0} - ${(weeklySummary?.total_revenue || 0).toFixed(2)}
-              </div>
-            </div>
-
-            <div>
-              <div className="text-sm text-gray-600 mb-1">💰 Down Payments</div>
-              <div className="text-xl font-bold text-blue-900">
-                ${(weeklySummary?.down_payment_income || 0).toFixed(2)}
-              </div>
-            </div>
-
-            <div>
-              <div className="text-sm text-gray-600 mb-1">📅 Installment Collections</div>
-              <div className="text-xl font-bold text-orange-900">
-                ${(weeklySummary?.installment_income || 0).toFixed(2)}
-              </div>
-            </div>
-
-            <div className="pt-3 border-t border-gray-200">
-              <div className="text-sm text-gray-600 mb-1">💵 Total Actual Income</div>
-              <div className="text-2xl font-bold text-green-900">
-                ${(weeklySummary?.total_actual_income || 0).toFixed(2)}
-              </div>
-            </div>
-          </div>
+      <div className="row g-4 mb-4">
+        <div className="col-12 col-sm-6">
+          <MetricCard
+            label="Today's Profit"
+            value={`$${(dailySummary?.total_profit || 0).toFixed(2)}`}
+            sub="Cash sales profit"
+            variant="metric-teal"
+            icon="bi-piggy-bank"
+          />
         </div>
-
-        <div className="card">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-6 h-6 bg-blue-100 rounded-lg flex items-center justify-center">
-              <span className="text-lg">📆</span>
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900">This Month</h3>
-          </div>
-
-          <div className="space-y-3 mb-4">
-            <div>
-              <div className="text-sm text-gray-600 mb-1">Cash Sales</div>
-              <div className="text-xl font-bold text-blue-900">
-                {monthlySummary?.total_sales || 0} - ${(monthlySummary?.total_revenue || 0).toFixed(2)}
-              </div>
-            </div>
-
-            <div>
-              <div className="text-sm text-gray-600 mb-1">💰 Down Payments</div>
-              <div className="text-xl font-bold text-blue-900">
-                ${(monthlySummary?.down_payment_income || 0).toFixed(2)}
-              </div>
-            </div>
-
-            <div>
-              <div className="text-sm text-gray-600 mb-1">📅 Installment Collections</div>
-              <div className="text-xl font-bold text-orange-900">
-                ${(monthlySummary?.installment_income || 0).toFixed(2)}
-              </div>
-            </div>
-
-            <div className="pt-3 border-t border-gray-200">
-              <div className="text-sm text-gray-600 mb-1">💵 Total Actual Income</div>
-              <div className="text-2xl font-bold text-green-900">
-                ${(monthlySummary?.total_actual_income || 0).toFixed(2)}
-              </div>
-            </div>
-          </div>
+        <div className="col-12 col-sm-6">
+          <MetricCard
+            label="Items Sold Today"
+            value={dailySummary?.total_items_sold || 0}
+            sub="Units sold"
+            variant="metric-blue"
+            icon="bi-box-seam"
+          />
         </div>
       </div>
 
-      {/* Overall Statistics */}
-      <div className="card">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-6 h-6 bg-green-100 rounded-lg flex items-center justify-center">
-            <span className="text-lg">📈</span>
-          </div>
-          <h2 className="text-xl font-semibold text-gray-900">Overall Statistics</h2>
+      <div className="row g-4 mb-4">
+        <div className="col-12 col-lg-6">
+          <PeriodPanel title="This Week" icon="bi-calendar-week" summary={weeklySummary} />
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <div className="text-sm font-medium text-blue-800 mb-1">Total Sales</div>
-            <div className="text-2xl font-bold text-blue-900">{overallSummary?.total_sales || 0}</div>
-          </div>
-
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-            <div className="text-sm font-medium text-green-800 mb-1">Total Revenue</div>
-            <div className="text-2xl font-bold text-green-900">
-              ${(overallSummary?.total_revenue || 0).toFixed(2)}
-            </div>
-          </div>
-
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-            <div className="text-sm font-medium text-green-800 mb-1">Total Profit</div>
-            <div className="text-2xl font-bold text-green-900">
-              ${(overallSummary?.total_profit || 0).toFixed(2)}
-            </div>
-          </div>
-
-          <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-            <div className="text-sm font-medium text-orange-800 mb-1">Total Items Sold</div>
-            <div className="text-2xl font-bold text-orange-900">{overallSummary?.total_items_sold || 0}</div>
-          </div>
+        <div className="col-12 col-lg-6">
+          <PeriodPanel title="This Month" icon="bi-calendar-month" summary={monthlySummary} />
         </div>
       </div>
 
-      {/* Date Filter */}
-      <div className="card">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-6 h-6 bg-purple-100 rounded-lg flex items-center justify-center">
-            <span className="text-lg">🔍</span>
-          </div>
-          <h2 className="text-xl font-semibold text-gray-900">Filter by Date Range</h2>
+      <h5 className="report-section-title mb-3">Overall Statistics</h5>
+      <div className="row g-4 mb-4">
+        <div className="col-12 col-sm-6 col-xl-3">
+          <MetricCard
+            label="Total Sales"
+            value={overallSummary?.total_sales || 0}
+            sub="All time transactions"
+            variant="metric-blue"
+            icon="bi-receipt"
+          />
         </div>
-
-        <div className="flex flex-col sm:flex-row gap-4 items-end">
-          <div className="flex-1">
-            <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 mb-1">
-              Start Date
-            </label>
-            <input
-              id="startDate"
-              type="date"
-              className="input"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-            />
-          </div>
-
-          <div className="flex-1">
-            <label htmlFor="endDate" className="block text-sm font-medium text-gray-700 mb-1">
-              End Date
-            </label>
-            <input
-              id="endDate"
-              type="date"
-              className="input"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-            />
-          </div>
-
-          <button onClick={handleDateFilter} className="btn btn-primary">
-            Apply Filter
-          </button>
-
-          <button onClick={handleClearFilter} className="btn btn-ghost">
-            Clear
-          </button>
+        <div className="col-12 col-sm-6 col-xl-3">
+          <MetricCard
+            label="Total Revenue"
+            value={`$${(overallSummary?.total_revenue || 0).toFixed(2)}`}
+            variant="metric-orange"
+            icon="bi-currency-dollar"
+          />
+        </div>
+        <div className="col-12 col-sm-6 col-xl-3">
+          <MetricCard
+            label="Total Profit"
+            value={`$${(overallSummary?.total_profit || 0).toFixed(2)}`}
+            variant="metric-teal"
+            icon="bi-graph-up"
+          />
+        </div>
+        <div className="col-12 col-sm-6 col-xl-3">
+          <MetricCard
+            label="Items Sold"
+            value={overallSummary?.total_items_sold || 0}
+            sub="All time units"
+            variant="metric-dark"
+            icon="bi-boxes"
+          />
         </div>
       </div>
 
-      {/* Sales Table */}
       <div className="card">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-6 h-6 bg-gray-100 rounded-lg flex items-center justify-center">
-            <span className="text-lg">📋</span>
+        <div className="card-body">
+          <div className="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4">
+            <div>
+              <h5 className="card-title mb-1">All Sales</h5>
+              <p className="text-muted small mb-0">
+                {filteredSales.length} record{filteredSales.length !== 1 ? 's' : ''}
+                {hasActiveFilters ? ' (filtered)' : ''}
+              </p>
+            </div>
           </div>
-          <h2 className="text-xl font-semibold text-gray-900">All Sales</h2>
-        </div>
 
-        {sales.length === 0 ? (
-          <p className="text-gray-500 text-center py-8">No sales found.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date & Time
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Item
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Quantity
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Price
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Total
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Teller
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {sales.map((sale) => (
-                  <tr key={sale.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {new Date(sale.sale_date).toLocaleString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {sale.item_name}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {sale.quantity}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      ${sale.price.toFixed(2)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      ${sale.total.toFixed(2)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {sale.teller_name}
-                    </td>
-                  </tr>
+          <div className="row g-3 mb-4 report-filters">
+            <div className="col-12 col-md-6 col-lg-3">
+              <label htmlFor="filterItem" className="form-label fw-semibold small">
+                Item
+              </label>
+              <select
+                id="filterItem"
+                className="form-select"
+                value={filterItem}
+                onChange={(e) => setFilterItem(e.target.value)}
+              >
+                <option value="">All items</option>
+                {itemOptions.map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
                 ))}
-              </tbody>
-            </table>
+              </select>
+            </div>
+            <div className="col-12 col-md-6 col-lg-3">
+              <label htmlFor="filterTeller" className="form-label fw-semibold small">
+                Teller
+              </label>
+              <select
+                id="filterTeller"
+                className="form-select"
+                value={filterTeller}
+                onChange={(e) => setFilterTeller(e.target.value)}
+              >
+                <option value="">All tellers</option>
+                {tellerOptions.map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="col-12 col-md-6 col-lg-2">
+              <label htmlFor="filterStartDate" className="form-label fw-semibold small">
+                From
+              </label>
+              <input
+                id="filterStartDate"
+                type="date"
+                className="form-control"
+                value={filterStartDate}
+                onChange={(e) => setFilterStartDate(e.target.value)}
+              />
+            </div>
+            <div className="col-12 col-md-6 col-lg-2">
+              <label htmlFor="filterEndDate" className="form-label fw-semibold small">
+                To
+              </label>
+              <input
+                id="filterEndDate"
+                type="date"
+                className="form-control"
+                value={filterEndDate}
+                onChange={(e) => setFilterEndDate(e.target.value)}
+                min={filterStartDate || undefined}
+              />
+            </div>
+            <div className="col-12 col-lg-2 d-flex align-items-end">
+              <button
+                type="button"
+                className="btn btn-outline-secondary w-100"
+                onClick={handleClearFilters}
+                disabled={!hasActiveFilters}
+              >
+                <i className="bi bi-x-circle me-1"></i>
+                Clear
+              </button>
+            </div>
           </div>
-        )}
+
+          <div className="card border-0 shadow-none">
+            <div className="card-body p-0">
+              {filteredSales.length === 0 ? (
+                <div className="text-center py-5">
+                  <i className="bi bi-receipt text-muted fs-1 mb-3 d-block"></i>
+                  <h5 className="text-muted">No sales found</h5>
+                  <p className="text-muted mb-0">
+                    {hasActiveFilters ? 'Try adjusting your filters.' : 'No sales recorded yet.'}
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div className="table-responsive">
+                    <table className="table table-hover mb-0">
+                      <thead className="table-light">
+                        <tr>
+                          <th className="border-0 fw-semibold">Date &amp; Time</th>
+                          <th className="border-0 fw-semibold">Item</th>
+                          <th className="border-0 fw-semibold">Qty</th>
+                          <th className="border-0 fw-semibold">Price</th>
+                          <th className="border-0 fw-semibold">Total</th>
+                          <th className="border-0 fw-semibold">Teller</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {paginatedSales.map((sale) => (
+                          <tr key={sale.id}>
+                            <td className="text-muted">
+                              {new Date(sale.sale_date).toLocaleString()}
+                            </td>
+                            <td className="fw-semibold">{sale.item_name}</td>
+                            <td>{sale.quantity}</td>
+                            <td>${sale.price?.toFixed(2) || '0.00'}</td>
+                            <td className="fw-semibold">${sale.total?.toFixed(2) || '0.00'}</td>
+                            <td>{sale.teller_name || '—'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="d-flex flex-column flex-sm-row align-items-center justify-content-between gap-3 px-3 py-3 border-top">
+                    <p className="text-muted small mb-0">
+                      Showing {(currentPage - 1) * PAGE_SIZE + 1}–
+                      {Math.min(currentPage * PAGE_SIZE, filteredSales.length)} of{' '}
+                      {filteredSales.length}
+                    </p>
+                    <nav aria-label="Sales pagination">
+                      <ul className="pagination pagination-sm mb-0">
+                        <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
+                          <button
+                            type="button"
+                            className="page-link"
+                            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                            disabled={currentPage === 1}
+                          >
+                            Previous
+                          </button>
+                        </li>
+                        {Array.from({ length: totalPages }, (_, i) => i + 1)
+                          .filter((page) => {
+                            if (totalPages <= 7) return true;
+                            return (
+                              page === 1 ||
+                              page === totalPages ||
+                              Math.abs(page - currentPage) <= 1
+                            );
+                          })
+                          .map((page, idx, arr) => {
+                            const prev = arr[idx - 1];
+                            const showEllipsis = prev && page - prev > 1;
+                            return (
+                              <React.Fragment key={page}>
+                                {showEllipsis && (
+                                  <li className="page-item disabled">
+                                    <span className="page-link">…</span>
+                                  </li>
+                                )}
+                                <li className={`page-item ${currentPage === page ? 'active' : ''}`}>
+                                  <button
+                                    type="button"
+                                    className="page-link"
+                                    onClick={() => setCurrentPage(page)}
+                                  >
+                                    {page}
+                                  </button>
+                                </li>
+                              </React.Fragment>
+                            );
+                          })}
+                        <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
+                          <button
+                            type="button"
+                            className="page-link"
+                            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                            disabled={currentPage === totalPages}
+                          >
+                            Next
+                          </button>
+                        </li>
+                      </ul>
+                    </nav>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

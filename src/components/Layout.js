@@ -1,23 +1,23 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import { LayoutProvider, useLayout } from '../contexts/LayoutContext';
-import clsx from 'clsx';
 
 const LayoutContent = ({ children }) => {
-  const { sidebarCollapsed } = useLayout();
+  const { sidebarCollapsed, mobileMenuOpen, closeMobileMenu } = useLayout();
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      <Sidebar />
-      <div className={clsx(
-        'flex-1 flex flex-col overflow-hidden transition-all duration-300',
-        sidebarCollapsed ? 'ml-16' : 'ml-64'
-      )}>
-        <Header />
-        <main className="flex-1 overflow-auto p-6 pt-12">
-          {children}
-        </main>
+    <div className="app-shell">
+      <Header />
+      <div className="app-body">
+        {mobileMenuOpen && (
+          <button type="button" className="sidebar-backdrop" onClick={closeMobileMenu} aria-label="Close menu" />
+        )}
+        <Sidebar />
+        <div className={`content-wrapper${sidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
+          <main className="content">{children}</main>
+        </div>
       </div>
     </div>
   );
@@ -29,6 +29,10 @@ const Layout = ({ children }) => {
       <LayoutContent>{children}</LayoutContent>
     </LayoutProvider>
   );
+};
+
+Layout.propTypes = {
+  children: PropTypes.node.isRequired,
 };
 
 export default Layout;
