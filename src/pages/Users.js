@@ -8,7 +8,10 @@ const Users = () => {
   const [formData, setFormData] = useState({
     username: '',
     password: '',
-    role: 'teller',
+    role: 'TELLER',
+    email: '',
+    fullName: '',
+    pin: '',
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -39,7 +42,10 @@ const Users = () => {
     setFormData({
       username: '',
       password: '',
-      role: 'teller',
+      role: 'TELLER',
+      email: '',
+      fullName: '',
+      pin: '',
     });
     setShowModal(true);
     setError('');
@@ -154,7 +160,9 @@ const Users = () => {
                       <td>
                         <span
                           className={`badge ${
-                            user.role === 'admin' ? 'bg-primary' : 'bg-success'
+                            ['admin', 'TENANT_ADMIN', 'SUPER_ADMIN'].includes(user.role)
+                              ? 'bg-primary'
+                              : 'bg-success'
                           }`}
                         >
                           {user.role}
@@ -220,6 +228,32 @@ const Users = () => {
                     />
                   </div>
                   <div className="mb-3">
+                    <label htmlFor="fullName" className="form-label fw-semibold">
+                      Full name
+                    </label>
+                    <input
+                      id="fullName"
+                      name="fullName"
+                      type="text"
+                      className="form-control"
+                      value={formData.fullName}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                  <div className="mb-3">
+                    <label htmlFor="email" className="form-label fw-semibold">
+                      Email
+                    </label>
+                    <input
+                      id="email"
+                      name="email"
+                      type="email"
+                      className="form-control"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                  <div className="mb-3">
                     <label htmlFor="password" className="form-label fw-semibold">
                       Password
                     </label>
@@ -231,9 +265,24 @@ const Users = () => {
                       value={formData.password}
                       onChange={handleInputChange}
                       required
-                      minLength={6}
+                      minLength={8}
                     />
-                    <div className="form-text">Minimum 6 characters</div>
+                    <div className="form-text">Minimum 8 characters</div>
+                  </div>
+                  <div className="mb-3">
+                    <label htmlFor="pin" className="form-label fw-semibold">
+                      POS PIN (optional)
+                    </label>
+                    <input
+                      id="pin"
+                      name="pin"
+                      type="password"
+                      inputMode="numeric"
+                      maxLength={8}
+                      className="form-control"
+                      value={formData.pin}
+                      onChange={handleInputChange}
+                    />
                   </div>
                   <div className="mb-0">
                     <label htmlFor="role" className="form-label fw-semibold">
@@ -247,8 +296,10 @@ const Users = () => {
                       onChange={handleInputChange}
                       required
                     >
-                      <option value="teller">Teller</option>
-                      <option value="admin">Admin</option>
+                      <option value="TELLER">Teller / Cashier</option>
+                      <option value="MANAGER">Manager</option>
+                      <option value="INVENTORY">Inventory</option>
+                      <option value="ACCOUNTANT">Accountant</option>
                     </select>
                   </div>
                 </div>

@@ -19,6 +19,15 @@
   z-index: 100;
 }
 
+.pos-topbar .user-menu {
+  position: relative;
+  z-index: 200;
+}
+
+.pos-topbar .user-dropdown {
+  z-index: 201;
+}
+
 .pos-topbar-left,
 .pos-topbar-right {
   display: flex;

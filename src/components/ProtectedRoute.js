@@ -1,9 +1,10 @@
 import React from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
-const ProtectedRoute = ({ children, requireAdmin = false }) => {
-  const { user, loading } = useAuth();
+const ProtectedRoute = ({ children, requireAdmin = false, requirePermission = null }) => {
+  const { user, loading, hasPermission, isAdmin, isSuperAdmin, getHomePath } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -18,8 +19,18 @@ const ProtectedRoute = ({ children, requireAdmin = false }) => {
     return <Navigate to="/login" replace />;
   }
 
-  if (requireAdmin && user.role !== 'admin') {
-    return <Navigate to="/" replace />;
+  const storePaths = ['/', '/sell', '/inventory', '/categories', '/sales-report', '/users', '/settings', '/installment-plans', '/installment-payments'];
+  if (isSuperAdmin && storePaths.includes(location.pathname) && !requirePermission) {
+    return <Navigate to="/platform" replace />;
+  }
+
+  if (requirePermission) {
+    const perms = Array.isArray(requirePermission) ? requirePermission : [requirePermission];
+    if (!perms.some((p) => hasPermission(p))) {
+      return <Navigate to={isSuperAdmin ? '/platform' : getHomePath()} replace />;
+    }
+  } else if (requireAdmin && !isAdmin) {
+    return <Navigate to={getHomePath()} replace />;
   }
 
   return children;

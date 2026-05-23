@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import PageHeader from '../components/PageHeader';
 import AdminAlerts from '../components/AdminAlerts';
 import { useTranslation } from 'react-i18next';
+import { APP_NAME } from '../config/app';
 
 const Settings = () => {
   const { t } = useTranslation();
   const [formData, setFormData] = useState({
-    businessName: 'Bright Mart',
+    businessName: APP_NAME,
     currency: 'USD ($)',
     currencySymbol: 'Rs',
     taxRate: '8',

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { authService } from '../services';
+import { authService, PERMISSIONS } from '../services';
 
 const AuthContext = createContext(null);
 
@@ -16,9 +16,21 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const currentUser = authService.getCurrentUser();
-    setUser(currentUser);
-    setLoading(false);
+    const bootstrap = async () => {
+      const stored = authService.getCurrentUser();
+      const token = localStorage.getItem('token');
+      if (stored && token) {
+        try {
+          const profile = await authService.getProfile();
+          setUser(profile);
+        } catch {
+          authService.logout();
+          setUser(null);
+        }
+      }
+      setLoading(false);
+    };
+    bootstrap();
   }, []);
 
   const login = async (username, password) => {
@@ -27,20 +39,19 @@ export const AuthProvider = ({ children }) => {
     return data;
   };
 
-  const logout = () => {
-    authService.logout();
+  const loginPin = async (username, pin, tenantId, branchId) => {
+    const data = await authService.loginPin(username, pin, tenantId, branchId);
+    setUser(data.user);
+    return data;
+  };
+
+  const logout = async () => {
+    await authService.logout();
     setUser(null);
   };
 
-  // Authorization methods
-  const hasFeature = (featureCode) => {
-    if (!user || !user.features) return false;
-    return user.features.includes(featureCode);
-  };
-
-  const normalizeRole = (role) => {
-    return typeof role === 'string' ? role.toUpperCase() : role;
-  };
+  const normalizeRole = (role) =>
+    typeof role === 'string' ? role.toUpperCase() : role;
 
   const hasRole = (roleOrRoles) => {
     if (!user) return false;
@@ -49,22 +60,58 @@ export const AuthProvider = ({ children }) => {
     return roles.includes(currentRole);
   };
 
-  const canAccess = (featureCode, requiredRole) => {
-    return hasFeature(featureCode) && hasRole(requiredRole);
+  const hasPermission = (permission) => {
+    if (!user?.permissions) return false;
+    const perms = Array.isArray(permission) ? permission : [permission];
+    return perms.some((p) => user.permissions.includes(p));
   };
+
+  const isSuperAdmin = hasRole('SUPER_ADMIN');
+
+  const isAdmin =
+    !!user &&
+    (hasPermission([
+      PERMISSIONS.INVENTORY_MANAGE,
+      PERMISSIONS.SETTINGS_MANAGE,
+      PERMISSIONS.USERS_MANAGE,
+      PERMISSIONS.PLATFORM_MANAGE,
+    ]) ||
+      isSuperAdmin);
+
+  const isTeller =
+    !!user &&
+    (hasPermission([PERMISSIONS.SALES_CREATE, PERMISSIONS.PLATFORM_MANAGE]) || isAdmin);
+
+  /** Cashier role without admin capabilities — no store dashboard */
+  const isTellerOnly = !!user && hasRole('TELLER') && !isAdmin;
+
+  const canViewDashboard = !isTellerOnly;
+
+  const getHomePath = () => {
+    if (isSuperAdmin) return '/platform';
+    if (isTellerOnly) return '/sell';
+    return '/';
+  };
+
+  const canManagePlatform =
+    !!user && hasPermission([PERMISSIONS.ROLES_MANAGE, PERMISSIONS.PLATFORM_MANAGE]);
 
   const value = {
     user,
     login,
+    loginPin,
     logout,
     loading,
     isAuthenticated: !!user,
-    isAdmin: normalizeRole(user?.role) === 'ADMIN',
-    isTeller: normalizeRole(user?.role) === 'TELLER',
-    isSuperAdmin: normalizeRole(user?.role) === 'SUPER_ADMIN',
-    hasFeature,
+    isAdmin,
+    isTeller,
+    isTellerOnly,
+    canViewDashboard,
+    getHomePath,
+    isSuperAdmin,
+    canManagePlatform,
     hasRole,
-    canAccess
+    hasPermission,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
