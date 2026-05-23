@@ -3,8 +3,10 @@ import { Link } from 'react-router-dom';
 import AppLogo from './AppLogo';
 import { getCopyrightText } from '../config/app';
 
-const AuthLayout = ({ children, footerExtra }) => (
-  <div className="auth-page">
+const authVariantClass = (variant, prefix) => (variant ? ` ${prefix}--${variant}` : '');
+
+const AuthLayout = ({ children, footerExtra, variant }) => (
+  <div className={`auth-page${authVariantClass(variant, 'auth-page')}`}>
     <div className="auth-page-backdrop" aria-hidden="true">
       <div
         className="auth-page-backdrop-media"
@@ -14,8 +16,8 @@ const AuthLayout = ({ children, footerExtra }) => (
       />
       <div className="auth-page-backdrop-overlay" />
     </div>
-    <div className="auth-page-inner">
-      <div className="auth-card">
+    <div className={`auth-page-inner${authVariantClass(variant, 'auth-page-inner')}`}>
+      <div className={`auth-card${authVariantClass(variant, 'auth-card')}`}>
         <div className="auth-card-header">
           <AppLogo />
         </div>

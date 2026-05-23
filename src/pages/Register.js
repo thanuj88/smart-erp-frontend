@@ -1,10 +1,15 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import AuthLayout from '../components/AuthLayout';
 import { APP_CONFIG } from '../config/app';
 import { authService } from '../services';
 
 const Register = () => {
+  useEffect(() => {
+    document.body.classList.add('auth-register-active');
+    return () => document.body.classList.remove('auth-register-active');
+  }, []);
+
   const navigate = useNavigate();
   const [form, setForm] = useState({
     fullName: '',
@@ -61,12 +66,23 @@ const Register = () => {
     setError('Google sign-up is not configured in this demo.');
   };
 
+  const field = (id, label, required, children) => (
+    <div className="auth-register-field">
+      <label htmlFor={id} className="form-label auth-label">
+        {label} {required && <span className="text-danger">*</span>}
+      </label>
+      {children}
+    </div>
+  );
+
   return (
-    <AuthLayout>
-      <h1 className="auth-title">Create Account</h1>
-      <p className="auth-subtitle">
-        Join {APP_CONFIG.name} to manage inventory, sales, and your store in one place.
-      </p>
+    <AuthLayout variant="register">
+      <div className="auth-register-intro">
+        <h1 className="auth-title">Create Account</h1>
+        <p className="auth-subtitle auth-register-subtitle">
+          Join {APP_CONFIG.name} to manage inventory, sales, and your store in one place.
+        </p>
+      </div>
 
       {success && (
         <div className="alert alert-success auth-alert" role="alert">
@@ -82,11 +98,11 @@ const Register = () => {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="auth-form">
-        <div className="mb-3">
-          <label htmlFor="businessName" className="form-label auth-label">
-            Business / store name <span className="text-danger">*</span>
-          </label>
+      <form onSubmit={handleSubmit} className="auth-form auth-register-form">
+        {field(
+          'businessName',
+          'Business / store name',
+          true,
           <input
             id="businessName"
             name="businessName"
@@ -96,11 +112,11 @@ const Register = () => {
             onChange={handleChange}
             required
           />
-        </div>
-        <div className="mb-3">
-          <label htmlFor="fullName" className="form-label auth-label">
-            Full name <span className="text-danger">*</span>
-          </label>
+        )}
+        {field(
+          'fullName',
+          'Full name',
+          true,
           <input
             id="fullName"
             name="fullName"
@@ -110,11 +126,11 @@ const Register = () => {
             onChange={handleChange}
             required
           />
-        </div>
-        <div className="mb-3">
-          <label htmlFor="email" className="form-label auth-label">
-            Email <span className="text-danger">*</span>
-          </label>
+        )}
+        {field(
+          'email',
+          'Email',
+          true,
           <div className="auth-input-wrap">
             <input
               id="email"
@@ -127,11 +143,11 @@ const Register = () => {
             />
             <i className="bi bi-envelope auth-input-icon"></i>
           </div>
-        </div>
-        <div className="mb-3">
-          <label htmlFor="username" className="form-label auth-label">
-            Username <span className="text-danger">*</span>
-          </label>
+        )}
+        {field(
+          'username',
+          'Username',
+          true,
           <input
             id="username"
             name="username"
@@ -141,11 +157,11 @@ const Register = () => {
             onChange={handleChange}
             required
           />
-        </div>
-        <div className="mb-3">
-          <label htmlFor="password" className="form-label auth-label">
-            Password <span className="text-danger">*</span>
-          </label>
+        )}
+        {field(
+          'password',
+          'Password',
+          true,
           <div className="auth-input-wrap">
             <input
               id="password"
@@ -154,7 +170,7 @@ const Register = () => {
               className="form-control auth-input"
               value={form.password}
               onChange={handleChange}
-              minLength={6}
+              minLength={8}
               required
             />
             <button
@@ -162,15 +178,16 @@ const Register = () => {
               className="auth-input-icon-btn"
               onClick={() => setShowPassword(!showPassword)}
               tabIndex={-1}
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
             >
               <i className={`bi ${showPassword ? 'bi-eye-slash' : 'bi-eye'}`}></i>
             </button>
           </div>
-        </div>
-        <div className="mb-4">
-          <label htmlFor="confirmPassword" className="form-label auth-label">
-            Confirm password <span className="text-danger">*</span>
-          </label>
+        )}
+        {field(
+          'confirmPassword',
+          'Confirm password',
+          true,
           <input
             id="confirmPassword"
             name="confirmPassword"
@@ -178,22 +195,26 @@ const Register = () => {
             className="form-control auth-input"
             value={form.confirmPassword}
             onChange={handleChange}
+            minLength={8}
             required
           />
+        )}
+
+        <div className="auth-register-actions">
+          <button type="submit" className="btn auth-btn-primary w-100" disabled={loading}>
+            {loading ? 'Creating account...' : 'Create account'}
+          </button>
         </div>
-        <button type="submit" className="btn auth-btn-primary w-100" disabled={loading}>
-          {loading ? 'Creating account...' : 'Create account'}
-        </button>
       </form>
 
-      <p className="auth-switch-link text-center mb-4">
+      <p className="auth-switch-link text-center auth-register-footer-link">
         Already have an account?{' '}
         <Link to="/login" className="auth-link-accent">
           Sign In
         </Link>
       </p>
 
-      <div className="auth-divider">
+      <div className="auth-divider auth-register-divider">
         <span>OR</span>
       </div>
 
