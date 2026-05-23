@@ -15,7 +15,6 @@ const Inventory = () => {
     description: '',
     buyingPrice: '',
     sellingPrice: '',
-    price: '',
     quantity: '',
     category: '',
     categoryId: '',
@@ -88,7 +87,6 @@ const Inventory = () => {
       description: '',
       buyingPrice: '',
       sellingPrice: '',
-      price: '',
       quantity: '',
       category: '',
       categoryId: '',
@@ -105,7 +103,6 @@ const Inventory = () => {
       description: item.description,
       buyingPrice: item.buying_price || '',
       sellingPrice: item.selling_price || '',
-      price: item.price,
       quantity: item.quantity,
       category: item.category,
       categoryId: item.category_id || '',
@@ -238,7 +235,7 @@ const Inventory = () => {
                     <th className="border-0 fw-semibold">Product</th>
                     <th className="border-0 fw-semibold">Category</th>
                     <th className="border-0 fw-semibold">Barcode</th>
-                    <th className="border-0 fw-semibold">Price</th>
+                    <th className="border-0 fw-semibold">Selling Price</th>
                     <th className="border-0 fw-semibold">Stock</th>
                     <th className="border-0 fw-semibold">Actions</th>
                   </tr>
@@ -264,7 +261,9 @@ const Inventory = () => {
                         </span>
                       </td>
                       <td className="text-muted">{item.barcode || '—'}</td>
-                      <td className="fw-semibold">${item.price?.toFixed(2) || '0.00'}</td>
+                      <td className="fw-semibold">
+                        ${(item.selling_price ?? item.price)?.toFixed(2) || '0.00'}
+                      </td>
                       <td>
                         {(() => {
                           const quantity = item.quantity;
@@ -366,7 +365,7 @@ const Inventory = () => {
                       />
                     </div>
 
-                    <div className="col-md-4">
+                    <div className="col-md-6">
                       <label className="form-label fw-semibold">Buying Price *</label>
                       <div className="input-group">
                         <span className="input-group-text">$</span>
@@ -383,7 +382,7 @@ const Inventory = () => {
                       </div>
                     </div>
 
-                    <div className="col-md-4">
+                    <div className="col-md-6">
                       <label className="form-label fw-semibold">Selling Price *</label>
                       <div className="input-group">
                         <span className="input-group-text">$</span>
@@ -398,24 +397,6 @@ const Inventory = () => {
                           required
                         />
                       </div>
-                    </div>
-
-                    <div className="col-md-4">
-                      <label className="form-label fw-semibold">Display Price *</label>
-                      <div className="input-group">
-                        <span className="input-group-text">$</span>
-                        <input
-                          type="number"
-                          name="price"
-                          className="form-control"
-                          value={formData.price}
-                          onChange={handleInputChange}
-                          step="0.01"
-                          min="0"
-                          required
-                        />
-                      </div>
-                      <div className="form-text">Price shown to customers</div>
                     </div>
 
                     <div className="col-md-6">

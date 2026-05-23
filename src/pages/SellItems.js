@@ -148,7 +148,7 @@ function SellItems() {
 
   const addToBill = (item) => {
     const existingIndex = bill.findIndex((billItem) => billItem.id === item.id);
-    const price = item.selling_price || item.price;
+    const price = item.selling_price ?? item.price;
 
     if (existingIndex !== -1) {
       const newBill = [...bill];
@@ -746,7 +746,7 @@ function SellItems() {
                         </div>
                         <div className="pos-product-cat">{cat?.name || 'General'}</div>
                         <div className="pos-product-name">{item.name}</div>
-                        <div className="pos-product-price">${(item.selling_price || item.price).toFixed(2)}</div>
+                        <div className="pos-product-price">${(item.selling_price ?? item.price ?? 0).toFixed(2)}</div>
                         <div className="pos-product-qty" onClick={(e) => e.stopPropagation()}>
                           <button type="button" className="pos-qty-btn" onClick={(e) => handleProductQty(item, -1, e)} disabled={qty === 0}>−</button>
                           <span className="pos-qty-value">{qty}</span>
