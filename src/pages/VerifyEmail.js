@@ -1,9 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import AuthLayout from '../components/AuthLayout';
+import useAuthBodyClass from '../hooks/useAuthBodyClass';
 import { authService } from '../services';
 
 const VerifyEmail = () => {
+  useAuthBodyClass('simple');
+
   const [searchParams] = useSearchParams();
   const [status, setStatus] = useState('loading');
   const [message, setMessage] = useState('');
@@ -29,7 +32,7 @@ const VerifyEmail = () => {
   }, [searchParams]);
 
   return (
-    <AuthLayout>
+    <AuthLayout variant="simple">
       <h1 className="auth-title">Email Verification</h1>
       {status === 'loading' && <p className="auth-subtitle">Verifying your email...</p>}
       {status === 'success' && (

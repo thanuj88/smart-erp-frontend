@@ -1,14 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import AuthLayout from '../components/AuthLayout';
 import { APP_CONFIG } from '../config/app';
 import { authService } from '../services';
+import useAuthBodyClass from '../hooks/useAuthBodyClass';
 
 const Register = () => {
-  useEffect(() => {
-    document.body.classList.add('auth-register-active');
-    return () => document.body.classList.remove('auth-register-active');
-  }, []);
+  useAuthBodyClass('register');
 
   const navigate = useNavigate();
   const [form, setForm] = useState({

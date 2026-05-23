@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import AuthLayout from '../components/AuthLayout';
+import useAuthBodyClass from '../hooks/useAuthBodyClass';
 import { authService } from '../services';
 
 const ResetPassword = () => {
+  useAuthBodyClass('simple');
+
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [password, setPassword] = useState('');
@@ -39,7 +42,7 @@ const ResetPassword = () => {
   };
 
   return (
-    <AuthLayout>
+    <AuthLayout variant="simple">
       <h1 className="auth-title">Reset Password</h1>
       <p className="auth-subtitle">Enter your new password below.</p>
 

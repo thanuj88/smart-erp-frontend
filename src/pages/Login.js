@@ -4,8 +4,11 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import AuthLayout, { AuthFooterLink } from '../components/AuthLayout';
 import { APP_CONFIG } from '../config/app';
+import useAuthBodyClass from '../hooks/useAuthBodyClass';
 
 const Login = () => {
+  useAuthBodyClass('login');
+
   const [mode, setMode] = useState('password');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -54,7 +57,7 @@ const Login = () => {
   };
 
   return (
-    <AuthLayout>
+    <AuthLayout variant="login">
       <div className="auth-lang-toggle">
         <button
           type="button"
@@ -72,10 +75,12 @@ const Login = () => {
         </button>
       </div>
 
+      <div className="auth-login-body">
+      <div className="auth-login-main">
       <h1 className="auth-title">Sign In</h1>
       <p className="auth-subtitle">{APP_CONFIG.loginPanelDescription(APP_CONFIG.name)}</p>
 
-      <div className="auth-mode-tabs mb-4">
+      <div className="auth-mode-tabs auth-login-tabs">
         <button
           type="button"
           className={`auth-mode-tab ${mode === 'password' ? 'active' : ''}`}
@@ -164,7 +169,7 @@ const Login = () => {
             </div>
           </div>
 
-          <div className="d-flex align-items-center justify-content-between mb-4">
+          <div className="d-flex align-items-center justify-content-between auth-login-options">
             <label className="auth-remember">
               <input
                 type="checkbox"
@@ -199,7 +204,7 @@ const Login = () => {
               disabled={loading}
             />
           </div>
-          <div className="mb-4">
+          <div className="mb-3">
             <label htmlFor="pin" className="form-label auth-label">
               PIN <span className="text-danger">*</span>
             </label>
@@ -222,21 +227,26 @@ const Login = () => {
         </form>
       )}
 
-      <AuthFooterLink to="/register">New on our platform?</AuthFooterLink>
-
-      <div className="auth-divider">
-        <span>OR</span>
       </div>
 
-      <button type="button" className="btn auth-btn-google w-100" onClick={handleGoogleSignIn}>
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="22" height="22" aria-hidden="true">
-          <path fill="#fbbc05" d="M43.6 20.5H42V20H24v8h11.3c-1.3 3.5-4.9 6-9.3 6-5.5 0-10-4.5-10-10s4.5-10 10-10c2.6 0 5 1 6.8 2.6l5.7-5.7C34.4 7.5 29.5 5 24 5 12.8 5 4 13.8 4 25s8.8 20 20 20 20-8.8 20-20c0-1.3-.1-2.5-.4-3.5z" />
-          <path fill="#518ef8" d="M6.3 14.7l6.6 4.8C14.8 16 19 13 24 13c2.6 0 5 1 6.8 2.6l5.7-5.7C34.4 7.5 29.5 5 24 5 16.4 5 9.5 9.6 6.3 14.7z" />
-          <path fill="#28b446" d="M24 43c5.4 0 10-2.2 13.3-5.8l-6.2-5.1c-2 1.4-4.5 2.2-7.1 2.2-4.4 0-8.1-2.8-9.4-6.7l-6.7 5.2C9.6 38.7 16.3 43 24 43z" />
-          <path fill="#f14336" d="M43.6 20.5H42V20H24v8h11.3c-1.1 2.8-3.2 5.1-6 6.5v5.2C35 36.7 39 31.6 43.6 20.5z" />
-        </svg>
-        Sign in with Google
-      </button>
+      <div className="auth-login-footer">
+        <AuthFooterLink to="/register">New on our platform?</AuthFooterLink>
+
+        <div className="auth-divider">
+          <span>OR</span>
+        </div>
+
+        <button type="button" className="btn auth-btn-google w-100" onClick={handleGoogleSignIn}>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="22" height="22" aria-hidden="true">
+            <path fill="#fbbc05" d="M43.6 20.5H42V20H24v8h11.3c-1.3 3.5-4.9 6-9.3 6-5.5 0-10-4.5-10-10s4.5-10 10-10c2.6 0 5 1 6.8 2.6l5.7-5.7C34.4 7.5 29.5 5 24 5 12.8 5 4 13.8 4 25s8.8 20 20 20 20-8.8 20-20c0-1.3-.1-2.5-.4-3.5z" />
+            <path fill="#518ef8" d="M6.3 14.7l6.6 4.8C14.8 16 19 13 24 13c2.6 0 5 1 6.8 2.6l5.7-5.7C34.4 7.5 29.5 5 24 5 16.4 5 9.5 9.6 6.3 14.7z" />
+            <path fill="#28b446" d="M24 43c5.4 0 10-2.2 13.3-5.8l-6.2-5.1c-2 1.4-4.5 2.2-7.1 2.2-4.4 0-8.1-2.8-9.4-6.7l-6.7 5.2C9.6 38.7 16.3 43 24 43z" />
+            <path fill="#f14336" d="M43.6 20.5H42V20H24v8h11.3c-1.1 2.8-3.2 5.1-6 6.5v5.2C35 36.7 39 31.6 43.6 20.5z" />
+          </svg>
+          Sign in with Google
+        </button>
+      </div>
+      </div>
     </AuthLayout>
   );
 };

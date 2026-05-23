@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import AuthLayout from '../components/AuthLayout';
+import useAuthBodyClass from '../hooks/useAuthBodyClass';
 import { APP_CONFIG } from '../config/app';
 import { authService } from '../services';
 
 const ForgotPassword = () => {
+  useAuthBodyClass('simple');
+
   const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -25,7 +28,7 @@ const ForgotPassword = () => {
   };
 
   return (
-    <AuthLayout>
+    <AuthLayout variant="simple">
       <h1 className="auth-title">Forgot Password?</h1>
       <p className="auth-subtitle">
         Enter your email and we&apos;ll send you instructions to reset your password for {APP_CONFIG.name}.

@@ -1098,10 +1098,13 @@ body {
   max-width: 480px;
 }
 
-body.auth-register-active,
-body.auth-login-active {
-  overflow: hidden;
-  height: 100dvh;
+/* Viewport scroll lock — desktop only (mobile must scroll naturally) */
+@media (min-width: 992px) {
+  body.auth-register-active,
+  body.auth-login-active {
+    overflow: hidden;
+    height: 100dvh;
+  }
 }
 
 .auth-page--login {
@@ -1375,57 +1378,217 @@ body.auth-login-active {
   pointer-events: none;
 }
 
-@media (max-width: 768px) {
-  body.auth-register-active,
-  body.auth-login-active {
-    overflow-y: auto;
-    height: auto;
-  }
+/* Auth — simple pages (forgot / reset / verify) */
+.auth-page--simple {
+  min-height: 100dvh;
+  padding: 1rem;
+  box-sizing: border-box;
+}
 
-  .auth-page--login {
+.auth-card--simple {
+  padding: 1.5rem 1.75rem 1.25rem;
+}
+
+.auth-card--simple .auth-card-header {
+  margin-bottom: 1rem;
+}
+
+/* ========== Auth responsive (tablet & mobile) ========== */
+@media (max-width: 991px) {
+  .auth-page,
+  .auth-page--login,
+  .auth-page--register,
+  .auth-page--simple {
+    align-items: flex-start;
+    justify-content: flex-start;
     height: auto;
     max-height: none;
     min-height: 100dvh;
+    overflow: visible;
     overflow-y: auto;
-    align-items: flex-start;
-    padding: 1rem 1rem 2.5rem;
+    padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right))
+      max(1.5rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+    -webkit-overflow-scrolling: touch;
   }
 
-  .auth-card--login {
+  .auth-page-inner,
+  .auth-page-inner--login,
+  .auth-page-inner--register {
+    max-width: 100%;
+    max-height: none;
+    width: 100%;
+  }
+
+  .auth-card,
+  .auth-card--login,
+  .auth-card--register,
+  .auth-card--simple {
+    flex: none;
     min-height: auto;
     max-height: none;
-    padding: 1.25rem 1.5rem 1rem;
+    overflow: visible;
+    padding: 1.25rem 1.25rem 1rem;
+    width: 100%;
   }
 
-  .auth-page--login .auth-copyright {
+  .auth-card--login .auth-card-header {
+    padding-bottom: 1rem;
+  }
+
+  .auth-login-body {
+    padding-top: 1rem;
+    overflow: visible;
+  }
+
+  .auth-login-main,
+  .auth-login-footer {
+    flex: none;
+    min-height: 0;
+  }
+
+  .auth-login-footer {
+    margin-top: 1rem;
+    padding-top: 0;
+  }
+
+  .auth-page--login .auth-copyright,
+  .auth-page--register .auth-copyright,
+  .auth-page--simple .auth-copyright {
     position: static;
-    margin-top: 0.75rem;
+    margin-top: 1rem;
+    padding-bottom: env(safe-area-inset-bottom);
+    pointer-events: auto;
   }
 
-  .auth-page--register {
-    height: auto;
-    max-height: none;
-    min-height: 100dvh;
-    overflow-y: auto;
-    align-items: flex-start;
-    padding: 1rem 1rem 2.5rem;
-  }
-
-  .auth-page-inner--register {
-    max-width: 480px;
+  .auth-card--login .auth-lang-toggle {
+    top: 0.85rem;
+    right: 0.85rem;
   }
 
   .auth-register-form {
     grid-template-columns: 1fr;
   }
 
-  .auth-card--register {
-    padding: 1.25rem 1.5rem 1rem;
+  .auth-page-inner--register {
+    max-width: 100%;
   }
 
-  .auth-page--register .auth-copyright {
+  .auth-input,
+  .auth-form .form-control.auth-input,
+  .auth-input-wrap .auth-input {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 576px) {
+  .auth-page,
+  .auth-page--login,
+  .auth-page--register,
+  .auth-page--simple {
+    padding: max(0.75rem, env(safe-area-inset-top)) max(0.75rem, env(safe-area-inset-right))
+      max(1.25rem, env(safe-area-inset-bottom)) max(0.75rem, env(safe-area-inset-left));
+  }
+
+  .auth-card,
+  .auth-card--login,
+  .auth-card--register,
+  .auth-card--simple {
+    padding: 1rem 1rem 0.85rem;
+    border-radius: 0.5rem;
+  }
+
+  .auth-card--login .auth-mode-tabs {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .auth-card--login .auth-mode-tab {
+    width: 100%;
+    text-align: center;
+  }
+
+  .auth-login-options {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 0.5rem;
+  }
+
+  .auth-card--login .auth-lang-toggle {
     position: static;
-    margin-top: 0.75rem;
+    display: inline-flex;
+    margin: 0 0 0.75rem auto;
+    width: fit-content;
+  }
+
+  .auth-title {
+    font-size: 1.15rem;
+  }
+
+  .auth-subtitle {
+    font-size: 0.85rem;
+  }
+
+  .auth-btn-primary,
+  .auth-btn-google {
+    min-height: 2.75rem;
+  }
+}
+
+/* ========== App shell responsive ========== */
+@media (max-width: 991px) {
+  .content {
+    padding: 1rem;
+  }
+
+  .top-navbar {
+    padding: 0 0.75rem;
+    gap: 0.5rem;
+  }
+
+  .admin-page .card-body {
+    padding: 1rem;
+  }
+
+  .admin-page .row.g-3 > [class*='col-'] {
+    margin-bottom: 0;
+  }
+
+  .admin-page .d-flex.flex-wrap.gap-2,
+  .admin-page .d-flex.gap-2 {
+    width: 100%;
+  }
+
+  .admin-page .btn {
+    white-space: nowrap;
+  }
+
+  .admin-page .table-responsive,
+  .admin-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .admin-page .modal-dialog {
+    margin: 0.75rem;
+    max-width: calc(100% - 1.5rem);
+  }
+}
+
+@media (max-width: 576px) {
+  .content {
+    padding: 0.75rem;
+  }
+
+  .admin-page-title {
+    font-size: 1.15rem;
+  }
+
+  .top-navbar .navbar-brand span,
+  .top-navbar .d-none.d-md-inline {
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
 
