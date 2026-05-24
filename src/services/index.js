@@ -104,6 +104,10 @@ export const platformService = {
     const response = await api.post('/platform/plans', payload);
     return response.data;
   },
+  updatePlan: async (code, payload) => {
+    const response = await api.put(`/platform/plans/${code}`, payload);
+    return response.data;
+  },
   listUsers: async () => {
     const response = await api.get('/platform/users');
     return response.data;
