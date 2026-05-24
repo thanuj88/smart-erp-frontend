@@ -16,6 +16,13 @@ import './SellItems.css';
 
 const HOLD_KEY = 'pos-held-order';
 
+/** Fallback when tenant has no installment settings configured yet */
+const DEFAULT_INSTALLMENT_PERIODS = [
+  { months: 3, interest_rate: 0 },
+  { months: 6, interest_rate: 0 },
+  { months: 12, interest_rate: 0 },
+];
+
 const getItemCategoryIcon = (item, categories) =>
   resolveCategoryIconKey(item.category_icon, categories, item.category_id);
 
@@ -63,6 +70,7 @@ function SellItems() {
   const [pendingPayments, setPendingPayments] = useState([]);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentNotes, setPaymentNotes] = useState('');
+  const [showInstallmentModal, setShowInstallmentModal] = useState(false);
 
   const newOrderRef = () => setOrderRef(`#ORD${Date.now().toString().slice(-6)}`);
 
@@ -81,15 +89,12 @@ function SellItems() {
         setItems(itemsData);
 
         const rates = {};
-        settingsData.forEach((setting) => {
-          rates[setting.months] = setting.interest_rate;
+        (settingsData || []).forEach((setting) => {
+          if (setting?.months != null) {
+            rates[String(setting.months)] = Number(setting.interest_rate) || 0;
+          }
         });
         setInterestRates(rates);
-
-        if (!installmentMonths && settingsData.length > 0) {
-          const sortedSettings = settingsData.sort((a, b) => a.months - b.months);
-          setInstallmentMonths(sortedSettings[0].months.toString());
-        }
       } else if (mode === 'payment') {
         const [plansData, paymentsData] = await Promise.all([
           installmentPlanService.getActive(),
@@ -104,11 +109,32 @@ function SellItems() {
     } finally {
       setLoading(false);
     }
-  }, [mode, installmentMonths, t]);
+  }, [mode, t]);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  const installmentPeriodOptions = useMemo(() => {
+    const keys = Object.keys(interestRates).sort((a, b) => Number(a) - Number(b));
+    if (keys.length > 0) {
+      return keys.map((months) => ({
+        months,
+        interest_rate: interestRates[months],
+      }));
+    }
+    return DEFAULT_INSTALLMENT_PERIODS.map((opt) => ({
+      months: String(opt.months),
+      interest_rate: opt.interest_rate,
+    }));
+  }, [interestRates]);
+
+  useEffect(() => {
+    const available = installmentPeriodOptions.map((opt) => opt.months);
+    if (available.length > 0 && !available.includes(installmentMonths)) {
+      setInstallmentMonths(available[0]);
+    }
+  }, [installmentPeriodOptions, installmentMonths]);
 
   const handleCategorySelect = async (category) => {
     if (!category) {
@@ -228,6 +254,41 @@ function SellItems() {
 
   const calculateTotal = () => bill.reduce((sum, item) => sum + item.total, 0);
 
+  const calculateInstallmentPreview = () => {
+    const total = calculateTotal();
+    const down = parseFloat(downPayment) || 0;
+    const remaining = total - down;
+    const selectedPeriod = installmentPeriodOptions.find((opt) => opt.months === installmentMonths);
+    const rate = selectedPeriod?.interest_rate ?? 0;
+    const interestAmount = (remaining * rate) / 100;
+    const totalWithInterest = remaining + interestAmount;
+    const months = parseInt(installmentMonths, 10) || 1;
+    const monthlyPayment = totalWithInterest / months;
+    return {
+      total: total.toFixed(2),
+      downPayment: down.toFixed(2),
+      remaining: remaining.toFixed(2),
+      interestRate: rate,
+      interestAmount: interestAmount.toFixed(2),
+      totalWithInterest: totalWithInterest.toFixed(2),
+      monthlyPayment: monthlyPayment.toFixed(2),
+    };
+  };
+
+  const openInstallmentModal = () => {
+    if (bill.length === 0) {
+      setError(t('Add items to bill before checkout'));
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
+    setError('');
+    setShowInstallmentModal(true);
+  };
+
+  const closeInstallmentModal = () => {
+    setShowInstallmentModal(false);
+  };
+
   const handleImageCapture = (field, type) => {
     const input = document.createElement('input');
     input.type = 'file';
@@ -238,8 +299,11 @@ function SellItems() {
       if (file) {
         const reader = new FileReader();
         reader.onloadend = () => {
-          if (type === 'customer') setCustomer({ ...customer, [field]: reader.result });
-          else setWitness({ ...witness, [field]: reader.result });
+          if (type === 'customer') {
+            setCustomer((prev) => ({ ...prev, [field]: reader.result }));
+          } else {
+            setWitness((prev) => ({ ...prev, [field]: reader.result }));
+          }
         };
         reader.readAsDataURL(file);
       }
@@ -320,6 +384,7 @@ function SellItems() {
       setCustomer({ name: '', phone: '', idCardNo: '', email: '', address: '', idImage: null });
       setWitness({ name: '', phone: '', idCardNo: '', address: '', idImage: null });
       setDownPayment('');
+      setShowInstallmentModal(false);
       newOrderRef();
       await loadData();
       setTimeout(() => setSuccess(''), 5000);
@@ -406,76 +471,231 @@ function SellItems() {
 
   const handlePaymentAction = () => {
     if (mode === 'cash') handleCashSaleCheckout();
-    else if (mode === 'installment') handleInstallmentSaleCheckout();
+    else if (mode === 'installment') openInstallmentModal();
     else handleInstallmentPayment();
   };
 
   const total = calculateTotal();
-  const preview = mode === 'installment' ? (() => {
-    const down = parseFloat(downPayment) || 0;
-    const remaining = total - down;
-    const rate = interestRates[installmentMonths] || 0;
-    const interest = (remaining * rate) / 100;
-    const totalWithInterest = remaining + interest;
-    const monthly = totalWithInterest / parseInt(installmentMonths, 10);
-    return { monthly: monthly.toFixed(2), rate };
-  })() : null;
+  const installmentPreview = downPayment ? calculateInstallmentPreview() : null;
 
-  const renderInstallmentForm = () => (
-    <div className="pos-installment-form">
-      <div className="row g-2">
-        <div className="col-6">
-          <label className="form-label">{t('Customer Name')}</label>
-          <input className="form-control" value={customer.name} onChange={(e) => setCustomer({ ...customer, name: e.target.value })} />
-        </div>
-        <div className="col-6">
-          <label className="form-label">{t('Phone')}</label>
-          <input className="form-control" value={customer.phone} onChange={(e) => setCustomer({ ...customer, phone: e.target.value })} />
-        </div>
-        <div className="col-6">
-          <label className="form-label">NIC</label>
-          <input className="form-control" value={customer.idCardNo} onChange={(e) => setCustomer({ ...customer, idCardNo: e.target.value })} />
-        </div>
-        <div className="col-6">
-          <label className="form-label">{t('Down Payment')}</label>
-          <input type="number" className="form-control" value={downPayment} onChange={(e) => setDownPayment(e.target.value)} />
-        </div>
-        <div className="col-6">
-          <label className="form-label">{t('Months')}</label>
-          <select className="form-select" value={installmentMonths} onChange={(e) => setInstallmentMonths(e.target.value)}>
-            {Object.keys(interestRates).map((m) => (
-              <option key={m} value={m}>{m} months ({interestRates[m]}%)</option>
-            ))}
-          </select>
-        </div>
-        <div className="col-6">
-          <label className="form-label">{t('Address')}</label>
-          <input className="form-control" value={customer.address} onChange={(e) => setCustomer({ ...customer, address: e.target.value })} />
-        </div>
-        <div className="col-6">
-          <label className="form-label">Witness Name</label>
-          <input className="form-control" value={witness.name} onChange={(e) => setWitness({ ...witness, name: e.target.value })} />
-        </div>
-        <div className="col-6">
-          <label className="form-label">Witness Phone</label>
-          <input className="form-control" value={witness.phone} onChange={(e) => setWitness({ ...witness, phone: e.target.value })} />
-        </div>
-        <div className="col-6">
-          <label className="form-label">Witness NIC</label>
-          <input className="form-control" value={witness.idCardNo} onChange={(e) => setWitness({ ...witness, idCardNo: e.target.value })} />
-        </div>
-        <div className="col-6">
-          <label className="form-label">Witness Address</label>
-          <input className="form-control" value={witness.address} onChange={(e) => setWitness({ ...witness, address: e.target.value })} />
-        </div>
-        {preview && (
-          <div className="col-12 small text-muted">
-            Est. monthly: ${preview.monthly} @ {preview.rate}%
+  const renderInstallmentModal = () => {
+    if (!showInstallmentModal) return null;
+
+    return (
+      <div
+        className="modal show d-block pos-installment-modal"
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="installmentModalTitle"
+      >
+        <div className="modal-dialog modal-lg modal-dialog-scrollable">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h5 className="modal-title" id="installmentModalTitle">
+                <i className="bi bi-clipboard-check me-2"></i>
+                {t('Installment Sale Details')}
+              </h5>
+              <button
+                type="button"
+                className="btn-close"
+                onClick={closeInstallmentModal}
+                disabled={processing}
+                aria-label={t('Close')}
+              />
+            </div>
+            <div className="modal-body">
+              <div className="pos-installment-order-summary mb-3">
+                <span>{t('Order Total')}</span>
+                <strong>${total.toFixed(2)}</strong>
+                <span className="text-muted small ms-2">
+                  ({bill.length} {bill.length === 1 ? t('item') : t('items')})
+                </span>
+              </div>
+
+              <div className="row g-4">
+                <div className="col-md-6">
+                  <h6 className="pos-installment-section-title">{t('Customer Details')}</h6>
+                  <div className="mb-2">
+                    <label className="form-label">{t('Customer Name')} *</label>
+                    <input
+                      className="form-control"
+                      value={customer.name}
+                      onChange={(e) => setCustomer({ ...customer, name: e.target.value })}
+                    />
+                  </div>
+                  <div className="mb-2">
+                    <label className="form-label">{t('Phone')} *</label>
+                    <input
+                      className="form-control"
+                      value={customer.phone}
+                      onChange={(e) => setCustomer({ ...customer, phone: e.target.value })}
+                    />
+                  </div>
+                  <div className="mb-2">
+                    <label className="form-label">{t('ID Card No')} *</label>
+                    <input
+                      className="form-control"
+                      value={customer.idCardNo}
+                      onChange={(e) => setCustomer({ ...customer, idCardNo: e.target.value })}
+                    />
+                  </div>
+                  <div className="mb-2">
+                    <label className="form-label">{t('Address')} *</label>
+                    <input
+                      className="form-control"
+                      value={customer.address}
+                      onChange={(e) => setCustomer({ ...customer, address: e.target.value })}
+                    />
+                  </div>
+                  <div className="mb-2">
+                    <label className="form-label">{t('Email')}</label>
+                    <input
+                      type="email"
+                      className="form-control"
+                      value={customer.email}
+                      onChange={(e) => setCustomer({ ...customer, email: e.target.value })}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-outline-secondary btn-sm w-100"
+                    onClick={() => handleImageCapture('idImage', 'customer')}
+                  >
+                    <i className="bi bi-camera me-1"></i>
+                    {customer.idImage ? t('ID Captured') : t('Capture Customer ID')}
+                  </button>
+                </div>
+
+                <div className="col-md-6">
+                  <h6 className="pos-installment-section-title">{t('Witness Details')}</h6>
+                  <div className="mb-2">
+                    <label className="form-label">{t('Witness Name')} *</label>
+                    <input
+                      className="form-control"
+                      value={witness.name}
+                      onChange={(e) => setWitness({ ...witness, name: e.target.value })}
+                    />
+                  </div>
+                  <div className="mb-2">
+                    <label className="form-label">{t('Witness Phone')} *</label>
+                    <input
+                      className="form-control"
+                      value={witness.phone}
+                      onChange={(e) => setWitness({ ...witness, phone: e.target.value })}
+                    />
+                  </div>
+                  <div className="mb-2">
+                    <label className="form-label">{t('Witness ID')} *</label>
+                    <input
+                      className="form-control"
+                      value={witness.idCardNo}
+                      onChange={(e) => setWitness({ ...witness, idCardNo: e.target.value })}
+                    />
+                  </div>
+                  <div className="mb-2">
+                    <label className="form-label">{t('Witness Address')} *</label>
+                    <input
+                      className="form-control"
+                      value={witness.address}
+                      onChange={(e) => setWitness({ ...witness, address: e.target.value })}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-outline-secondary btn-sm w-100"
+                    onClick={() => handleImageCapture('idImage', 'witness')}
+                  >
+                    <i className="bi bi-camera me-1"></i>
+                    {witness.idImage ? t('ID Captured') : t('Capture Witness ID')}
+                  </button>
+                </div>
+              </div>
+
+              <hr className="my-4" />
+
+              <h6 className="pos-installment-section-title">{t('Payment Terms')}</h6>
+              <div className="row g-3">
+                <div className="col-sm-6">
+                  <label className="form-label">{t('Down Payment')} *</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    className="form-control"
+                    value={downPayment}
+                    onChange={(e) => setDownPayment(e.target.value)}
+                  />
+                </div>
+                <div className="col-sm-6">
+                  <label className="form-label">{t('Installment Period')} *</label>
+                  <select
+                    className="form-select"
+                    value={installmentMonths}
+                    onChange={(e) => setInstallmentMonths(e.target.value)}
+                    disabled={installmentPeriodOptions.length === 0}
+                  >
+                    {installmentPeriodOptions.map((opt) => (
+                      <option key={opt.months} value={opt.months}>
+                        {opt.months} {t('months')} ({opt.interest_rate}% {t('interest')})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {installmentPreview && (
+                <div className="pos-installment-preview mt-3">
+                  <div className="preview-row">
+                    <span>{t('Total')}</span>
+                    <span>${installmentPreview.total}</span>
+                  </div>
+                  <div className="preview-row">
+                    <span>{t('Down Payment')}</span>
+                    <span>${installmentPreview.downPayment}</span>
+                  </div>
+                  <div className="preview-row">
+                    <span>{t('Remaining')}</span>
+                    <span>${installmentPreview.remaining}</span>
+                  </div>
+                  <div className="preview-row">
+                    <span>{t('Interest')} ({installmentPreview.interestRate}%)</span>
+                    <span>${installmentPreview.interestAmount}</span>
+                  </div>
+                  <div className="preview-row highlight">
+                    <span>{t('Total with Interest')}</span>
+                    <span>${installmentPreview.totalWithInterest}</span>
+                  </div>
+                  <div className="preview-row highlight">
+                    <span>{t('Monthly Payment')}</span>
+                    <span>${installmentPreview.monthlyPayment}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button
+                type="button"
+                className="btn btn-light"
+                onClick={closeInstallmentModal}
+                disabled={processing}
+              >
+                {t('Cancel')}
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                disabled={processing}
+                onClick={handleInstallmentSaleCheckout}
+              >
+                {processing ? t('Processing...') : `📋 ${t('Create Installment')}`}
+              </button>
+            </div>
           </div>
-        )}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderOrderPanel = () => (
     <aside className="pos-order-panel">
@@ -494,8 +714,6 @@ function SellItems() {
           )}
         </div>
       </div>
-
-      {mode === 'installment' && renderInstallmentForm()}
 
       {mode !== 'payment' && (
         <>
@@ -607,7 +825,14 @@ function SellItems() {
         <button type="button" className={`pos-mode-btn${mode === 'cash' ? ' active' : ''}`} onClick={() => setMode('cash')}>
           💰 {t('Cash Sale')}
         </button>
-        <button type="button" className={`pos-mode-btn${mode === 'installment' ? ' active' : ''}`} onClick={() => setMode('installment')}>
+        <button
+          type="button"
+          className={`pos-mode-btn${mode === 'installment' ? ' active' : ''}`}
+          onClick={() => {
+            setMode('installment');
+            setShowInstallmentModal(false);
+          }}
+        >
           📋 {t('Installment Sale')}
         </button>
         <button type="button" className={`pos-mode-btn${mode === 'payment' ? ' active' : ''}`} onClick={() => setMode('payment')}>
@@ -805,6 +1030,8 @@ function SellItems() {
           {renderOrderPanel()}
         </div>
       )}
+
+      {renderInstallmentModal()}
     </div>
   );
 }

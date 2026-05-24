@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { categoryService } from '../services';
 import PageHeader from '../components/PageHeader';
@@ -17,6 +17,7 @@ function Categories() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [showIconPicker, setShowIconPicker] = useState(false);
+  const [iconSearch, setIconSearch] = useState('');
   const [editingCategory, setEditingCategory] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
@@ -103,9 +104,18 @@ function Categories() {
     setShowModal(true);
   };
 
+  const filteredIcons = useMemo(() => {
+    const q = iconSearch.trim().toLowerCase();
+    if (!q) return CATEGORY_ICON_LIBRARY;
+    return CATEGORY_ICON_LIBRARY.filter((icon) =>
+      icon.replace(/^Bs/, '').toLowerCase().includes(q)
+    );
+  }, [iconSearch]);
+
   const handleCloseModal = () => {
     setShowModal(false);
     setShowIconPicker(false);
+    setIconSearch('');
     setEditingCategory(null);
     setFormData({
       name: '',
@@ -230,8 +240,16 @@ function Categories() {
                     </button>
                     {showIconPicker && (
                       <div className="category-icon-picker border rounded p-3 mt-2">
+                        <input
+                          type="search"
+                          className="form-control form-control-sm mb-2"
+                          placeholder={t('Search icons...')}
+                          value={iconSearch}
+                          onChange={(e) => setIconSearch(e.target.value)}
+                          aria-label={t('Search icons')}
+                        />
                         <div className="category-icon-picker-grid">
-                          {CATEGORY_ICON_LIBRARY.map((icon) => (
+                          {filteredIcons.map((icon) => (
                             <button
                               key={icon}
                               type="button"
@@ -245,6 +263,9 @@ function Categories() {
                             </button>
                           ))}
                         </div>
+                        {filteredIcons.length === 0 && (
+                          <p className="text-muted small text-center mb-0 mt-2">{t('No icons match your search')}</p>
+                        )}
                       </div>
                     )}
                   </div>

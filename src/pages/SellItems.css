@@ -645,24 +645,75 @@
   font-size: 0.88rem;
 }
 
-.pos-installment-form {
+.pos-installment-modal {
+  background: rgba(33, 43, 54, 0.55);
+  z-index: 1050;
+}
+
+.pos-installment-modal .modal-content {
+  border: none;
+  border-radius: 0.75rem;
+  box-shadow: 0 12px 40px rgba(33, 43, 54, 0.2);
+}
+
+.pos-installment-modal .modal-header {
+  border-bottom: 1px solid #e8ecef;
+  padding: 1rem 1.25rem;
+}
+
+.pos-installment-modal .modal-body {
+  padding: 1.25rem;
+}
+
+.pos-installment-modal .modal-footer {
+  border-top: 1px solid #e8ecef;
+  padding: 0.85rem 1.25rem;
+}
+
+.pos-installment-order-summary {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
   padding: 0.75rem 1rem;
-  border-bottom: 1px solid #f0f2f5;
-  max-height: 280px;
-  overflow-y: auto;
+  background: #fff8f0;
+  border: 1px solid #ffe0b8;
+  border-radius: 0.5rem;
+  font-size: 0.95rem;
 }
 
-.pos-installment-form .form-label {
-  font-size: 0.75rem;
-  font-weight: 600;
-  margin-bottom: 0.2rem;
+.pos-installment-order-summary strong {
+  color: #ff9f43;
+  font-size: 1.15rem;
 }
 
-.pos-installment-form .form-control,
-.pos-installment-form .form-select {
-  font-size: 0.82rem;
-  padding: 0.4rem 0.6rem;
-  margin-bottom: 0.5rem;
+.pos-installment-section-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  margin-bottom: 0.75rem;
+  color: #212b36;
+}
+
+.pos-installment-preview {
+  background: #f8f9fa;
+  border: 1px solid #e8ecef;
+  border-radius: 0.5rem;
+  padding: 0.85rem 1rem;
+}
+
+.pos-installment-preview .preview-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.3rem 0;
+  font-size: 0.9rem;
+  color: #67748e;
+}
+
+.pos-installment-preview .preview-row.highlight {
+  font-weight: 700;
+  color: #28c76f;
+  border-top: 1px dashed #e8ecef;
+  margin-top: 0.35rem;
+  padding-top: 0.5rem;
 }
 
 .pos-summary {
