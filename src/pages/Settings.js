@@ -122,7 +122,7 @@ const Settings = () => {
                   onChange={handleChange}
                 />
               </div>
-              <div className="col-12 pt-2">
+              <div className="col-12 pt-2 d-flex justify-content-end">
                 <button type="submit" className="btn btn-primary">
                   Save settings
                 </button>

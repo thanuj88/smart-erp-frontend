@@ -901,10 +901,6 @@ body {
   overflow: hidden;
 }
 
-.settings-card {
-  max-width: 56rem;
-}
-
 .settings-card .form-label {
   display: block;
   margin-bottom: 0.35rem;
