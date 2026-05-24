@@ -208,116 +208,118 @@ const Users = () => {
 
       {/* Add User Modal */}
       {showModal && (
-        <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <div className="modal-dialog">
+        <div className="modal show d-block users-add-modal-backdrop" tabIndex={-1}>
+          <div className="modal-dialog users-add-modal-dialog">
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="modal-title">
                   <i className="bi bi-person-plus me-2"></i>
                   Add New User
                 </h5>
-                <button type="button" className="btn-close" onClick={() => setShowModal(false)}></button>
+                <button type="button" className="btn-close" onClick={() => setShowModal(false)} aria-label="Close"></button>
               </div>
               <form onSubmit={handleSubmit}>
                 <div className="modal-body">
                   {error && (
-                    <div className="alert alert-danger">
+                    <div className="alert alert-danger py-2 mb-3">
                       <i className="bi bi-exclamation-triangle-fill me-2"></i>
                       {error}
                     </div>
                   )}
-                  <div className="mb-3">
-                    <label htmlFor="username" className="form-label fw-semibold">
-                      Username
-                    </label>
-                    <input
-                      id="username"
-                      name="username"
-                      type="text"
-                      className="form-control"
-                      value={formData.username}
-                      onChange={handleInputChange}
-                      required
-                      autoFocus
-                    />
-                  </div>
-                  <div className="mb-3">
-                    <label htmlFor="fullName" className="form-label fw-semibold">
-                      Full name
-                    </label>
-                    <input
-                      id="fullName"
-                      name="fullName"
-                      type="text"
-                      className="form-control"
-                      value={formData.fullName}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                  <div className="mb-3">
-                    <label htmlFor="email" className="form-label fw-semibold">
-                      Email
-                    </label>
-                    <input
-                      id="email"
-                      name="email"
-                      type="email"
-                      className="form-control"
-                      value={formData.email}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                  <div className="mb-3">
-                    <label htmlFor="password" className="form-label fw-semibold">
-                      Password
-                    </label>
-                    <input
-                      id="password"
-                      name="password"
-                      type="password"
-                      className="form-control"
-                      value={formData.password}
-                      onChange={handleInputChange}
-                      required
-                      minLength={8}
-                    />
-                    <div className="form-text">Minimum 8 characters</div>
-                  </div>
-                  <div className="mb-3">
-                    <label htmlFor="pin" className="form-label fw-semibold">
-                      POS PIN (optional)
-                    </label>
-                    <input
-                      id="pin"
-                      name="pin"
-                      type="password"
-                      inputMode="numeric"
-                      maxLength={8}
-                      className="form-control"
-                      value={formData.pin}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                  <div className="mb-0">
-                    <label htmlFor="role" className="form-label fw-semibold">
-                      Role
-                    </label>
-                    <select
-                      id="role"
-                      name="role"
-                      className="form-select"
-                      value={formData.role}
-                      onChange={handleInputChange}
-                      required
-                    >
-                      <option value="TELLER">Teller / Cashier</option>
-                      <option value="MANAGER">Manager</option>
-                      <option value="INVENTORY">Inventory</option>
-                      <option value="ACCOUNTANT">Accountant</option>
-                    </select>
+                  <div className="row g-3">
+                    <div className="col-sm-6">
+                      <label htmlFor="username" className="form-label fw-semibold">
+                        Username
+                      </label>
+                      <input
+                        id="username"
+                        name="username"
+                        type="text"
+                        className="form-control form-control-sm"
+                        value={formData.username}
+                        onChange={handleInputChange}
+                        required
+                        autoFocus
+                      />
+                    </div>
+                    <div className="col-sm-6">
+                      <label htmlFor="fullName" className="form-label fw-semibold">
+                        Full name
+                      </label>
+                      <input
+                        id="fullName"
+                        name="fullName"
+                        type="text"
+                        className="form-control form-control-sm"
+                        value={formData.fullName}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                    <div className="col-sm-6">
+                      <label htmlFor="email" className="form-label fw-semibold">
+                        Email
+                      </label>
+                      <input
+                        id="email"
+                        name="email"
+                        type="email"
+                        className="form-control form-control-sm"
+                        value={formData.email}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                    <div className="col-sm-6">
+                      <label htmlFor="password" className="form-label fw-semibold">
+                        Password
+                      </label>
+                      <input
+                        id="password"
+                        name="password"
+                        type="password"
+                        className="form-control form-control-sm"
+                        value={formData.password}
+                        onChange={handleInputChange}
+                        required
+                        minLength={8}
+                      />
+                      <div className="form-text">Min. 8 characters</div>
+                    </div>
+                    <div className="col-sm-6">
+                      <label htmlFor="pin" className="form-label fw-semibold">
+                        POS PIN <span className="text-muted fw-normal">(optional)</span>
+                      </label>
+                      <input
+                        id="pin"
+                        name="pin"
+                        type="password"
+                        inputMode="numeric"
+                        maxLength={8}
+                        className="form-control form-control-sm"
+                        value={formData.pin}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                    <div className="col-sm-6">
+                      <label htmlFor="role" className="form-label fw-semibold">
+                        Role
+                      </label>
+                      <select
+                        id="role"
+                        name="role"
+                        className="form-select form-select-sm"
+                        value={formData.role}
+                        onChange={handleInputChange}
+                        required
+                      >
+                        <option value="TELLER">Teller / Cashier</option>
+                        <option value="MANAGER">Manager</option>
+                        <option value="INVENTORY">Inventory</option>
+                        <option value="ACCOUNTANT">Accountant</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
-                <div className="modal-footer">
+                <div className="modal-footer justify-content-end">
                   <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>
                     Cancel
                   </button>

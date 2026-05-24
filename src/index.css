@@ -98,6 +98,66 @@ body {
   margin-top: calc(var(--dreams-topbar-height) + 12px);
 }
 
+/* Add User modal — compact layout, no scroll on laptop */
+.users-add-modal-backdrop {
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.modal.show .users-add-modal-dialog {
+  max-width: 42rem;
+  margin-top: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.users-add-modal-dialog {
+  max-width: 42rem;
+  margin-top: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.users-add-modal-dialog .modal-content {
+  overflow: visible;
+}
+
+.users-add-modal-dialog .modal-header {
+  padding: 0.85rem 1.15rem;
+}
+
+.users-add-modal-dialog .modal-body {
+  overflow: visible;
+  padding: 0.85rem 1.15rem 0.5rem;
+}
+
+.users-add-modal-dialog .modal-footer {
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 0.75rem 1.15rem;
+}
+
+.users-add-modal-dialog .form-label {
+  margin-bottom: 0.25rem;
+  font-size: 0.85rem;
+}
+
+.users-add-modal-dialog .form-text {
+  margin-top: 0.2rem;
+  font-size: 0.75rem;
+}
+
+@media (min-width: 576px) {
+  .users-add-modal-dialog {
+    margin-top: 2rem;
+  }
+}
+
+@media (max-width: 575px) {
+  .users-add-modal-dialog .modal-body {
+    max-height: calc(100dvh - 11rem);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
 /* Also cover custom full-screen overlays (tailwind-style) used elsewhere */
 .fixed.inset-0.bg-black.bg-opacity-50 {
   z-index: 1200;
