@@ -193,19 +193,29 @@ const InstallmentPlans = () => {
     }
   };
 
-  if (loading && !selectedPlan) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
+  const getStatusBadgeClass = (status) => {
+    switch (status) {
+      case 'active':
+        return 'bg-primary';
+      case 'completed':
+      case 'paid':
+        return 'bg-success';
+      case 'defaulted':
+      case 'overdue':
+        return 'bg-danger';
+      case 'pending':
+        return 'bg-warning text-dark';
+      default:
+        return 'bg-secondary';
+    }
+  };
+
+  if (loading && !selectedPlan && plans.length === 0 && settings.length === 0) {
+    return <AdminLoading message="Loading installment data..." />;
   }
 
   return (
-    <div className="container-fluid py-4 matte-page admin-page">
+    <div className="container-fluid py-4 matte-page admin-page installment-page">
       <PageHeader
         title="Installment Management"
         subtitle="Manage installment plans, payments, and interest rate settings."
@@ -233,153 +243,139 @@ const InstallmentPlans = () => {
         )}
       </ul>
 
-            {/* Plans Tab Content */}
       {mainTab === 'plans' && (
         <>
-          {/* Sub-tabs for Plans */}
-          <ul className="nav nav-pills mb-3">
-            <li className="nav-item"><button type="button" className={`nav-link ${plansTab === 'all' ? 'active' : ''}`} onClick={() => setPlansTab('all')}>All Plans</button></li>
-            <li className="nav-item"><button type="button" className={`nav-link ${plansTab === 'active' ? 'active' : ''}`} onClick={() => setPlansTab('active')}>Active</button></li>
-            <li className="nav-item"><button type="button" className={`nav-link ${plansTab === 'completed' ? 'active' : ''}`} onClick={() => setPlansTab('completed')}>Completed</button></li>
-          </ul>
+          <div className="admin-filter-tabs">
+            <button
+              type="button"
+              className={`btn btn-sm ${plansTab === 'all' ? 'btn-primary' : 'btn-outline-secondary'}`}
+              onClick={() => setPlansTab('all')}
+            >
+              All Plans
+            </button>
+            <button
+              type="button"
+              className={`btn btn-sm ${plansTab === 'active' ? 'btn-primary' : 'btn-outline-secondary'}`}
+              onClick={() => setPlansTab('active')}
+            >
+              Active
+            </button>
+            <button
+              type="button"
+              className={`btn btn-sm ${plansTab === 'completed' ? 'btn-primary' : 'btn-outline-secondary'}`}
+              onClick={() => setPlansTab('completed')}
+            >
+              Completed
+            </button>
+          </div>
 
           <div className="card">
-            {/* Section Header */}
-            <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+            <div className="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">Installment Plans</h3>
-                <p className="text-sm text-gray-500 mt-1">
-                  {plansTab === 'active' ? 'Active installment plans' : plansTab === 'completed' ? 'Completed installment plans' : 'All installment plans'}
+                <h5 className="admin-section-title mb-1">Installment Plans</h5>
+                <p className="admin-section-subtitle">
+                  {plansTab === 'active'
+                    ? 'Active installment plans'
+                    : plansTab === 'completed'
+                      ? 'Completed installment plans'
+                      : 'All installment plans'}
                 </p>
               </div>
-              <div className="bg-cyan-500 text-white rounded-full px-4 py-1 text-sm font-semibold">
-                {plans.length} total
-              </div>
+              <span className="badge rounded-pill text-bg-primary">{plans.length} total</span>
             </div>
-
-            {/* Table */}
-            {plans.length === 0 ? (
-              <p className="text-gray-500 text-center py-8">No installment plans found.</p>
-            ) : (
-              <div className="table-responsive"><table className="table table-hover admin-table mb-0"><thead className="table-light">
-                    <tr>
-                      <th className="border-0 fw-semibold">
-                        Plan #
-                      </th>
-                      <th className="border-0 fw-semibold">
-                        Customer
-                      </th>
-                      <th className="border-0 fw-semibold">
-                        Phone
-                      </th>
-                      <th className="border-0 fw-semibold">
-                        Total Amount
-                      </th>
-                      <th className="border-0 fw-semibold">
-                        Paid Amount
-                      </th>
-                      <th className="border-0 fw-semibold">
-                        Remaining
-                      </th>
-                      <th className="border-0 fw-semibold">
-                        Monthly Payment
-                      </th>
-                      <th className="border-0 fw-semibold">
-                        Status
-                      </th>
-                      <th className="border-0 fw-semibold">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {plans.map((plan) => (
-                      <tr key={plan.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          #{plan.id}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {plan.customer_name}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {plan.customer_phone}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          ${plan.total_with_interest.toFixed(2)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          ${plan.paid_amount.toFixed(2)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-red-600 font-medium">
-                          ${(plan.total_with_interest - plan.paid_amount).toFixed(2)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          ${plan.monthly_payment.toFixed(2)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium capitalize">
-                          <span className={getStatusColor(plan.status)}>
-                            {plan.status}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <button
-                            onClick={() => loadPlanDetails(plan.id)}
-                            className="btn btn-outline-primary btn-sm"
-                          >
-                            <i className="bi bi-eye me-1"></i>View Details
-                          </button>
-                        </td>
+            <div className="card-body p-0">
+              {loading ? (
+                <p className="text-muted text-center py-5 mb-0">Loading plans...</p>
+              ) : plans.length === 0 ? (
+                <p className="text-muted text-center py-5 mb-0">No installment plans found.</p>
+              ) : (
+                <div className="table-responsive">
+                  <table className="table table-hover admin-table mb-0">
+                    <thead className="table-light">
+                      <tr>
+                        <th className="border-0 fw-semibold">Plan #</th>
+                        <th className="border-0 fw-semibold">Customer</th>
+                        <th className="border-0 fw-semibold">Phone</th>
+                        <th className="border-0 fw-semibold">Total Amount</th>
+                        <th className="border-0 fw-semibold">Paid Amount</th>
+                        <th className="border-0 fw-semibold">Remaining</th>
+                        <th className="border-0 fw-semibold">Monthly Payment</th>
+                        <th className="border-0 fw-semibold">Status</th>
+                        <th className="border-0 fw-semibold">Actions</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+                    </thead>
+                    <tbody>
+                      {plans.map((plan) => (
+                        <tr key={plan.id}>
+                          <td className="fw-semibold">#{plan.id}</td>
+                          <td>{plan.customer_name}</td>
+                          <td className="text-muted">{plan.customer_phone}</td>
+                          <td>${plan.total_with_interest.toFixed(2)}</td>
+                          <td>${plan.paid_amount.toFixed(2)}</td>
+                          <td className="text-danger fw-semibold">
+                            ${(plan.total_with_interest - plan.paid_amount).toFixed(2)}
+                          </td>
+                          <td>${plan.monthly_payment.toFixed(2)}</td>
+                          <td>
+                            <span className={`badge text-capitalize ${getStatusBadgeClass(plan.status)}`}>
+                              {plan.status}
+                            </span>
+                          </td>
+                          <td>
+                            <button
+                              type="button"
+                              onClick={() => loadPlanDetails(plan.id)}
+                              className="btn btn-outline-primary btn-sm"
+                            >
+                              <i className="bi bi-eye me-1"></i>
+                              View Details
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
           </div>
         </>
       )}
 
-      {/* Settings Tab Content */}
       {mainTab === 'settings' && isAdmin && (
-        <>
-          <div className="card">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">Interest Rate Configuration</h3>
-                <p className="text-gray-600 text-sm">
-                  Configure interest rates for different installment periods. These rates will be available when creating new installment sales.
-                </p>
-              </div>
-              <button onClick={openAddSettingModal} className="btn btn-primary">
-                Add New Setting
-              </button>
+        <div className="card">
+          <div className="card-header d-flex flex-wrap align-items-center justify-content-between gap-3">
+            <div>
+              <h5 className="admin-section-title mb-1">Interest Rate Configuration</h5>
+              <p className="admin-section-subtitle">
+                Configure interest rates for different installment periods. These rates will be available when creating new installment sales.
+              </p>
             </div>
-
-            {settings.length === 0 ? (
-              <p className="text-gray-500 text-center py-8">No installment settings found. Click "Add New Setting" to create one.</p>
+            <button type="button" onClick={openAddSettingModal} className="btn btn-primary btn-sm">
+              <i className="bi bi-plus-circle me-1"></i>
+              Add New Setting
+            </button>
+          </div>
+          <div className="card-body p-0">
+            {loading ? (
+              <p className="text-muted text-center py-5 mb-0">Loading settings...</p>
+            ) : settings.length === 0 ? (
+              <p className="text-muted text-center py-5 mb-0">
+                No installment settings found. Click &quot;Add New Setting&quot; to create one.
+              </p>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50">
+              <div className="table-responsive">
+                <table className="table table-hover admin-table mb-0">
+                  <thead className="table-light">
                     <tr>
-                      <th className="border-0 fw-semibold">
-                        Months
-                      </th>
-                      <th className="border-0 fw-semibold">
-                        Interest Rate
-                      </th>
-                      <th className="border-0 fw-semibold">
-                        Example: $1000 Item
-                      </th>
-                      <th className="border-0 fw-semibold">
-                        Last Updated
-                      </th>
-                      <th className="border-0 fw-semibold">
-                        Actions
-                      </th>
+                      <th className="border-0 fw-semibold">Months</th>
+                      <th className="border-0 fw-semibold">Interest Rate</th>
+                      <th className="border-0 fw-semibold">Example: $1000 Item</th>
+                      <th className="border-0 fw-semibold">Last Updated</th>
+                      <th className="border-0 fw-semibold">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody>
                     {settings.map((setting) => {
                       const exampleAmount = 1000;
                       const interestAmount = (exampleAmount * setting.interest_rate) / 100;
@@ -387,33 +383,27 @@ const InstallmentPlans = () => {
                       const monthlyPayment = totalWithInterest / setting.months;
 
                       return (
-                        <tr key={setting.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                            {setting.months} months
+                        <tr key={setting.id}>
+                          <td className="fw-semibold">{setting.months} months</td>
+                          <td className="text-primary fw-semibold">{setting.interest_rate}%</td>
+                          <td className="text-muted">
+                            <div>Total: ${totalWithInterest.toFixed(2)}</div>
+                            <div>Monthly: ${monthlyPayment.toFixed(2)}</div>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
-                            {setting.interest_rate}%
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            <div>
-                              <div>Total: ${totalWithInterest.toFixed(2)}</div>
-                              <div>Monthly: ${monthlyPayment.toFixed(2)}</div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {new Date(setting.updated_at).toLocaleDateString()}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <div className="flex gap-2">
+                          <td className="text-muted">{new Date(setting.updated_at).toLocaleDateString()}</td>
+                          <td>
+                            <div className="d-flex flex-wrap gap-2">
                               <button
+                                type="button"
                                 onClick={() => openEditSettingModal(setting)}
-                                className="btn btn-primary btn-sm"
+                                className="btn btn-outline-primary btn-sm"
                               >
                                 Edit
                               </button>
                               <button
+                                type="button"
                                 onClick={() => handleDeleteSetting(setting.months)}
-                                className="btn btn-danger btn-sm"
+                                className="btn btn-outline-danger btn-sm"
                               >
                                 Delete
                               </button>
@@ -427,7 +417,7 @@ const InstallmentPlans = () => {
               </div>
             )}
           </div>
-        </>
+        </div>
       )}
 
       {/* Plan Details Modal */}

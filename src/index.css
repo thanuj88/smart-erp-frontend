@@ -1068,6 +1068,80 @@ body {
   color: var(--dreams-orange);
 }
 
+.admin-page .nav-tabs.admin-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  border-bottom: 1px solid var(--dreams-border);
+  margin-bottom: 1.25rem;
+  padding: 0;
+}
+
+.admin-page .nav-tabs.admin-tabs .nav-item {
+  margin-bottom: 0;
+}
+
+.admin-page .nav-tabs.admin-tabs .nav-link {
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  color: var(--dreams-text-muted);
+  font-weight: 600;
+  font-size: 0.88rem;
+  padding: 0.65rem 1.1rem;
+  margin-bottom: -1px;
+  background: transparent;
+}
+
+.admin-page .nav-tabs.admin-tabs .nav-link:hover {
+  color: var(--dreams-text);
+  border-color: transparent;
+  background: transparent;
+}
+
+.admin-page .nav-tabs.admin-tabs .nav-link.active {
+  color: var(--dreams-orange);
+  border-bottom-color: var(--dreams-orange);
+  background: transparent;
+}
+
+.admin-page .admin-filter-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.admin-page .admin-filter-tabs .btn {
+  border-radius: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.45rem 1rem;
+}
+
+.admin-page .admin-filter-tabs .btn-primary {
+  background: var(--dreams-orange);
+  border-color: var(--dreams-orange);
+}
+
+.admin-page .admin-filter-tabs .btn-outline-secondary {
+  background: #fff;
+  border-color: var(--dreams-border);
+  color: var(--dreams-text-muted);
+}
+
+.admin-page .admin-filter-tabs .btn-outline-secondary:hover {
+  background: var(--dreams-orange-soft);
+  border-color: var(--dreams-orange);
+  color: var(--dreams-orange);
+}
+
+.admin-page .card-header {
+  background: #fff;
+  border-bottom: 1px solid var(--dreams-border);
+  padding: 0.85rem 1rem;
+}
+
 .admin-modal .modal-content {
   border-radius: 0.75rem;
   border: 1px solid var(--dreams-border);
