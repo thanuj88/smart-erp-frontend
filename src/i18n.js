@@ -6,9 +6,17 @@ const resources = {
   en: {
     translation: {
       // Navigation
+      sidebarPrimary: 'Primary',
+      sidebarCatalog: 'Catalog',
+      sidebarReporting: 'Reporting',
+      sidebarInstallments: 'Installments',
+      sidebarAdministration: 'Administration',
       dashboard: 'Dashboard',
       sellItems: 'Sell Items',
       inventory: 'Inventory',
+      items: 'Items',
+      categories: 'Categories',
+      settings: 'Settings',
       salesReport: 'Sales Report',
       users: 'Users',
       installmentPlans: 'Installment Plans',
@@ -159,9 +167,17 @@ const resources = {
   si: {
     translation: {
       // Navigation - Sinhala
+      sidebarPrimary: 'ප්‍රධාන',
+      sidebarCatalog: 'නිර්දේශිකාව',
+      sidebarReporting: 'වාර්තා',
+      sidebarInstallments: 'වාරික',
+      sidebarAdministration: 'පරිපාලනය',
       dashboard: 'උපකරණ පුවරුව',
       sellItems: 'භාණ්ඩ විකුණන්න',
       inventory: 'ඉන්වෙන්ටරි',
+      items: 'භාණ්ඩ',
+      categories: 'වර්ග',
+      settings: 'සැකසුම්',
       salesReport: 'විකුණුම් වාර්තාව',
       users: 'පරිශීලකයින්',
       installmentPlans: 'වාරික සැලසුම්',
