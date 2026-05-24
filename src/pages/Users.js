@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { userService } from '../services';
+import { useAuth } from '../contexts/AuthContext';
 
 const Users = () => {
+  const { user: currentUser } = useAuth();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -154,9 +156,18 @@ const Users = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {users.map((user) => (
+                  {users.map((user) => {
+                    const isOwnAccount =
+                      currentUser && String(user.id) === String(currentUser.id);
+
+                    return (
                     <tr key={user.id}>
-                      <td className="fw-semibold">{user.username}</td>
+                      <td className="fw-semibold">
+                        {user.username}
+                        {isOwnAccount && (
+                          <span className="badge bg-light text-muted border ms-2">You</span>
+                        )}
+                      </td>
                       <td>
                         <span
                           className={`badge ${
@@ -177,14 +188,17 @@ const Users = () => {
                             type="button"
                             onClick={() => handleDelete(user.id)}
                             className="btn btn-outline-danger btn-sm"
-                            title="Delete user"
+                            title={isOwnAccount ? 'You cannot delete your own account' : 'Delete user'}
+                            disabled={isOwnAccount}
+                            aria-disabled={isOwnAccount}
                           >
                             <i className="bi bi-trash"></i>
                           </button>
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
