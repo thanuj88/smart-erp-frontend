@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { itemService, categoryService } from '../services';
 import ProductThumbnail from '../components/ProductThumbnail';
 import ProductImageField from '../components/ProductImageField';
+import CategoryFormModal from '../components/CategoryFormModal';
 import '../components/ProductThumbnail.css';
 import { resolveProductImageUrl } from '../utils/productImage';
 
@@ -27,6 +28,7 @@ const Inventory = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
 
   useEffect(() => {
     loadItems();
@@ -71,7 +73,7 @@ const Inventory = () => {
     const { name, value } = e.target;
 
     if (name === 'categoryId') {
-      const selectedCategory = categories.find(cat => cat.id === parseInt(value));
+      const selectedCategory = categories.find((cat) => String(cat.id) === String(value));
       setFormData({
         ...formData,
         categoryId: value,
@@ -83,6 +85,17 @@ const Inventory = () => {
         [name]: value,
       });
     }
+  };
+
+  const handleCategoryCreated = async (created) => {
+    const updated = await categoryService.getAll();
+    setCategories(updated);
+    setFormData((prev) => ({
+      ...prev,
+      categoryId: String(created.id),
+      category: created.name,
+    }));
+    setShowCategoryModal(false);
   };
 
   const resetImageState = () => {
@@ -103,6 +116,7 @@ const Inventory = () => {
       image: null,
     });
     resetImageState();
+    setShowCategoryModal(false);
     setShowModal(true);
     setError('');
     setSuccess('');
@@ -122,6 +136,7 @@ const Inventory = () => {
     });
     setImagePreview(resolveProductImageUrl(item.image_path) || null);
     setRemoveImage(false);
+    setShowCategoryModal(false);
     setShowModal(true);
     setError('');
     setSuccess('');
@@ -389,7 +404,18 @@ const Inventory = () => {
                     </div>
 
                     <div className="col-md-6">
-                      <label className="form-label fw-semibold">Category</label>
+                      <label className="form-label fw-semibold inventory-field-label">
+                        Category
+                        <button
+                          type="button"
+                          className="btn btn-link inventory-add-category-btn"
+                          onClick={() => setShowCategoryModal(true)}
+                          title="Add category"
+                          aria-label="Add category"
+                        >
+                          <i className="bi bi-plus-circle"></i>
+                        </button>
+                      </label>
                       <select
                         name="categoryId"
                         className="form-select"
@@ -403,7 +429,7 @@ const Inventory = () => {
                           </option>
                         ))}
                       </select>
-                      <div className="form-text">Manage categories from the Categories menu</div>
+
                     </div>
 
                     <div className="col-12">
@@ -495,6 +521,12 @@ const Inventory = () => {
           </div>
         </div>
       )}
+
+      <CategoryFormModal
+        open={showCategoryModal}
+        onClose={() => setShowCategoryModal(false)}
+        onCreated={handleCategoryCreated}
+      />
     </div>
   );
 };
