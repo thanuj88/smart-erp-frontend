@@ -1,0 +1,130 @@
+.product-thumbnail-img {
+  display: block;
+  object-fit: cover;
+  border-radius: 0.4rem;
+  background: #f5f6fa;
+}
+
+.product-thumbnail-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 0.4rem;
+  background: #f5f6fa;
+}
+
+.product-image-preview {
+  width: 96px;
+  height: 96px;
+  object-fit: cover;
+  border-radius: 0.5rem;
+  border: 1px solid #e8ecef;
+}
+
+.product-image-upload-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+/* Compact product image field in add/edit modal */
+.inventory-product-modal .modal-content {
+  overflow: visible;
+}
+
+.inventory-product-modal .modal-body {
+  overflow: visible;
+  max-height: none;
+  padding: 1rem 1.25rem;
+}
+
+.inventory-product-modal .modal-header,
+.inventory-product-modal .modal-footer {
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+}
+
+.product-form-image-group .input-group-text {
+  padding: 0.35rem 0.5rem;
+  background: #f8f9fa;
+}
+
+.product-form-image-thumb {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  min-width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+}
+
+.product-form-image-preview {
+  width: 2rem;
+  height: 2rem;
+  object-fit: cover;
+  border-radius: 0.25rem;
+}
+
+.product-form-image-empty {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.65rem 0.85rem;
+  border: 1px dashed #ced4da;
+  border-radius: 0.375rem;
+  background: #fff;
+  color: #67748e;
+  cursor: pointer;
+  text-align: left;
+}
+
+.product-form-image-empty:hover {
+  border-color: #ff9f43;
+  background: #fffaf5;
+}
+
+.product-form-image-empty-text {
+  font-size: 0.9rem;
+}
+
+.product-form-image-selected {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.65rem;
+  border: 1px solid #e8ecef;
+  border-radius: 0.375rem;
+  background: #fafbfc;
+}
+
+.product-form-image-display-btn {
+  border: none;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.product-form-image-display {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 0.375rem;
+  border: 1px solid #e8ecef;
+  display: block;
+}
+
+.product-form-image-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.product-form-image-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+}

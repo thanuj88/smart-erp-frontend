@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { itemService, categoryService } from '../services';
-import CategoryIcon from '../components/CategoryIcon';
-import { resolveCategoryIconKey } from '../config/categoryIcons';
+import ProductThumbnail from '../components/ProductThumbnail';
+import ProductImageField from '../components/ProductImageField';
+import '../components/ProductThumbnail.css';
+import { resolveProductImageUrl } from '../utils/productImage';
 
 const Inventory = () => {
   const [items, setItems] = useState([]);
@@ -18,7 +20,10 @@ const Inventory = () => {
     quantity: '',
     category: '',
     categoryId: '',
+    image: null,
   });
+  const [imagePreview, setImagePreview] = useState(null);
+  const [removeImage, setRemoveImage] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
@@ -80,6 +85,11 @@ const Inventory = () => {
     }
   };
 
+  const resetImageState = () => {
+    setImagePreview(null);
+    setRemoveImage(false);
+  };
+
   const openAddModal = () => {
     setEditingItem(null);
     setFormData({
@@ -90,7 +100,9 @@ const Inventory = () => {
       quantity: '',
       category: '',
       categoryId: '',
+      image: null,
     });
+    resetImageState();
     setShowModal(true);
     setError('');
     setSuccess('');
@@ -106,21 +118,49 @@ const Inventory = () => {
       quantity: item.quantity,
       category: item.category,
       categoryId: item.category_id || '',
+      image: null,
     });
+    setImagePreview(resolveProductImageUrl(item.image_path) || null);
+    setRemoveImage(false);
     setShowModal(true);
     setError('');
     setSuccess('');
   };
 
-  const buildPayload = () => ({
-    name: formData.name.trim(),
-    description: formData.description?.trim() || '',
-    buyingPrice: formData.buyingPrice === '' ? 0 : Number(formData.buyingPrice),
-    sellingPrice: Number(formData.sellingPrice),
-    quantity: parseInt(formData.quantity, 10),
-    category: formData.category || '',
-    categoryId: formData.categoryId || null,
-  });
+  const handleImageSelect = (imageData, imageError) => {
+    if (imageError) {
+      setError(imageError);
+      return;
+    }
+    setFormData((prev) => ({ ...prev, image: imageData }));
+    setImagePreview(imageData);
+    setRemoveImage(false);
+    setError('');
+  };
+
+  const handleImageRemove = () => {
+    setFormData((prev) => ({ ...prev, image: null }));
+    setImagePreview(null);
+    setRemoveImage(true);
+  };
+
+  const buildPayload = () => {
+    const payload = {
+      name: formData.name.trim(),
+      description: formData.description?.trim() || '',
+      buyingPrice: formData.buyingPrice === '' ? 0 : Number(formData.buyingPrice),
+      sellingPrice: Number(formData.sellingPrice),
+      quantity: parseInt(formData.quantity, 10),
+      category: formData.category || '',
+      categoryId: formData.categoryId || null,
+    };
+    if (formData.image) {
+      payload.image = formData.image;
+    } else if (removeImage) {
+      payload.removeImage = true;
+    }
+    return payload;
+  };
 
   const formatSaveError = (err) => {
     const data = err.response?.data;
@@ -262,22 +302,17 @@ const Inventory = () => {
                   {visibleItems.map((item) => (
                     <tr key={item.id}>
                       <td>
-                        <div className="fw-semibold">{item.name}</div>
-                        <small className="text-muted">{item.description || 'No description'}</small>
+                        <div className="d-flex align-items-center gap-2">
+                          <span className="product-thumbnail-wrap" style={{ width: 40, height: 40 }}>
+                            <ProductThumbnail item={item} categories={categories} size={40} />
+                          </span>
+                          <div>
+                            <div className="fw-semibold">{item.name}</div>
+                            <small className="text-muted">{item.description || 'No description'}</small>
+                          </div>
+                        </div>
                       </td>
-                      <td>
-                        <span className="d-inline-flex align-items-center gap-1">
-                          <CategoryIcon
-                            name={resolveCategoryIconKey(
-                              item.category_icon,
-                              categories,
-                              item.category_id
-                            )}
-                            size={18}
-                          />
-                          {item.category_name || item.category || '—'}
-                        </span>
-                      </td>
+                      <td>{item.category_name || item.category || '—'}</td>
                       <td className="text-muted">{item.barcode || '—'}</td>
                       <td className="fw-semibold">
                         ${(item.selling_price ?? item.price)?.toFixed(2) || '0.00'}
@@ -318,7 +353,7 @@ const Inventory = () => {
       {/* Modal */}
       {showModal && (
         <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <div className="modal-dialog modal-lg">
+          <div className="modal-dialog modal-lg inventory-product-modal">
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="modal-title">
@@ -340,7 +375,7 @@ const Inventory = () => {
                     </div>
                   )}
 
-                  <div className="row g-3">
+                  <div className="row g-2">
                     <div className="col-md-6">
                       <label className="form-label fw-semibold">Product Name *</label>
                       <input
@@ -427,6 +462,16 @@ const Inventory = () => {
                         onChange={handleInputChange}
                         min="0"
                         required
+                      />
+                    </div>
+
+                    <div className="col-12">
+                      <ProductImageField
+                        imagePreview={imagePreview}
+                        categoryId={formData.categoryId}
+                        categories={categories}
+                        onSelect={handleImageSelect}
+                        onRemove={handleImageRemove}
                       />
                     </div>
                   </div>

@@ -11,6 +11,7 @@ import {
   installmentPlanService,
 } from '../services';
 import CategoryIcon from '../components/CategoryIcon';
+import ProductThumbnail from '../components/ProductThumbnail';
 import { resolveCategoryIconKey } from '../config/categoryIcons';
 import './SellItems.css';
 
@@ -197,6 +198,9 @@ function SellItems() {
           maxQuantity: item.quantity,
           total: price,
           categoryIcon: getItemCategoryIcon(item, categories),
+          category_id: item.category_id,
+          category_icon: item.category_icon,
+          image_path: item.image_path,
         },
       ]);
     }
@@ -746,7 +750,7 @@ function SellItems() {
                 <div key={item.id} className="pos-order-item">
                   <div className="pos-order-item-info">
                     <span className="pos-order-item-thumb">
-                      <CategoryIcon name={item.categoryIcon} size={22} />
+                      <ProductThumbnail item={item} categories={categories} size={22} />
                     </span>
                     <span className="pos-order-item-name">{item.name}</span>
                   </div>
@@ -967,7 +971,7 @@ function SellItems() {
                       >
                         <span className="pos-product-check"><i className="bi bi-check-lg"></i></span>
                         <div className="pos-product-image">
-                          <CategoryIcon name={getItemCategoryIcon(item, categories)} size={36} />
+                          <ProductThumbnail item={item} categories={categories} size={36} />
                         </div>
                         <div className="pos-product-cat">{cat?.name || 'General'}</div>
                         <div className="pos-product-name">{item.name}</div>

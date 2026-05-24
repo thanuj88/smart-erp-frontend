@@ -414,6 +414,13 @@
   justify-content: center;
   margin-bottom: 0.65rem;
   color: #ff9f43;
+  overflow: hidden;
+}
+
+.pos-product-image .product-thumbnail-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 0.5rem;
 }
 
 .pos-product-cat {
