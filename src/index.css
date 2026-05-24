@@ -841,6 +841,20 @@ body {
   overflow: hidden;
 }
 
+.settings-card {
+  max-width: 56rem;
+}
+
+.settings-card .form-label {
+  display: block;
+  margin-bottom: 0.35rem;
+}
+
+.settings-card .form-control,
+.settings-card .form-select {
+  width: 100%;
+}
+
 .admin-page .btn-primary {
   background: var(--dreams-orange);
   border-color: var(--dreams-orange);

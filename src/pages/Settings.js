@@ -1,11 +1,9 @@
 import React, { useState } from 'react';
 import PageHeader from '../components/PageHeader';
 import AdminAlerts from '../components/AdminAlerts';
-import { useTranslation } from 'react-i18next';
 import { APP_NAME } from '../config/app';
 
 const Settings = () => {
-  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     businessName: APP_NAME,
     currency: 'USD ($)',
@@ -36,109 +34,103 @@ const Settings = () => {
 
       <AdminAlerts success={success} onClearSuccess={() => setSuccess('')} />
 
-      <div className="card mb-4">
-        <form className="row g-3" onSubmit={handleSubmit}>
-          <div className="col-md-6"><label className="form-label">Business name</label>
-            <input
-              type="text"
-              name="businessName"
-              className="form-control"
-              value={formData.businessName}
-              onChange={handleChange}
-            />
-          </div>
-          <div className="col-md-6"><label className="form-label">Currency</label>
-            <select
-              name="currency"
-              className="form-control"
-              value={formData.currency}
-              onChange={handleChange}
-            >
-              <option>USD ($)</option>
-              <option>EUR (€)</option>
-              <option>LKR (Rs)</option>
-            </select>
-          </div>
-          <div className="col-md-6"><label className="form-label">Currency symbol</label>
-            <input
-              type="text"
-              name="currencySymbol"
-              className="form-control"
-              value={formData.currencySymbol}
-              onChange={handleChange}
-            />
-          </div>
-          <div className="col-md-6"><label className="form-label">Tax rate (%)</label>
-            <input
-              type="number"
-              name="taxRate"
-              className="form-control"
-              value={formData.taxRate}
-              onChange={handleChange}
-            />
-          </div>
-          <div className="col-md-6"><label className="form-label">Low stock threshold</label>
-            <input
-              type="number"
-              name="lowStockThreshold"
-              className="form-control"
-              value={formData.lowStockThreshold}
-              onChange={handleChange}
-            />
-          </div>
-          <div className="col-md-6"><label className="form-label">Receipt footer</label>
-            <input
-              type="text"
-              name="receiptFooter"
-              className="form-control"
-              value={formData.receiptFooter}
-              onChange={handleChange}
-            />
-          </div>
-          <div className="col-12">
-            <button type="submit" className="btn btn-primary">
-              Save settings
-            </button>
-          </div>
-        </form>
-      </div>
-
-      <div className="card">
-        <div className="card-header-flex">
-          <div>
-            <h2 className="card-title">Demo Accounts</h2>
-            <p className="text-sm text-gray-500">These accounts are preloaded for demonstration. Admin has full access, Teller can only use POS.</p>
-          </div>
-        </div>
-
-        <div className="overflow-x-auto mt-4">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>USERNAME</th>
-                <th className="border-0 fw-semibold">PASSWORD</th>
-                <th className="border-0 fw-semibold">ROLE</th>
-                <th className="border-0 fw-semibold">ACCESS</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>admin</td>
-                <td>admin123</td>
-                <td><span className="badge bg-primary">admin</span></td>
-                <td>Dashboard, POS, Inventory, Settings</td>
-              </tr>
-              <tr>
-                <td>teller</td>
-                <td>teller123</td>
-                <td><span className="badge bg-secondary">teller</span></td>
-                <td>POS only</td>
-              </tr>
-            </tbody>
-          </table>
+      <div className="card settings-card">
+        <div className="card-body">
+          <form onSubmit={handleSubmit}>
+            <div className="row g-3">
+              <div className="col-md-6">
+                <label htmlFor="settings-business-name" className="form-label fw-semibold">
+                  Business name
+                </label>
+                <input
+                  id="settings-business-name"
+                  type="text"
+                  name="businessName"
+                  className="form-control"
+                  value={formData.businessName}
+                  onChange={handleChange}
+                />
+              </div>
+              <div className="col-md-6">
+                <label htmlFor="settings-currency" className="form-label fw-semibold">
+                  Currency
+                </label>
+                <select
+                  id="settings-currency"
+                  name="currency"
+                  className="form-select"
+                  value={formData.currency}
+                  onChange={handleChange}
+                >
+                  <option>USD ($)</option>
+                  <option>EUR (€)</option>
+                  <option>LKR (Rs)</option>
+                </select>
+              </div>
+              <div className="col-md-6">
+                <label htmlFor="settings-currency-symbol" className="form-label fw-semibold">
+                  Currency symbol
+                </label>
+                <input
+                  id="settings-currency-symbol"
+                  type="text"
+                  name="currencySymbol"
+                  className="form-control"
+                  value={formData.currencySymbol}
+                  onChange={handleChange}
+                />
+              </div>
+              <div className="col-md-6">
+                <label htmlFor="settings-tax-rate" className="form-label fw-semibold">
+                  Tax rate (%)
+                </label>
+                <input
+                  id="settings-tax-rate"
+                  type="number"
+                  name="taxRate"
+                  className="form-control"
+                  value={formData.taxRate}
+                  onChange={handleChange}
+                  min="0"
+                  step="0.01"
+                />
+              </div>
+              <div className="col-md-6">
+                <label htmlFor="settings-low-stock" className="form-label fw-semibold">
+                  Low stock threshold
+                </label>
+                <input
+                  id="settings-low-stock"
+                  type="number"
+                  name="lowStockThreshold"
+                  className="form-control"
+                  value={formData.lowStockThreshold}
+                  onChange={handleChange}
+                  min="0"
+                />
+              </div>
+              <div className="col-md-6">
+                <label htmlFor="settings-receipt-footer" className="form-label fw-semibold">
+                  Receipt footer
+                </label>
+                <input
+                  id="settings-receipt-footer"
+                  type="text"
+                  name="receiptFooter"
+                  className="form-control"
+                  value={formData.receiptFooter}
+                  onChange={handleChange}
+                />
+              </div>
+              <div className="col-12 pt-2">
+                <button type="submit" className="btn btn-primary">
+                  Save settings
+                </button>
+              </div>
+            </div>
+          </form>
         </div>
       </div>
-
     </div>
   );
 };
