@@ -30,8 +30,8 @@ const Login = () => {
     setError('');
     setLoading(true);
     try {
-      await login(username, password);
-      navigate(getHomePath());
+      const data = await login(username, password);
+      navigate(resolveHomePath(data.user), { replace: true });
     } catch (err) {
       setError(err.response?.data?.error || 'Login failed. Please try again.');
     } finally {
