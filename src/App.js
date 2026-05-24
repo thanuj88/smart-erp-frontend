@@ -65,7 +65,14 @@ import './index.css';
 function HomeRedirect() {
   const { isSuperAdmin, isTellerOnly, loading } = useAuth();
 
-  if (loading) return null;
+  if (loading) {
+    return (
+      <div className="loading">
+        <div className="spinner"></div>
+        <p>Loading...</p>
+      </div>
+    );
+  }
   if (isSuperAdmin) return <Navigate to="/platform" replace />;
   if (isTellerOnly) return <Navigate to="/sell" replace />;
 
