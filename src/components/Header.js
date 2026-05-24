@@ -11,7 +11,7 @@ const Header = () => {
   const { isAdmin, isSuperAdmin, getHomePath } = useAuth();
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
-  const { toggleSidebar } = useLayout();
+  const { sidebarCollapsed, toggleSidebar } = useLayout();
 
   return (
     <header className="top-navbar">
@@ -24,8 +24,31 @@ const Header = () => {
         >
           <i className="bi bi-list"></i>
         </button>
+        <div className={`top-navbar-sidebar-zone d-none d-lg-flex${sidebarCollapsed ? ' is-collapsed' : ''}`}>
+          <div
+            className="top-navbar-brand"
+            onClick={() => navigate(getHomePath())}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => e.key === 'Enter' && navigate(getHomePath())}
+          >
+            <span className="top-navbar-logo">
+              <i className="bi bi-bag-check-fill"></i>
+            </span>
+            <span className="top-navbar-brand-text">{APP_NAME}</span>
+          </div>
+          <button
+            type="button"
+            className="top-navbar-collapse-btn"
+            onClick={toggleSidebar}
+            title={sidebarCollapsed ? 'Expand menu' : 'Collapse menu'}
+            aria-label={sidebarCollapsed ? 'Expand menu' : 'Collapse menu'}
+          >
+            <i className="bi bi-list"></i>
+          </button>
+        </div>
         <div
-          className="top-navbar-brand"
+          className="top-navbar-brand d-lg-none"
           onClick={() => navigate(getHomePath())}
           role="button"
           tabIndex={0}

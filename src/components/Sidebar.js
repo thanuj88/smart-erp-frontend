@@ -9,7 +9,7 @@ const Sidebar = () => {
   const { hasPermission, isSuperAdmin, canManagePlatform, isTeller, canViewDashboard } = useAuth();
   const location = useLocation();
   const { t } = useTranslation();
-  const { sidebarCollapsed, mobileMenuOpen, toggleSidebar, closeMobileMenu } = useLayout();
+  const { sidebarCollapsed, mobileMenuOpen, closeMobileMenu } = useLayout();
 
   const isActive = (path) => location.pathname === path;
 
@@ -50,17 +50,6 @@ const Sidebar = () => {
   if (isSuperAdmin) {
     return (
       <aside className={`sidebar${sidebarCollapsed ? ' collapsed' : ''}${mobileMenuOpen ? ' mobile-open' : ''}`}>
-        <div className="sidebar-top">
-          <button
-            type="button"
-            className="sidebar-collapse-btn"
-            onClick={toggleSidebar}
-            title={sidebarCollapsed ? 'Expand menu' : 'Collapse menu'}
-            aria-label={sidebarCollapsed ? 'Expand menu' : 'Collapse menu'}
-          >
-            <i className={`bi ${sidebarCollapsed ? 'bi-chevron-right' : 'bi-chevron-left'}`}></i>
-          </button>
-        </div>
         <nav className="sidebar-nav">
           <div className="sidebar-section-label">Platform</div>
           {canManagePlatform && (
@@ -73,18 +62,6 @@ const Sidebar = () => {
 
   return (
     <aside className={`sidebar${sidebarCollapsed ? ' collapsed' : ''}${mobileMenuOpen ? ' mobile-open' : ''}`}>
-      <div className="sidebar-top">
-        <button
-          type="button"
-          className="sidebar-collapse-btn"
-          onClick={toggleSidebar}
-          title={sidebarCollapsed ? 'Expand menu' : 'Collapse menu'}
-          aria-label={sidebarCollapsed ? 'Expand menu' : 'Collapse menu'}
-        >
-          <i className={`bi ${sidebarCollapsed ? 'bi-chevron-right' : 'bi-chevron-left'}`}></i>
-        </button>
-      </div>
-
       <nav className="sidebar-nav">
         <SidebarSection title={t('sidebarPrimary') || 'Primary'}>
           {canViewDashboard && <NavItem to="/" icon="bi-grid" label={t('dashboard')} />}
