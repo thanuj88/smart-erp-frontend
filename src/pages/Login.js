@@ -200,10 +200,14 @@ const Login = () => {
               className="form-control auth-input auth-input-pin"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
+              placeholder="storecode-teller"
               required
               autoFocus
               disabled={loading}
             />
+            <div className="form-text text-muted small">
+              Use your full username (store prefix + name), e.g. brightmart-john
+            </div>
           </div>
           <div className="mb-3">
             <label htmlFor="pin" className="form-label auth-label">

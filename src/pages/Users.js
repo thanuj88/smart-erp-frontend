@@ -2,8 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { userService } from '../services';
 import { useAuth } from '../contexts/AuthContext';
 
+const usernamePrefix = (tenantSlug) => {
+  if (!tenantSlug) return '';
+  const part = String(tenantSlug)
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, '');
+  return part ? `${part}-` : '';
+};
+
 const Users = () => {
   const { user: currentUser } = useAuth();
+  const storePrefix = usernamePrefix(currentUser?.tenantSlug);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -231,16 +241,27 @@ const Users = () => {
                       <label htmlFor="username" className="form-label fw-semibold">
                         Username
                       </label>
-                      <input
-                        id="username"
-                        name="username"
-                        type="text"
-                        className="form-control form-control-sm"
-                        value={formData.username}
-                        onChange={handleInputChange}
-                        required
-                        autoFocus
-                      />
+                      <div className="input-group input-group-sm">
+                        {storePrefix ? (
+                          <span className="input-group-text text-muted">{storePrefix}</span>
+                        ) : null}
+                        <input
+                          id="username"
+                          name="username"
+                          type="text"
+                          className="form-control"
+                          value={formData.username}
+                          onChange={handleInputChange}
+                          placeholder={storePrefix ? 'e.g. john' : 'username'}
+                          required
+                          autoFocus
+                        />
+                      </div>
+                      <div className="form-text">
+                        {storePrefix
+                          ? `Saved as ${storePrefix}your-name — required for POS PIN sign-in.`
+                          : 'Staff usernames are prefixed with your store code for uniqueness.'}
+                      </div>
                     </div>
                     <div className="col-sm-6">
                       <label htmlFor="fullName" className="form-label fw-semibold">
