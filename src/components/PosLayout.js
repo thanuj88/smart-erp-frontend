@@ -16,6 +16,7 @@ const PosLayout = ({ children }) => {
   const navigate = useNavigate();
   const { canViewDashboard, getHomePath } = useAuth();
   const [elapsed, setElapsed] = useState(0);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   useEffect(() => {
     const started = Date.now();
@@ -24,6 +25,24 @@ const PosLayout = ({ children }) => {
     }, 1000);
     return () => clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    const onFullscreenChange = () => {
+      setIsFullscreen(Boolean(document.fullscreenElement));
+    };
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', onFullscreenChange);
+  }, []);
+
+  const toggleFullscreen = () => {
+    if (document.fullscreenElement) {
+      document.exitFullscreen?.();
+      return;
+    }
+    document.documentElement.requestFullscreen?.();
+  };
+
+  const fullscreenLabel = isFullscreen ? 'Exit full screen' : 'Enter full screen';
 
   return (
     <div className="pos-shell">
@@ -51,10 +70,11 @@ const PosLayout = ({ children }) => {
           <button
             type="button"
             className="pos-icon-btn"
-            title="Fullscreen"
-            onClick={() => document.documentElement.requestFullscreen?.()}
+            title={fullscreenLabel}
+            aria-label={fullscreenLabel}
+            onClick={toggleFullscreen}
           >
-            <i className="bi bi-arrows-fullscreen"></i>
+            <i className={`bi ${isFullscreen ? 'bi-fullscreen-exit' : 'bi-arrows-fullscreen'}`}></i>
           </button>
           {canViewDashboard && (
             <button type="button" className="pos-btn pos-btn-dashboard" onClick={() => navigate('/')}>

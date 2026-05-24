@@ -703,10 +703,6 @@ function SellItems() {
 
   const renderOrderPanel = () => (
     <aside className="pos-order-panel">
-      <button type="button" className="pos-settings-tab" title="Settings" onClick={() => navigate('/settings')}>
-        <i className="bi bi-gear"></i>
-      </button>
-
       <div className="pos-order-header">
         <h6>{mode === 'payment' ? t('Record Payment') : t('Order List')}</h6>
         <div className="d-flex align-items-center gap-2">
