@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import AuthLayout, { AuthFooterLink } from '../components/AuthLayout';
 import { APP_CONFIG } from '../config/app';
 import useAuthBodyClass from '../hooks/useAuthBodyClass';
+import { resolveHomePath } from '../utils/authRouting';
 
 const Login = () => {
   useAuthBodyClass('login');
@@ -17,7 +18,7 @@ const Login = () => {
   const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login, loginPin, getHomePath } = useAuth();
+  const { login, loginPin } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { t, i18n } = useTranslation();
@@ -43,8 +44,8 @@ const Login = () => {
     setError('');
     setLoading(true);
     try {
-      await loginPin(username, pin);
-      navigate('/sell');
+      const data = await loginPin(username, pin);
+      navigate(resolveHomePath(data.user), { replace: true });
     } catch (err) {
       setError(err.response?.data?.error || 'PIN login failed.');
     } finally {

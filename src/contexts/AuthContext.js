@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authService, PERMISSIONS } from '../services';
+import { resolveHomePath } from '../utils/authRouting';
 
 const AuthContext = createContext(null);
 
@@ -16,21 +17,32 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
+
     const bootstrap = async () => {
       const stored = authService.getCurrentUser();
-      const token = localStorage.getItem('token');
-      if (stored && token) {
+      const bootstrapToken = localStorage.getItem('token');
+
+      if (stored && bootstrapToken) {
+        setUser(stored);
         try {
           const profile = await authService.getProfile();
-          setUser(profile);
+          if (!cancelled) setUser(profile);
         } catch {
-          authService.logout();
-          setUser(null);
+          if (!cancelled && localStorage.getItem('token') === bootstrapToken) {
+            authService.logout();
+            setUser(null);
+          }
         }
       }
-      setLoading(false);
+
+      if (!cancelled) setLoading(false);
     };
+
     bootstrap();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const login = async (username, password) => {
@@ -87,11 +99,7 @@ export const AuthProvider = ({ children }) => {
 
   const canViewDashboard = !isTellerOnly;
 
-  const getHomePath = () => {
-    if (isSuperAdmin) return '/platform';
-    if (isTellerOnly) return '/sell';
-    return '/';
-  };
+  const getHomePath = () => resolveHomePath(user);
 
   const canManagePlatform =
     !!user && hasPermission([PERMISSIONS.ROLES_MANAGE, PERMISSIONS.PLATFORM_MANAGE]);
