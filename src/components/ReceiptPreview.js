@@ -1,7 +1,7 @@
 import React from 'react';
 import { formatMoney } from '../utils/currency';
 import { resolveProductImageUrl } from '../utils/productImage';
-import { SAMPLE_RECEIPT_ITEMS } from '../utils/receipt';
+import { SAMPLE_RECEIPT_ITEMS, getReceiptPaperSize, formatVoucherOfferValue } from '../utils/receipt';
 import ReceiptQr from './ReceiptQr';
 import './ReceiptPreview.css';
 
@@ -19,15 +19,22 @@ const ReceiptPreview = ({
   const subtotal = items.reduce((sum, item) => sum + Number(item.price || 0), 0);
   const tax = subtotal * (Number(taxRate) || 0) / 100;
   const total = subtotal + tax;
-  const voucherAmount = Math.round(total * 0.075 * 100) / 100;
+  const voucherOfferValue = formatVoucherOfferValue(receipt, currency);
   const now = new Date();
   const dateLabel = now.toLocaleDateString('en-GB');
   const timeLabel = now.toLocaleTimeString('en-GB', { hour12: false });
   const voucherCode = `DV${saleNumber.replace(/\D/g, '').slice(-9) || '723178338'}`;
   const initial = store.charAt(0).toUpperCase();
+  const paper = getReceiptPaperSize(receipt?.paperSize);
 
   return (
-    <div className="receipt-preview-paper">
+    <div
+      className={`receipt-preview-paper receipt-preview-paper--${paper.code.replace(/\s+/g, '').toLowerCase()}`}
+      style={{
+        '--receipt-width': `${paper.previewPx}px`,
+        '--receipt-full-width': `${paper.fullPx}px`,
+      }}
+    >
       <div className="receipt-preview-logo-wrap">
         {logoSrc ? (
           <img src={logoSrc} alt="" className="receipt-preview-logo" />
@@ -118,7 +125,9 @@ const ReceiptPreview = ({
           </div>
           <p className="receipt-preview-voucher-title">{receipt.voucherTitle || 'Our Gift To You...'}</p>
           <div className="receipt-preview-dots" />
-          <p className="receipt-preview-voucher-amount">{formatMoney(voucherAmount, currency)}</p>
+          {voucherOfferValue ? (
+            <p className="receipt-preview-voucher-amount">{voucherOfferValue}</p>
+          ) : null}
           <p className="receipt-preview-voucher-offer">
             {receipt.voucherOfferText || 'off your next purchase with us.'}
           </p>

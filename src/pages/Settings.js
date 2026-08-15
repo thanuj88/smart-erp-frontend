@@ -2,13 +2,14 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import PageHeader from '../components/PageHeader';
 import AdminAlerts from '../components/AdminAlerts';
 import ReceiptPreview from '../components/ReceiptPreview';
+import ReceiptPreviewFullscreen from '../components/ReceiptPreviewFullscreen';
 import ReceiptLogoCropper from '../components/ReceiptLogoCropper';
 import { settingsService } from '../services';
 import { useAuth } from '../contexts/AuthContext';
 import { useTenantSettings } from '../contexts/TenantSettingsContext';
 import { CURRENCY_OPTIONS } from '../utils/currency';
 import { COUNTRIES, DEFAULT_COUNTRY_CODE } from '../utils/phone';
-import { DEFAULT_RECEIPT, mergeReceipt } from '../utils/receipt';
+import { DEFAULT_RECEIPT, mergeReceipt, RECEIPT_PAPER_SIZES, getReceiptPaperSize } from '../utils/receipt';
 import { resolveProductImageUrl } from '../utils/productImage';
 import { RECEIPT_LOGO, RECEIPT_LOGO_HINT, validateReceiptLogoFile } from '../utils/receiptLogo';
 
@@ -34,6 +35,7 @@ const Settings = () => {
   const [removeReceiptLogo, setRemoveReceiptLogo] = useState(false);
   const [logoError, setLogoError] = useState('');
   const [cropSrc, setCropSrc] = useState(null);
+  const [receiptFullscreen, setReceiptFullscreen] = useState(false);
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
@@ -47,6 +49,16 @@ const Settings = () => {
     if (removeReceiptLogo) return null;
     return resolveProductImageUrl(formData.receipt.logo);
   }, [formData.receipt.logo, removeReceiptLogo]);
+
+  const receiptPreviewProps = {
+    businessName: formData.businessName,
+    currency: selectedCurrency,
+    taxRate: formData.taxRate,
+    receipt: {
+      ...formData.receipt,
+      logo: removeReceiptLogo ? null : formData.receipt.logo,
+    },
+  };
 
   useEffect(() => {
     if (!settings) return;
@@ -349,6 +361,28 @@ const Settings = () => {
                   </div>
 
                   <div className="receipt-field">
+                    <label htmlFor="receipt-paper-size" className="form-label fw-semibold">
+                      Printer paper size
+                    </label>
+                    <select
+                      id="receipt-paper-size"
+                      name="paperSize"
+                      className="form-select form-select-sm"
+                      value={formData.receipt.paperSize}
+                      onChange={handleReceiptChange}
+                    >
+                      {RECEIPT_PAPER_SIZES.map((size) => (
+                        <option key={size.code} value={size.code}>
+                          {size.label}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="form-text mb-0">
+                      {getReceiptPaperSize(formData.receipt.paperSize).hint}
+                    </div>
+                  </div>
+
+                  <div className="receipt-field">
                     <label htmlFor="receipt-slogan" className="form-label fw-semibold">
                       Slogan
                     </label>
@@ -525,6 +559,60 @@ const Settings = () => {
                           onChange={handleReceiptChange}
                         />
                       </div>
+                      <div className="row g-2">
+                        <div className="col-6">
+                          <label htmlFor="receipt-voucher-offer-type" className="form-label fw-semibold">
+                            Offer type
+                          </label>
+                          <select
+                            id="receipt-voucher-offer-type"
+                            name="voucherOfferType"
+                            className="form-select form-select-sm"
+                            value={formData.receipt.voucherOfferType || 'percent'}
+                            onChange={handleReceiptChange}
+                          >
+                            <option value="percent">Percentage</option>
+                            <option value="value">Fixed value</option>
+                          </select>
+                        </div>
+                        <div className="col-6">
+                          <label htmlFor="receipt-voucher-offer-value" className="form-label fw-semibold">
+                            Offer value
+                          </label>
+                          {formData.receipt.voucherOfferType === 'value' ? (
+                            <div className="settings-currency-field">
+                              <span className="settings-currency-prefix" aria-hidden="true">
+                                {selectedCurrency.symbol}
+                              </span>
+                              <input
+                                id="receipt-voucher-offer-value"
+                                name="voucherOfferValue"
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                className="form-control form-control-sm"
+                                value={formData.receipt.voucherOfferValue}
+                                onChange={handleReceiptChange}
+                              />
+                            </div>
+                          ) : (
+                            <div className="input-group input-group-sm">
+                              <input
+                                id="receipt-voucher-offer-value"
+                                name="voucherOfferValue"
+                                type="number"
+                                min="0"
+                                max="100"
+                                step="0.5"
+                                className="form-control"
+                                value={formData.receipt.voucherOfferValue}
+                                onChange={handleReceiptChange}
+                              />
+                              <span className="input-group-text">%</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                       <div className="receipt-field">
                         <label htmlFor="receipt-voucher-offer" className="form-label fw-semibold">
                           Offer text
@@ -568,17 +656,19 @@ const Settings = () => {
                 </div>
 
                 <div className="receipt-designer-preview">
-                  <div className="receipt-designer-preview-label">Live preview</div>
+                  <div className="receipt-designer-preview-label">
+                    <span>Live preview · {getReceiptPaperSize(formData.receipt.paperSize).code}</span>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline-secondary"
+                      onClick={() => setReceiptFullscreen(true)}
+                    >
+                      <i className="bi bi-arrows-fullscreen me-1"></i>
+                      Full screen
+                    </button>
+                  </div>
                   <div className="receipt-preview-stage">
-                    <ReceiptPreview
-                      businessName={formData.businessName}
-                      currency={selectedCurrency}
-                      taxRate={formData.taxRate}
-                      receipt={{
-                        ...formData.receipt,
-                        logo: removeReceiptLogo ? null : formData.receipt.logo,
-                      }}
-                    />
+                    <ReceiptPreview {...receiptPreviewProps} />
                   </div>
                 </div>
               </div>
@@ -586,6 +676,9 @@ const Settings = () => {
           </div>
         </div>
       </form>
+      {receiptFullscreen ? (
+        <ReceiptPreviewFullscreen {...receiptPreviewProps} onClose={() => setReceiptFullscreen(false)} />
+      ) : null}
       {cropSrc ? (
         <ReceiptLogoCropper
           src={cropSrc}

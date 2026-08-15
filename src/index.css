@@ -1113,13 +1113,23 @@ body {
   position: sticky;
   top: 0;
   z-index: 1;
-  padding: 0.55rem 0.85rem 0.35rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.45rem 0.75rem;
   font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--dreams-text-muted);
   background: #eef1f4;
+}
+
+.receipt-designer-preview-label .btn {
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 600;
 }
 
 @media (max-width: 991px) {
@@ -1196,7 +1206,8 @@ body {
   border-right: 1px solid var(--dreams-border);
 }
 
-.settings-currency-field .form-select {
+.settings-currency-field .form-select,
+.settings-currency-field .form-control {
   border: none !important;
   box-shadow: none !important;
   border-radius: 0 !important;
