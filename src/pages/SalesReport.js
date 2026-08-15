@@ -4,6 +4,16 @@ import { useCurrency } from '../contexts/TenantSettingsContext';
 
 const PAGE_SIZE = 10;
 
+const actualIncome = (summary) => {
+  if (!summary) return 0;
+  if (typeof summary.total_actual_income === 'number') return summary.total_actual_income;
+  return (
+    (Number(summary.total_revenue) || 0) +
+    (Number(summary.down_payment_income) || 0) +
+    (Number(summary.installment_income) || 0)
+  );
+};
+
 const MetricCard = ({ label, value, sub, variant = 'metric-orange', icon }) => (
   <div className={`metric-card ${variant}`}>
     <div className="metric-info">
@@ -51,7 +61,7 @@ const PeriodPanel = ({ title, icon, summary, formatMoney }) => {
           <div className="col-6">
             <div className="report-stat-pill report-stat-pill-highlight">
               <small>Total income</small>
-              <strong>{formatMoney(summary.total_actual_income || 0)}</strong>
+              <strong>{formatMoney(actualIncome(summary))}</strong>
             </div>
           </div>
         </div>
@@ -239,7 +249,7 @@ const SalesReport = () => {
         <div className="col-12 col-sm-6 col-xl-3">
           <MetricCard
             label="Total Actual Income"
-            value={formatMoney(dailySummary?.total_actual_income || 0)}
+            value={formatMoney(actualIncome(dailySummary))}
             sub={`${dailySummary?.total_items_sold || 0} items sold`}
             variant="metric-dark"
             icon="bi-graph-up-arrow"

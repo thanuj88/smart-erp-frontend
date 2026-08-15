@@ -30,18 +30,18 @@ export function currencyFromSettings(settings) {
 }
 
 /**
- * Format a number with the tenant currency symbol (e.g. Rs1,234.56).
+ * Format a number with the tenant currency symbol (e.g. Rs 1,234.56).
  */
 export function formatMoney(amount, currency = DEFAULT_CURRENCY) {
   const n = Number(amount);
   const symbol = currency?.symbol ?? DEFAULT_CURRENCY.symbol;
-  if (Number.isNaN(n)) return `${symbol}0.00`;
+  if (Number.isNaN(n)) return `${symbol} 0.00`;
 
   const formatted = Math.abs(n).toLocaleString('en-US', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
 
-  if (n < 0) return `-${symbol}${formatted}`;
-  return `${symbol}${formatted}`;
+  if (n < 0) return `-${symbol} ${formatted}`;
+  return `${symbol} ${formatted}`;
 }
