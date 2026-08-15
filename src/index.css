@@ -610,11 +610,15 @@ body {
   font-size: 0.88rem;
 }
 
-/* Metric cards (dashboard) */
+/* Metric cards (dashboard / reports) — outlined, theme fill */
 .metric-card {
+  --metric-accent: var(--dreams-orange);
+  --metric-accent-soft: var(--dreams-orange-soft);
   border-radius: 0.75rem;
   padding: 1.25rem 1.35rem;
-  color: #fff;
+  color: var(--dreams-text);
+  background: var(--dreams-surface);
+  border: 1.5px solid var(--metric-accent);
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -623,7 +627,7 @@ body {
 }
 
 .metric-card small {
-  opacity: 0.9;
+  color: var(--dreams-text-muted);
   font-size: 0.82rem;
 }
 
@@ -631,27 +635,45 @@ body {
   font-size: 1.65rem;
   font-weight: 700;
   margin: 0.35rem 0;
+  color: var(--dreams-text);
 }
 
 .metric-sub {
   font-size: 0.78rem;
-  opacity: 0.85;
+  color: var(--dreams-text-muted);
 }
 
 .metric-icon {
   width: 2.75rem;
   height: 2.75rem;
   border-radius: 0.65rem;
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--metric-accent-soft);
+  color: var(--metric-accent);
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
-.metric-orange { background: linear-gradient(135deg, #ff9f43, #ff8510); }
-.metric-dark { background: linear-gradient(135deg, #212b36, #374151); }
-.metric-teal { background: linear-gradient(135deg, #28c76f, #1f9d57); }
-.metric-blue { background: linear-gradient(135deg, #4b7bff, #3b6bff); }
+.metric-orange {
+  --metric-accent: var(--dreams-orange);
+  --metric-accent-soft: var(--dreams-orange-soft);
+}
+
+.metric-dark {
+  --metric-accent: var(--dreams-navy);
+  --metric-accent-soft: #eef1f4;
+}
+
+.metric-teal {
+  --metric-accent: var(--dreams-teal);
+  --metric-accent-soft: #e8f8ef;
+}
+
+.metric-blue {
+  --metric-accent: var(--dreams-blue);
+  --metric-accent-soft: #eef2ff;
+}
 
 .table thead th {
   background: #f8f9fb;
