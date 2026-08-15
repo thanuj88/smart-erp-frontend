@@ -251,6 +251,7 @@ body {
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  color: var(--dreams-text-muted);
 }
 
 .top-navbar-divider {
@@ -550,8 +551,7 @@ body {
 }
 
 .pos-app-shell .pos-page {
-  height: calc(100vh - var(--dreams-topbar-height) - 60px);
-  height: calc(100dvh - var(--dreams-topbar-height) - 60px);
+  height: 100%;
 }
 
 .content {

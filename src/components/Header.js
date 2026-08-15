@@ -1,5 +1,5 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { useLayout } from '../contexts/LayoutContext';
@@ -8,10 +8,31 @@ import { APP_NAME } from '../config/app';
 import UserMenu from './UserMenu';
 
 const Header = () => {
-  const { isAdmin, isSuperAdmin, getHomePath } = useAuth();
-  const { t, i18n } = useTranslation();
+  const { getHomePath } = useAuth();
+  const { i18n } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const { sidebarCollapsed, toggleSidebar } = useLayout();
+  const isPos = location.pathname === '/sell';
+  const [isFullscreen, setIsFullscreen] = useState(Boolean(document.fullscreenElement));
+
+  useEffect(() => {
+    const onFullscreenChange = () => {
+      setIsFullscreen(Boolean(document.fullscreenElement));
+    };
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', onFullscreenChange);
+  }, []);
+
+  const toggleFullscreen = () => {
+    if (document.fullscreenElement) {
+      document.exitFullscreen?.();
+      return;
+    }
+    document.documentElement.requestFullscreen?.();
+  };
+
+  const fullscreenLabel = isFullscreen ? 'Exit full screen' : 'Enter full screen';
 
   return (
     <header className="top-navbar">
@@ -62,21 +83,17 @@ const Header = () => {
       </div>
 
       <div className="top-navbar-right">
-        {!isSuperAdmin && isAdmin && (
-          <button type="button" className="btn btn-dreams-primary btn-sm" onClick={() => navigate('/inventory')}>
-            <i className="bi bi-plus-lg me-1"></i>
-            {t('addNew') || 'Add New'}
+        {isPos && (
+          <button
+            type="button"
+            className="top-navbar-icon-btn"
+            title={fullscreenLabel}
+            aria-label={fullscreenLabel}
+            onClick={toggleFullscreen}
+          >
+            <i className={`bi ${isFullscreen ? 'bi-fullscreen-exit' : 'bi-arrows-fullscreen'}`}></i>
           </button>
         )}
-        {!isSuperAdmin && (
-          <button type="button" className="btn btn-dreams-navy btn-sm" onClick={() => navigate('/sell')}>
-            <i className="bi bi-display me-1"></i>
-            {t('POS Register') || 'POS'}
-          </button>
-        )}
-
-        <div className="top-navbar-divider d-none d-sm-block" />
-
         <div className="lang-toggle d-none d-sm-flex">
           <button
             type="button"

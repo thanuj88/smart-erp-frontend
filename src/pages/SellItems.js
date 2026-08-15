@@ -35,6 +35,13 @@ const DEFAULT_INSTALLMENT_PERIODS = [
 const getItemCategoryIcon = (item, categories) =>
   resolveCategoryIconKey(item.category_icon, categories, item.category_id);
 
+const formatTimer = (seconds) => {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  return [h, m, s].map((v) => String(v).padStart(2, '0')).join(':');
+};
+
 function SellItems() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -57,6 +64,7 @@ function SellItems() {
   const [itemSearch, setItemSearch] = useState('');
   const [planSearch, setPlanSearch] = useState('');
   const [orderRef, setOrderRef] = useState(() => `#ORD${Date.now().toString().slice(-6)}`);
+  const [elapsed, setElapsed] = useState(0);
   const [walkInCustomer, setWalkInCustomer] = useState('Walk in Customer');
 
   const [interestRates, setInterestRates] = useState({});
@@ -94,6 +102,14 @@ function SellItems() {
       document.body.classList.remove('pos-installment-modal-open');
     };
   }, [showInstallmentModal]);
+
+  useEffect(() => {
+    const started = Date.now();
+    const timer = setInterval(() => {
+      setElapsed(Math.floor((Date.now() - started) / 1000));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const newOrderRef = () => setOrderRef(`#ORD${Date.now().toString().slice(-6)}`);
 
@@ -881,6 +897,10 @@ function SellItems() {
         <h6>{mode === 'payment' ? t('Record Payment') : t('Order List')}</h6>
         <div className="d-flex align-items-center gap-2">
           {mode !== 'payment' && <span className="pos-order-id">{orderRef}</span>}
+          <span className="pos-timer">
+            <i className="bi bi-clock"></i>
+            {formatTimer(elapsed)}
+          </span>
           {mode !== 'payment' && bill.length > 0 && (
             <button type="button" className="pos-order-clear" onClick={clearBill} title="Clear order">
               <i className="bi bi-trash"></i>
