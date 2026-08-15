@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useAuth } from '../contexts/AuthContext';
 import {
   itemService,
   categoryService,
@@ -20,6 +18,10 @@ import {
   getInstallmentFieldErrors,
   getInstallmentValidationMessage,
   getCustomerWitnessDuplicates,
+  isValidNic,
+  normalizeNic,
+  sanitizeNicInput,
+  NIC_FORMAT_MESSAGE,
 } from '../utils/installmentValidation';
 import './SellItems.css';
 
@@ -44,8 +46,6 @@ const formatTimer = (seconds) => {
 
 function SellItems() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
-  const { user, isAdmin } = useAuth();
   const { formatMoney } = useCurrency();
   const { confirm } = useConfirm();
 
@@ -419,12 +419,22 @@ function SellItems() {
 
     setInstallmentTouched(true);
     const orderTotal = calculateTotal();
-    const fieldErrors = getInstallmentFieldErrors(customer, witness, downPayment, orderTotal);
+    const normalizedCustomer = { ...customer, idCardNo: normalizeNic(customer.idCardNo) };
+    const normalizedWitness = { ...witness, idCardNo: normalizeNic(witness.idCardNo) };
+    setCustomer(normalizedCustomer);
+    setWitness(normalizedWitness);
+
+    const fieldErrors = getInstallmentFieldErrors(
+      normalizedCustomer,
+      normalizedWitness,
+      downPayment,
+      orderTotal
+    );
     if (Object.keys(fieldErrors).length > 0) {
       const message = getInstallmentValidationMessage(
         fieldErrors,
-        customer,
-        witness,
+        normalizedCustomer,
+        normalizedWitness,
         downPayment,
         orderTotal
       );
@@ -450,8 +460,8 @@ function SellItems() {
       await saleService.processInstallmentSale({
         itemId: firstItem.id,
         quantity: totalQuantity,
-        customer,
-        witness,
+        customer: normalizedCustomer,
+        witness: normalizedWitness,
         downPayment: parseFloat(downPayment),
         installmentMonths: parseInt(installmentMonths, 10),
       });
@@ -573,6 +583,13 @@ function SellItems() {
       ? getInstallmentFieldErrors(customer, witness, downPayment, total)
       : {};
 
+    if (normalizeNic(customer.idCardNo) && !isValidNic(customer.idCardNo)) {
+      errors['customer.idCardNo'] = true;
+    }
+    if (normalizeNic(witness.idCardNo) && !isValidNic(witness.idCardNo)) {
+      errors['witness.idCardNo'] = true;
+    }
+
     getCustomerWitnessDuplicates(customer, witness).forEach((dup) => {
       if (dup === 'name') {
         errors['customer.name'] = true;
@@ -595,7 +612,7 @@ function SellItems() {
   const installmentControlClass = (fieldKey) =>
     `form-control${isInstallmentFieldInvalid(fieldKey) ? ' is-invalid' : ''}`;
 
-  const getInstallmentFieldMessage = (fieldKey, requiredMessage, duplicateMessage) => {
+  const getInstallmentFieldMessage = (fieldKey, requiredMessage, duplicateMessage, formatMessage) => {
     if (!isInstallmentFieldInvalid(fieldKey)) return null;
     const duplicates = getCustomerWitnessDuplicates(customer, witness);
 
@@ -613,11 +630,28 @@ function SellItems() {
       ((fieldKey === 'customer.idCardNo' || fieldKey === 'witness.idCardNo') && duplicates.includes('id'));
 
     if (duplicateActive) return duplicateMessage;
+
+    if (
+      (fieldKey === 'customer.idCardNo' || fieldKey === 'witness.idCardNo') &&
+      formatMessage &&
+      String(
+        fieldKey === 'customer.idCardNo' ? customer.idCardNo : witness.idCardNo
+      ).trim() &&
+      !isValidNic(fieldKey === 'customer.idCardNo' ? customer.idCardNo : witness.idCardNo)
+    ) {
+      return formatMessage;
+    }
+
     return requiredMessage;
   };
 
-  const installmentFieldFeedback = (fieldKey, requiredMessage, duplicateMessage) => {
-    const message = getInstallmentFieldMessage(fieldKey, requiredMessage, duplicateMessage);
+  const installmentFieldFeedback = (fieldKey, requiredMessage, duplicateMessage, formatMessage) => {
+    const message = getInstallmentFieldMessage(
+      fieldKey,
+      requiredMessage,
+      duplicateMessage,
+      formatMessage
+    );
     if (!message) return null;
     return <div className="invalid-feedback d-block">{message}</div>;
   };
@@ -698,12 +732,18 @@ function SellItems() {
                     <input
                       className={installmentControlClass('customer.idCardNo')}
                       value={customer.idCardNo}
-                      onChange={(e) => setCustomer({ ...customer, idCardNo: e.target.value })}
+                      placeholder="901234567V or 199012345678"
+                      maxLength={12}
+                      autoComplete="off"
+                      onChange={(e) =>
+                        setCustomer({ ...customer, idCardNo: sanitizeNicInput(e.target.value) })
+                      }
                     />
                     {installmentFieldFeedback(
                       'customer.idCardNo',
                       t('ID card number is required'),
-                      t('Must differ from witness ID')
+                      t('Must differ from witness ID'),
+                      t(NIC_FORMAT_MESSAGE)
                     )}
                   </div>
                   <div className="mb-2">
@@ -767,12 +807,18 @@ function SellItems() {
                     <input
                       className={installmentControlClass('witness.idCardNo')}
                       value={witness.idCardNo}
-                      onChange={(e) => setWitness({ ...witness, idCardNo: e.target.value })}
+                      placeholder="901234567V or 199012345678"
+                      maxLength={12}
+                      autoComplete="off"
+                      onChange={(e) =>
+                        setWitness({ ...witness, idCardNo: sanitizeNicInput(e.target.value) })
+                      }
                     />
                     {installmentFieldFeedback(
                       'witness.idCardNo',
                       t('Witness ID is required'),
-                      t('Must differ from customer ID')
+                      t('Must differ from customer ID'),
+                      t(NIC_FORMAT_MESSAGE)
                     )}
                   </div>
                   <div className="mb-2">
@@ -1041,6 +1087,14 @@ function SellItems() {
         <button type="button" className={`pos-mode-btn${mode === 'payment' ? ' active' : ''}`} onClick={() => setMode('payment')}>
           💳 {t('Installment Payment')}
         </button>
+        <div className="pos-mode-bar-actions">
+          <button type="button" className="pos-action-btn pos-action-hold" onClick={handleHold}>
+            Hold
+          </button>
+          <button type="button" className="pos-action-btn pos-action-void" onClick={clearBill}>
+            Void
+          </button>
+        </div>
       </div>
 
       <div className="pos-alerts">
@@ -1117,17 +1171,6 @@ function SellItems() {
 
           <section className="pos-products">
             <div className="pos-products-header">
-              <div className="pos-welcome">
-                <h5>Welcome, {user?.name || 'Cashier'}</h5>
-                <p>
-                  {new Date().toLocaleDateString(undefined, {
-                    weekday: 'long',
-                    day: 'numeric',
-                    month: 'short',
-                    year: 'numeric',
-                  })}
-                </p>
-              </div>
               <div className="pos-products-toolbar">
                 <div className="pos-search-wrap">
                   <i className="bi bi-search"></i>
@@ -1138,13 +1181,6 @@ function SellItems() {
                     onChange={(e) => setItemSearch(e.target.value)}
                   />
                 </div>
-                <button type="button" className="pos-btn-brands" onClick={() => handleCategorySelect(null)}>
-                  {t('View All Brands')}
-                </button>
-                <button type="button" className="pos-btn-featured" onClick={() => setItemSearch('')}>
-                  <i className="bi bi-star-fill me-1"></i>
-                  Featured
-                </button>
               </div>
             </div>
 
@@ -1192,41 +1228,6 @@ function SellItems() {
                   })
                 )}
               </div>
-            </div>
-
-            <div className="pos-actions">
-              <button type="button" className="pos-action-btn pos-action-hold" onClick={handleHold}>Hold</button>
-              <button type="button" className="pos-action-btn pos-action-void" onClick={clearBill}>Void</button>
-              <button
-                type="button"
-                className="pos-action-btn pos-action-payment"
-                disabled={processing || bill.length === 0}
-                onClick={handlePaymentAction}
-              >
-                Payment
-              </button>
-              <button
-                type="button"
-                className="pos-action-btn pos-action-orders"
-                onClick={() => (isAdmin ? navigate('/sales-report') : navigate('/'))}
-              >
-                View Orders
-              </button>
-              <button
-                type="button"
-                className="pos-action-btn pos-action-reset"
-                onClick={() => {
-                  setItemSearch('');
-                  setSelectedCategory(null);
-                  setItems(allItems);
-                  newOrderRef();
-                }}
-              >
-                Reset
-              </button>
-              <button type="button" className="pos-action-btn pos-action-transaction" onClick={() => setMode('payment')}>
-                Transaction
-              </button>
             </div>
           </section>
 
