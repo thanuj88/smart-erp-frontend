@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import PageHeader from '../components/PageHeader';
 import AdminAlerts from '../components/AdminAlerts';
 import { settingsService } from '../services';
 import { useAuth } from '../contexts/AuthContext';
 import { useTenantSettings } from '../contexts/TenantSettingsContext';
 import { CURRENCY_OPTIONS } from '../utils/currency';
+import { COUNTRIES, DEFAULT_COUNTRY_CODE } from '../utils/phone';
 
 const Settings = () => {
   const { refreshUser } = useAuth();
@@ -12,7 +13,7 @@ const Settings = () => {
   const [formData, setFormData] = useState({
     businessName: '',
     currency: CURRENCY_OPTIONS[0].label,
-    currencySymbol: CURRENCY_OPTIONS[0].symbol,
+    countryCode: DEFAULT_COUNTRY_CODE,
     taxRate: '0',
     lowStockThreshold: '15',
     receiptFooter: 'Thank you for shopping with us!',
@@ -21,12 +22,17 @@ const Settings = () => {
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 
+  const selectedCurrency = useMemo(
+    () => CURRENCY_OPTIONS.find((c) => c.label === formData.currency) || CURRENCY_OPTIONS[0],
+    [formData.currency]
+  );
+
   useEffect(() => {
     if (!settings) return;
     setFormData({
       businessName: settings.businessName || '',
       currency: settings.currencyLabel || CURRENCY_OPTIONS[0].label,
-      currencySymbol: settings.currencySymbol || CURRENCY_OPTIONS[0].symbol,
+      countryCode: settings.countryCode || DEFAULT_COUNTRY_CODE,
       taxRate: String(settings.taxRate ?? 0),
       lowStockThreshold: String(settings.lowStockThreshold ?? 15),
       receiptFooter: settings.receiptFooter || '',
@@ -35,15 +41,6 @@ const Settings = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    if (name === 'currency') {
-      const option = CURRENCY_OPTIONS.find((c) => c.label === value);
-      setFormData((prev) => ({
-        ...prev,
-        currency: value,
-        currencySymbol: option?.symbol ?? prev.currencySymbol,
-      }));
-      return;
-    }
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -56,7 +53,8 @@ const Settings = () => {
       const updated = await settingsService.update({
         businessName: formData.businessName,
         currency: formData.currency,
-        currencySymbol: formData.currencySymbol,
+        currencySymbol: selectedCurrency.symbol,
+        countryCode: formData.countryCode,
         taxRate: parseFloat(formData.taxRate) || 0,
         lowStockThreshold: parseInt(formData.lowStockThreshold, 10) || 0,
         receiptFooter: formData.receiptFooter,
@@ -77,14 +75,18 @@ const Settings = () => {
     <div className="container-fluid py-4 matte-page admin-page">
       <PageHeader
         title="Store Settings"
-        subtitle="Customize your business information, currency and tax behavior."
+        subtitle="Customize your business information, country, currency and tax behavior."
       />
 
       <AdminAlerts success={success} error={error} onClearSuccess={() => setSuccess('')} onClearError={() => setError('')} />
 
-      <div className="card settings-card">
-        <div className="card-body">
-          <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} className="settings-form">
+        <div className="card settings-card">
+          <div className="card-header">
+            <div className="admin-section-title mb-0">Store details</div>
+            <p className="admin-section-subtitle">How this store is identified.</p>
+          </div>
+          <div className="card-body">
             <div className="row g-3">
               <div className="col-md-6">
                 <label htmlFor="settings-business-name" className="form-label fw-semibold">
@@ -100,35 +102,57 @@ const Settings = () => {
                 />
               </div>
               <div className="col-md-6">
-                <label htmlFor="settings-currency" className="form-label fw-semibold">
-                  Currency
+                <label htmlFor="settings-country" className="form-label fw-semibold">
+                  Country
                 </label>
                 <select
-                  id="settings-currency"
-                  name="currency"
+                  id="settings-country"
+                  name="countryCode"
                   className="form-select"
-                  value={formData.currency}
+                  value={formData.countryCode}
                   onChange={handleChange}
                 >
-                  {CURRENCY_OPTIONS.map((opt) => (
-                    <option key={opt.code} value={opt.label}>
-                      {opt.label}
+                  {COUNTRIES.map((country) => (
+                    <option key={country.code} value={country.code}>
+                      {country.flag} {country.name}
                     </option>
                   ))}
                 </select>
               </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="card settings-card">
+          <div className="card-header">
+            <div className="admin-section-title mb-0">Currency &amp; tax</div>
+            <p className="admin-section-subtitle">Used on prices, receipts and reports.</p>
+          </div>
+          <div className="card-body">
+            <div className="row g-3">
               <div className="col-md-6">
-                <label htmlFor="settings-currency-symbol" className="form-label fw-semibold">
-                  Currency symbol
+                <label htmlFor="settings-currency" className="form-label fw-semibold">
+                  Currency
                 </label>
-                <input
-                  id="settings-currency-symbol"
-                  type="text"
-                  name="currencySymbol"
-                  className="form-control"
-                  value={formData.currencySymbol}
-                  onChange={handleChange}
-                />
+                <div className="settings-currency-field">
+                  <span className="settings-currency-prefix" aria-label="Currency symbol">
+                    {selectedCurrency.symbol}
+                  </span>
+                  <select
+                    id="settings-currency"
+                    name="currency"
+                    className="form-select"
+                    value={formData.currency}
+                    onChange={handleChange}
+                    aria-label="Currency"
+                  >
+                    {CURRENCY_OPTIONS.map((opt) => (
+                      <option key={opt.code} value={opt.label}>
+                        {opt.code}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
               <div className="col-md-6">
                 <label htmlFor="settings-tax-rate" className="form-label fw-semibold">
@@ -145,6 +169,17 @@ const Settings = () => {
                   step="0.01"
                 />
               </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="card settings-card">
+          <div className="card-header">
+            <div className="admin-section-title mb-0">Inventory &amp; receipts</div>
+            <p className="admin-section-subtitle">Stock alerts and printed receipt text.</p>
+          </div>
+          <div className="card-body">
+            <div className="row g-3">
               <div className="col-md-6">
                 <label htmlFor="settings-low-stock" className="form-label fw-semibold">
                   Low stock threshold
@@ -172,15 +207,16 @@ const Settings = () => {
                   onChange={handleChange}
                 />
               </div>
-              <div className="col-12 pt-2 d-flex justify-content-end">
-                <button type="submit" className="btn btn-primary" disabled={saving}>
-                  {saving ? 'Saving…' : 'Save settings'}
-                </button>
-              </div>
             </div>
-          </form>
+          </div>
         </div>
-      </div>
+
+        <div className="d-flex justify-content-end">
+          <button type="submit" className="btn btn-primary" disabled={saving}>
+            {saving ? 'Saving…' : 'Save settings'}
+          </button>
+        </div>
+      </form>
     </div>
   );
 };
