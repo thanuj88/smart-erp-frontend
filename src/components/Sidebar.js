@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { PERMISSIONS } from '../services';
 
 const Sidebar = () => {
-  const { hasPermission, isSuperAdmin, canManagePlatform, isTeller, canViewDashboard } = useAuth();
+  const { hasPermission, isSuperAdmin, canManagePlatform, isTeller, canViewDashboard, isAdmin } = useAuth();
   const location = useLocation();
   const { t } = useTranslation();
   const { sidebarCollapsed, mobileMenuOpen, closeMobileMenu } = useLayout();
@@ -84,8 +84,10 @@ const Sidebar = () => {
         </SidebarSection>
 
         <SidebarSection title={t('sidebarInstallments') || 'Installments'}>
-          <NavItem to="/installment-plans" icon="bi-calendar-event" label={t('installmentPlans')} />
           <NavItem to="/installment-payments" icon="bi-credit-card" label={t('installmentPayments')} />
+          {isAdmin && (
+            <NavItem to="/installment-plans" icon="bi-percent" label={t('interestRateSettings')} />
+          )}
         </SidebarSection>
 
         <SidebarSection title={t('sidebarAdministration') || 'Administration'}>

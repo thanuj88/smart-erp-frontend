@@ -1268,6 +1268,58 @@ body {
   background: #fafbfc;
 }
 
+.admin-table tbody tr.plan-expand-row {
+  cursor: pointer;
+}
+
+.admin-table tbody tr.plan-expand-row.is-expanded {
+  background: #eef3f9;
+}
+
+.admin-table tbody tr.plan-expand-row.is-expanded:hover {
+  background: #e8eef6;
+}
+
+.admin-table tbody tr.plan-installments-row > td {
+  background: #f6f8fb;
+  padding: 0;
+  border-bottom: 1px solid #e6ebf2;
+}
+
+.admin-table tbody tr.plan-installments-row:hover {
+  background: transparent;
+}
+
+.plan-installments-wrap {
+  padding: 0.75rem 1rem 1rem 2.5rem;
+}
+
+.plan-installments-wrap .table {
+  background: #fff;
+  border: 1px solid #e6ebf2;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 0;
+}
+
+.plan-installments-wrap .table thead th {
+  font-size: 0.75rem;
+  padding: 0.55rem 0.85rem;
+}
+
+.plan-installments-wrap .table tbody td {
+  padding: 0.6rem 0.85rem;
+  font-size: 0.85rem;
+}
+
+.plan-expand-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.4rem;
+  color: var(--dreams-text-muted);
+}
+
 .admin-empty {
   text-align: center;
   padding: 3rem 1.5rem;

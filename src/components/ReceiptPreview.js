@@ -13,19 +13,36 @@ const ReceiptPreview = ({
   items = SAMPLE_RECEIPT_ITEMS,
   cashierName = 'CASHIER',
   saleNumber = 'S0000084978',
+  soldAt,
+  subtotal: subtotalProp,
+  tax: taxProp,
+  total: totalProp,
+  tendered,
+  change,
+  tenderedLabel = 'Tendered Cash',
+  extraTotalLines = [],
+  showChange = true,
+  infoLines = [],
+  totalLabel = 'Total',
+  subtotalLabel = 'Sub Total',
 }) => {
   const logoSrc = resolveProductImageUrl(receipt?.logo);
   const store = (businessName || 'Your Store').trim() || 'Your Store';
-  const subtotal = items.reduce((sum, item) => sum + Number(item.price || 0), 0);
-  const tax = subtotal * (Number(taxRate) || 0) / 100;
-  const total = subtotal + tax;
+  const computedSubtotal = items.reduce((sum, item) => sum + Number(item.price || 0), 0);
+  const subtotal = subtotalProp != null ? Number(subtotalProp) : computedSubtotal;
+  const tax = taxProp != null ? Number(taxProp) : subtotal * (Number(taxRate) || 0) / 100;
+  const total = totalProp != null ? Number(totalProp) : subtotal + tax;
+  const tenderedAmount = tendered != null ? Number(tendered) : total;
+  const changeAmount = change != null ? Number(change) : Math.max(0, tenderedAmount - total);
   const voucherOfferValue = formatVoucherOfferValue(receipt, currency);
-  const now = new Date();
-  const dateLabel = now.toLocaleDateString('en-GB');
-  const timeLabel = now.toLocaleTimeString('en-GB', { hour12: false });
-  const voucherCode = `DV${saleNumber.replace(/\D/g, '').slice(-9) || '723178338'}`;
+  const soldDate = soldAt ? new Date(soldAt) : new Date();
+  const dateLabel = soldDate.toLocaleDateString('en-GB');
+  const timeLabel = soldDate.toLocaleTimeString('en-GB', { hour12: false });
+  const voucherCode = `DV${String(saleNumber).replace(/\D/g, '').slice(-9) || '723178338'}`;
   const initial = store.charAt(0).toUpperCase();
   const paper = getReceiptPaperSize(receipt?.paperSize);
+  const printWidth =
+    paper.code === 'A4' ? '210mm' : paper.code === 'A5' ? '148mm' : `${paper.widthMm}mm`;
 
   return (
     <div
@@ -33,6 +50,7 @@ const ReceiptPreview = ({
       style={{
         '--receipt-width': `${paper.previewPx}px`,
         '--receipt-full-width': `${paper.fullPx}px`,
+        '--receipt-print-width': printWidth,
       }}
     >
       <div className="receipt-preview-logo-wrap">
@@ -61,9 +79,20 @@ const ReceiptPreview = ({
       <p className="receipt-preview-title">{receipt?.invoiceTitle || 'Tax Invoice / Receipt'}</p>
       <div className="receipt-preview-rule" />
 
+      {infoLines.length > 0 ? (
+        <div className="receipt-preview-info">
+          {infoLines.map((line) => (
+            <div className="receipt-preview-item-row" key={line.label}>
+              <span>{line.label}</span>
+              <span>{line.value}</span>
+            </div>
+          ))}
+        </div>
+      ) : null}
+
       <div className="receipt-preview-items">
-        {items.map((item) => (
-          <div className="receipt-preview-item" key={item.name}>
+        {items.map((item, index) => (
+          <div className="receipt-preview-item" key={item.id || `${item.name}-${index}`}>
             <div className="receipt-preview-item-row">
               <span>{item.name}</span>
               <span>{formatMoney(item.price, currency)}</span>
@@ -75,7 +104,7 @@ const ReceiptPreview = ({
 
       <div className="receipt-preview-totals">
         <div className="receipt-preview-item-row">
-          <span>Sub Total</span>
+          <span>{subtotalLabel}</span>
           <span>{formatMoney(subtotal, currency)}</span>
         </div>
         {tax > 0 ? (
@@ -85,17 +114,25 @@ const ReceiptPreview = ({
           </div>
         ) : null}
         <div className="receipt-preview-item-row receipt-preview-total">
-          <span>Total</span>
+          <span>{totalLabel}</span>
           <span>{formatMoney(total, currency)}</span>
         </div>
+        {extraTotalLines.map((line) => (
+          <div className="receipt-preview-item-row" key={line.label}>
+            <span>{line.label}</span>
+            <span>{formatMoney(line.value, currency)}</span>
+          </div>
+        ))}
         <div className="receipt-preview-item-row">
-          <span>Tendered Cash</span>
-          <span>{formatMoney(total, currency)}</span>
+          <span>{tenderedLabel}</span>
+          <span>{formatMoney(tenderedAmount, currency)}</span>
         </div>
-        <div className="receipt-preview-item-row receipt-preview-change">
-          <span>Change</span>
-          <span>{formatMoney(0, currency)}</span>
-        </div>
+        {showChange ? (
+          <div className="receipt-preview-item-row receipt-preview-change">
+            <span>Change</span>
+            <span>{formatMoney(changeAmount, currency)}</span>
+          </div>
+        ) : null}
       </div>
 
       <div className="receipt-preview-rule" />
@@ -138,7 +175,7 @@ const ReceiptPreview = ({
           <ReceiptQr value={voucherCode} size={96} />
           <p className="receipt-preview-sale-no">{voucherCode}</p>
           <p className="receipt-preview-expiry">
-            Expiry {new Date(now.getTime() + 21 * 24 * 60 * 60 * 1000).toLocaleDateString('en-GB')}
+            Expiry {new Date(soldDate.getTime() + 21 * 24 * 60 * 60 * 1000).toLocaleDateString('en-GB')}
           </p>
           {receipt.voucherTerms ? (
             <p className="receipt-preview-terms">{receipt.voucherTerms}</p>

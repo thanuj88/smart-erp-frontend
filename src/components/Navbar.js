@@ -120,20 +120,22 @@ const Navbar = () => {
           )}
           <Button 
             component={Link} 
-            to="/installment-plans" 
-            startIcon={<AccountBalanceIcon />}
-            sx={{ textTransform: 'none', color: 'text.primary' }}
-          >
-            Plans
-          </Button>
-          <Button 
-            component={Link} 
             to="/installment-payments" 
             startIcon={<PaymentIcon />}
             sx={{ textTransform: 'none', color: 'text.primary' }}
           >
             Payments
           </Button>
+          {isAdmin && (
+            <Button 
+              component={Link} 
+              to="/installment-plans" 
+              startIcon={<AccountBalanceIcon />}
+              sx={{ textTransform: 'none', color: 'text.primary' }}
+            >
+              Interest Rates
+            </Button>
+          )}
         </Box>
 
         {/* User Menu */}

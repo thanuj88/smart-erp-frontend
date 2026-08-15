@@ -81,7 +81,13 @@ function isBlank(value) {
   return !String(value ?? '').trim();
 }
 
-export function getInstallmentFieldErrors(customer, witness, downPayment, orderTotal) {
+export function getInstallmentFieldErrors(
+  customer,
+  witness,
+  downPayment,
+  orderTotal,
+  { includeWitness = true } = {}
+) {
   const errors = {};
 
   if (isBlank(customer?.name)) errors['customer.name'] = true;
@@ -90,26 +96,28 @@ export function getInstallmentFieldErrors(customer, witness, downPayment, orderT
   else if (!isValidNic(customer.idCardNo)) errors['customer.idCardNo'] = true;
   if (isBlank(customer?.address)) errors['customer.address'] = true;
 
-  if (isBlank(witness?.name)) errors['witness.name'] = true;
-  if (isBlank(witness?.phone)) errors['witness.phone'] = true;
-  if (isBlank(witness?.idCardNo)) errors['witness.idCardNo'] = true;
-  else if (!isValidNic(witness.idCardNo)) errors['witness.idCardNo'] = true;
-  if (isBlank(witness?.address)) errors['witness.address'] = true;
+  if (includeWitness) {
+    if (isBlank(witness?.name)) errors['witness.name'] = true;
+    if (isBlank(witness?.phone)) errors['witness.phone'] = true;
+    if (isBlank(witness?.idCardNo)) errors['witness.idCardNo'] = true;
+    else if (!isValidNic(witness.idCardNo)) errors['witness.idCardNo'] = true;
+    if (isBlank(witness?.address)) errors['witness.address'] = true;
 
-  getCustomerWitnessDuplicates(customer, witness).forEach((dup) => {
-    if (dup === 'name') {
-      errors['customer.name'] = true;
-      errors['witness.name'] = true;
-    }
-    if (dup === 'phone') {
-      errors['customer.phone'] = true;
-      errors['witness.phone'] = true;
-    }
-    if (dup === 'id') {
-      errors['customer.idCardNo'] = true;
-      errors['witness.idCardNo'] = true;
-    }
-  });
+    getCustomerWitnessDuplicates(customer, witness).forEach((dup) => {
+      if (dup === 'name') {
+        errors['customer.name'] = true;
+        errors['witness.name'] = true;
+      }
+      if (dup === 'phone') {
+        errors['customer.phone'] = true;
+        errors['witness.phone'] = true;
+      }
+      if (dup === 'id') {
+        errors['customer.idCardNo'] = true;
+        errors['witness.idCardNo'] = true;
+      }
+    });
+  }
 
   const downStr = String(downPayment ?? '').trim();
   const down = parseFloat(downPayment);
@@ -122,7 +130,14 @@ export function getInstallmentFieldErrors(customer, witness, downPayment, orderT
   return errors;
 }
 
-export function getInstallmentValidationMessage(fieldErrors, customer, witness, downPayment, orderTotal) {
+export function getInstallmentValidationMessage(
+  fieldErrors,
+  customer,
+  witness,
+  downPayment,
+  orderTotal,
+  { includeWitness = true } = {}
+) {
   const keys = Object.keys(fieldErrors);
   if (keys.length === 0) return null;
 
@@ -145,11 +160,13 @@ export function getInstallmentValidationMessage(fieldErrors, customer, witness, 
   if (customerRequired.some((key) => fieldErrors[key])) {
     return 'Please fill in all customer details';
   }
-  if (witnessRequired.some((key) => fieldErrors[key])) {
+  if (includeWitness && witnessRequired.some((key) => fieldErrors[key])) {
     return 'Please fill in all witness details';
   }
 
-  const duplicateMessage = validateDistinctCustomerAndWitness(customer, witness);
+  const duplicateMessage = includeWitness
+    ? validateDistinctCustomerAndWitness(customer, witness)
+    : null;
   if (duplicateMessage) return duplicateMessage;
 
   if (fieldErrors.downPayment) {

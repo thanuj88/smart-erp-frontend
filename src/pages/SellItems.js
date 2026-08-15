@@ -12,6 +12,7 @@ import CategoryIcon from '../components/CategoryIcon';
 import ProductThumbnail from '../components/ProductThumbnail';
 import { resolveCategoryIconKey } from '../config/categoryIcons';
 import { useCurrency } from '../contexts/TenantSettingsContext';
+import { useAuth } from '../contexts/AuthContext';
 import { useConfirm } from '../contexts/ConfirmContext';
 import {
   validateDistinctCustomerAndWitness,
@@ -23,6 +24,8 @@ import {
   sanitizeNicInput,
   NIC_FORMAT_MESSAGE,
 } from '../utils/installmentValidation';
+import { billToReceiptItems, mergeReceipt, getReceiptPaperSize, receiptPrintPageSize, createInstallmentReceiptPrintJob } from '../utils/receipt';
+import ReceiptPrintLayer from '../components/ReceiptPrintLayer';
 import './SellItems.css';
 
 const HOLD_KEY = 'pos-held-order';
@@ -46,7 +49,8 @@ const formatTimer = (seconds) => {
 
 function SellItems() {
   const { t } = useTranslation();
-  const { formatMoney } = useCurrency();
+  const { formatMoney, currency, settings } = useCurrency();
+  const { user } = useAuth();
   const { confirm } = useConfirm();
 
   const [mode, setMode] = useState('cash');
@@ -83,6 +87,7 @@ function SellItems() {
     address: '',
     idImage: null,
   });
+  const [includeWitness, setIncludeWitness] = useState(false);
   const [downPayment, setDownPayment] = useState('');
   const [installmentMonths, setInstallmentMonths] = useState('3');
 
@@ -92,6 +97,7 @@ function SellItems() {
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentNotes, setPaymentNotes] = useState('');
   const [showInstallmentModal, setShowInstallmentModal] = useState(false);
+  const [printJob, setPrintJob] = useState(null);
 
   useEffect(() => {
     if (!showInstallmentModal) return undefined;
@@ -112,6 +118,36 @@ function SellItems() {
   }, []);
 
   const newOrderRef = () => setOrderRef(`#ORD${Date.now().toString().slice(-6)}`);
+
+  const printSaleReceipt = useCallback(
+    (billItems, extras = {}) => {
+      const template = mergeReceipt(settings?.receipt, settings?.receiptFooter);
+      const paper = getReceiptPaperSize(template.paperSize);
+      const charged = billItems.reduce((sum, item) => sum + Number(item.total || 0), 0);
+      setPrintJob({
+        pageSize: receiptPrintPageSize(paper),
+        preview: {
+          businessName: settings?.businessName,
+          currency,
+          taxRate: 0,
+          receipt: template,
+          items: billToReceiptItems(billItems, currency),
+          cashierName: user?.full_name || user?.fullName || user?.username || 'CASHIER',
+          saleNumber: String(orderRef || '').replace(/^#/, '') || `S${Date.now()}`,
+          soldAt: new Date().toISOString(),
+          subtotal: charged,
+          tax: 0,
+          total: extras.total != null ? extras.total : charged,
+          tendered: extras.tendered != null ? extras.tendered : charged,
+          change: extras.change != null ? extras.change : 0,
+          tenderedLabel: extras.tenderedLabel || 'Tendered Cash',
+          extraTotalLines: extras.extraTotalLines || [],
+          showChange: extras.showChange !== false,
+        },
+      });
+    },
+    [currency, orderRef, settings, user]
+  );
 
   const loadData = useCallback(async () => {
     try {
@@ -303,6 +339,7 @@ function SellItems() {
     setBill([]);
     setCustomer({ name: '', phone: '', idCardNo: '', email: '', address: '', idImage: null });
     setWitness({ name: '', phone: '', idCardNo: '', address: '', idImage: null });
+    setIncludeWitness(false);
     setDownPayment('');
     newOrderRef();
   };
@@ -399,6 +436,7 @@ function SellItems() {
       for (const item of bill) {
         await saleService.processCashSale(item.id, item.quantity);
       }
+      printSaleReceipt(bill);
       setSuccess(t('Sale completed successfully!'));
       setBill([]);
       newOrderRef();
@@ -420,15 +458,18 @@ function SellItems() {
     setInstallmentTouched(true);
     const orderTotal = calculateTotal();
     const normalizedCustomer = { ...customer, idCardNo: normalizeNic(customer.idCardNo) };
-    const normalizedWitness = { ...witness, idCardNo: normalizeNic(witness.idCardNo) };
+    const normalizedWitness = includeWitness
+      ? { ...witness, idCardNo: normalizeNic(witness.idCardNo) }
+      : { name: '', phone: '', idCardNo: '', address: '', idImage: null };
     setCustomer(normalizedCustomer);
-    setWitness(normalizedWitness);
+    if (includeWitness) setWitness(normalizedWitness);
 
     const fieldErrors = getInstallmentFieldErrors(
       normalizedCustomer,
       normalizedWitness,
       downPayment,
-      orderTotal
+      orderTotal,
+      { includeWitness }
     );
     if (Object.keys(fieldErrors).length > 0) {
       const message = getInstallmentValidationMessage(
@@ -436,7 +477,8 @@ function SellItems() {
         normalizedCustomer,
         normalizedWitness,
         downPayment,
-        orderTotal
+        orderTotal,
+        { includeWitness }
       );
       showInstallmentModalError(message, 4000);
       return;
@@ -461,14 +503,28 @@ function SellItems() {
         itemId: firstItem.id,
         quantity: totalQuantity,
         customer: normalizedCustomer,
-        witness: normalizedWitness,
+        includeWitness,
+        witness: includeWitness ? normalizedWitness : null,
         downPayment: parseFloat(downPayment),
         installmentMonths: parseInt(installmentMonths, 10),
+      });
+      const preview = calculateInstallmentPreview();
+      printSaleReceipt(bill, {
+        total: preview.total,
+        tendered: preview.downPayment,
+        tenderedLabel: 'Down payment',
+        showChange: false,
+        extraTotalLines: [
+          { label: 'Balance', value: preview.remaining },
+          { label: `${preview.interestRate}% interest`, value: preview.interestAmount },
+          { label: `${installmentMonths} monthly`, value: preview.monthlyPayment },
+        ],
       });
       setSuccess('Installment sale created successfully!');
       setBill([]);
       setCustomer({ name: '', phone: '', idCardNo: '', email: '', address: '', idImage: null });
       setWitness({ name: '', phone: '', idCardNo: '', address: '', idImage: null });
+      setIncludeWitness(false);
       setDownPayment('');
       setShowInstallmentModal(false);
       setInstallmentModalError('');
@@ -513,6 +569,20 @@ function SellItems() {
         parseFloat(paymentAmount),
         paymentNotes
       );
+      try {
+        const plan = await installmentPlanService.getById(selectedPlan.id);
+        setPrintJob(
+          createInstallmentReceiptPrintJob({
+            settings,
+            currency,
+            cashierName: user?.full_name || user?.fullName || user?.username || 'CASHIER',
+            plan,
+            currentAmount: parseFloat(paymentAmount),
+          })
+        );
+      } catch {
+        // Sale still recorded if receipt print fails.
+      }
       setSuccess('Payment recorded successfully!');
       setSelectedPlan(null);
       setPaymentAmount('');
@@ -534,7 +604,16 @@ function SellItems() {
     }
     localStorage.setItem(
       HOLD_KEY,
-      JSON.stringify({ bill, mode, customer, witness, downPayment, installmentMonths, walkInCustomer })
+      JSON.stringify({
+        bill,
+        mode,
+        customer,
+        witness,
+        includeWitness,
+        downPayment,
+        installmentMonths,
+        walkInCustomer,
+      })
     );
     setSuccess('Order held successfully');
     setBill([]);
@@ -555,6 +634,7 @@ function SellItems() {
       if (data.mode) setMode(data.mode);
       if (data.customer) setCustomer(data.customer);
       if (data.witness) setWitness(data.witness);
+      if (typeof data.includeWitness === 'boolean') setIncludeWitness(data.includeWitness);
       if (data.downPayment) setDownPayment(data.downPayment);
       if (data.installmentMonths) setInstallmentMonths(data.installmentMonths);
       if (data.walkInCustomer) setWalkInCustomer(data.walkInCustomer);
@@ -574,39 +654,41 @@ function SellItems() {
   const total = calculateTotal();
   const installmentPreview = downPayment ? calculateInstallmentPreview() : null;
   const witnessDuplicateError = useMemo(
-    () => validateDistinctCustomerAndWitness(customer, witness),
-    [customer, witness]
+    () => (includeWitness ? validateDistinctCustomerAndWitness(customer, witness) : null),
+    [includeWitness, customer, witness]
   );
 
   const highlightedInstallmentFields = useMemo(() => {
     const errors = installmentTouched
-      ? getInstallmentFieldErrors(customer, witness, downPayment, total)
+      ? getInstallmentFieldErrors(customer, witness, downPayment, total, { includeWitness })
       : {};
 
     if (normalizeNic(customer.idCardNo) && !isValidNic(customer.idCardNo)) {
       errors['customer.idCardNo'] = true;
     }
-    if (normalizeNic(witness.idCardNo) && !isValidNic(witness.idCardNo)) {
+    if (includeWitness && normalizeNic(witness.idCardNo) && !isValidNic(witness.idCardNo)) {
       errors['witness.idCardNo'] = true;
     }
 
-    getCustomerWitnessDuplicates(customer, witness).forEach((dup) => {
-      if (dup === 'name') {
-        errors['customer.name'] = true;
-        errors['witness.name'] = true;
-      }
-      if (dup === 'phone') {
-        errors['customer.phone'] = true;
-        errors['witness.phone'] = true;
-      }
-      if (dup === 'id') {
-        errors['customer.idCardNo'] = true;
-        errors['witness.idCardNo'] = true;
-      }
-    });
+    if (includeWitness) {
+      getCustomerWitnessDuplicates(customer, witness).forEach((dup) => {
+        if (dup === 'name') {
+          errors['customer.name'] = true;
+          errors['witness.name'] = true;
+        }
+        if (dup === 'phone') {
+          errors['customer.phone'] = true;
+          errors['witness.phone'] = true;
+        }
+        if (dup === 'id') {
+          errors['customer.idCardNo'] = true;
+          errors['witness.idCardNo'] = true;
+        }
+      });
+    }
 
     return errors;
-  }, [installmentTouched, customer, witness, downPayment, total]);
+  }, [installmentTouched, includeWitness, customer, witness, downPayment, total]);
 
   const isInstallmentFieldInvalid = (fieldKey) => Boolean(highlightedInstallmentFields[fieldKey]);
   const installmentControlClass = (fieldKey) =>
@@ -614,7 +696,7 @@ function SellItems() {
 
   const getInstallmentFieldMessage = (fieldKey, requiredMessage, duplicateMessage, formatMessage) => {
     if (!isInstallmentFieldInvalid(fieldKey)) return null;
-    const duplicates = getCustomerWitnessDuplicates(customer, witness);
+    const duplicates = includeWitness ? getCustomerWitnessDuplicates(customer, witness) : [];
 
     if (fieldKey === 'downPayment') {
       const down = parseFloat(downPayment);
@@ -775,7 +857,35 @@ function SellItems() {
                 </div>
 
                 <div className="col-md-6">
-                  <h6 className="pos-installment-section-title">{t('Witness Details')}</h6>
+                  <div className="d-flex align-items-center justify-content-between gap-2 mb-2">
+                    <h6 className="pos-installment-section-title mb-0">{t('Witness Details')}</h6>
+                    <div className="form-check mb-0">
+                      <input
+                        className="form-check-input"
+                        type="checkbox"
+                        id="includeWitness"
+                        checked={includeWitness}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          setIncludeWitness(checked);
+                          if (!checked) {
+                            setWitness({
+                              name: '',
+                              phone: '',
+                              idCardNo: '',
+                              address: '',
+                              idImage: null,
+                            });
+                          }
+                        }}
+                      />
+                      <label className="form-check-label" htmlFor="includeWitness">
+                        {t('addWitness')}
+                      </label>
+                    </div>
+                  </div>
+                  {includeWitness ? (
+                    <>
                   <div className="mb-2">
                     <label className="form-label">{t('Witness Name')} *</label>
                     <input
@@ -838,6 +948,12 @@ function SellItems() {
                     <i className="bi bi-camera me-1"></i>
                     {witness.idImage ? t('ID Captured') : t('Capture Witness ID')}
                   </button>
+                    </>
+                  ) : (
+                    <p className="text-muted small mb-0">
+                      {t('witnessNotRequired')}
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -1236,6 +1352,7 @@ function SellItems() {
       )}
 
       {renderInstallmentModal()}
+      <ReceiptPrintLayer job={printJob} onDone={() => setPrintJob(null)} />
     </div>
   );
 }

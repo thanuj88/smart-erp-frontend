@@ -160,7 +160,7 @@ function AppRoutes() {
 
       <Route path="/users" element={<ProtectedRoute requirePermission={[PERMISSIONS.USERS_MANAGE, PERMISSIONS.USERS_VIEW]}><Layout><Users /></Layout></ProtectedRoute>} />
 
-      <Route path="/installment-plans" element={<ProtectedRoute><Layout><InstallmentPlans /></Layout></ProtectedRoute>} />
+      <Route path="/installment-plans" element={<ProtectedRoute requireAdmin><Layout><InstallmentPlans /></Layout></ProtectedRoute>} />
 
       <Route path="/installment-payments" element={<ProtectedRoute><Layout><InstallmentPayments /></Layout></ProtectedRoute>} />
 

@@ -814,6 +814,12 @@ body.pos-installment-modal-open .pos-plans-area::-webkit-scrollbar {
   color: #212b36;
 }
 
+.pos-installment-modal .form-check-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  user-select: none;
+}
+
 .pos-installment-preview {
   background: #f8f9fa;
   border: 1px solid #e8ecef;

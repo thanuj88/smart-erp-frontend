@@ -82,6 +82,10 @@
   font-size: 12px;
 }
 
+.receipt-preview-info {
+  margin-bottom: 0.45rem;
+}
+
 .receipt-preview-items {
   display: flex;
   flex-direction: column;
@@ -272,4 +276,42 @@
 .receipt-preview-fullscreen .receipt-qr img {
   width: 132px;
   height: 132px;
+}
+
+.receipt-print-root {
+  display: none;
+}
+
+@media print {
+  @page {
+    margin: 0;
+    size: auto;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  body > *:not(.receipt-print-root) {
+    display: none !important;
+  }
+
+  .receipt-print-root {
+    display: block !important;
+    position: static !important;
+    background: #fff;
+    padding: 0;
+    margin: 0;
+  }
+
+  .receipt-print-root .receipt-preview-paper {
+    width: var(--receipt-print-width, 80mm) !important;
+    max-width: 100% !important;
+    box-shadow: none !important;
+    border: none !important;
+    margin: 0 auto;
+  }
 }

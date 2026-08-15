@@ -22,6 +22,7 @@ const resources = {
       installmentPlans: 'Installment Plans',
       payments: 'Payments',
       installmentPayments: 'Installment Payments',
+      interestRateSettings: 'Interest Rate Settings',
       logout: 'Logout',
       
       // Dashboard
@@ -110,6 +111,8 @@ const resources = {
       idCardNumber: "ID Card Number",
       witnessInformation: "Witness Information",
       witnessName: "Witness Name",
+      addWitness: "Add witness",
+      witnessNotRequired: "Witness is not required unless this is checked.",
       installmentDetails: "Installment Details",
       downPayment: "Down Payment",
       installmentPeriod: "Installment Period",
@@ -181,8 +184,9 @@ const resources = {
       salesReport: 'විකුණුම් වාර්තාව',
       users: 'පරිශීලකයින්',
       installmentPlans: 'වාරික සැලසුම්',
-      payments: 'ගෙවීම්',
       installmentPayments: 'වාරික ගෙවීම්',
+      interestRateSettings: 'පොලී අනුපාත සැකසුම්',
+      payments: 'ගෙවීම්',
       logout: 'ඉවත්වන්න',
       
       // Dashboard - Sinhala
@@ -271,6 +275,8 @@ const resources = {
       idCardNumber: 'හැඳුනුම්පත් අංකය',
       witnessInformation: 'සාක්ෂිකරුගේ තොරතුරු',
       witnessName: 'සාක්ෂිකරුගේ නම',
+      addWitness: 'සාක්ෂිකරු එක් කරන්න',
+      witnessNotRequired: 'මෙය තෝරා නොමැති විට සාක්ෂිකරු අවශ්‍ය නොවේ.',
       installmentDetails: 'වාරික විස්තර',
       downPayment: 'පූර්ව ගෙවීම',
       installmentPeriod: 'වාරික කාලය',
