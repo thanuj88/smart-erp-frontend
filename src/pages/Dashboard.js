@@ -3,9 +3,11 @@ import { useAuth } from '../contexts/AuthContext';
 import { saleService, itemService } from '../services';
 import { useTranslation } from 'react-i18next';
 import SalesPurchaseChart from '../components/SalesPurchaseChart';
+import { useCurrency } from '../contexts/TenantSettingsContext';
 
 const Dashboard = () => {
   const { isAdmin, user } = useAuth();
+  const { formatMoney } = useCurrency();
   const { t } = useTranslation();
   const [dailySummary, setDailySummary] = useState(null);
   const [todaySales, setTodaySales] = useState([]);
@@ -134,7 +136,7 @@ const Dashboard = () => {
           <div className="metric-card metric-orange">
             <div className="metric-info">
               <small>Today's Revenue</small>
-              <h3>${todayRevenue.toFixed(2)}</h3>
+              <h3>{formatMoney(todayRevenue)}</h3>
               <div className="metric-sub">{totalItemsSold} items sold</div>
             </div>
             <div className="metric-icon">
@@ -160,7 +162,7 @@ const Dashboard = () => {
           <div className="metric-card metric-teal">
             <div className="metric-info">
               <small>Total Revenue</small>
-              <h3>${totalRevenue.toFixed(2)}</h3>
+              <h3>{formatMoney(totalRevenue)}</h3>
               <div className="metric-sub">Total income</div>
             </div>
             <div className="metric-icon">
@@ -289,7 +291,7 @@ const Dashboard = () => {
                               {sale.payment_type || 'Cash'}
                             </span>
                           </td>
-                          <td className="fw-semibold">${sale.total.toFixed(2)}</td>
+                          <td className="fw-semibold">{formatMoney(sale.total)}</td>
                         </tr>
                       ))
                     )}

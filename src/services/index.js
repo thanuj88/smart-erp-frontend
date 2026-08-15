@@ -79,6 +79,17 @@ export const authService = {
   },
 };
 
+export const settingsService = {
+  get: async () => {
+    const response = await api.get('/settings');
+    return response.data;
+  },
+  update: async (payload) => {
+    const response = await api.put('/settings', payload);
+    return response.data;
+  },
+};
+
 export const platformService = {
   getReports: async () => {
     const response = await api.get('/platform/reports');

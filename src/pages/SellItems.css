@@ -630,6 +630,29 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+}
+
+.pos-order-item-remove {
+  flex-shrink: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: none;
+  border-radius: 0.35rem;
+  background: transparent;
+  color: #9aa3af;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font-size: 0.7rem;
+  cursor: pointer;
+}
+
+.pos-order-item-remove:hover {
+  background: #fee2e2;
+  color: #ea5455;
 }
 
 .pos-order-item-qty {
@@ -655,26 +678,122 @@
 .pos-installment-modal {
   background: rgba(33, 43, 54, 0.55);
   z-index: 1050;
+  overflow: hidden;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 1.25rem 1rem 2.75rem;
+}
+
+.pos-installment-modal-dialog {
+  margin: 0 auto 1.25rem;
+  width: 100%;
+  max-width: 920px;
+  max-height: calc(100vh - 4.5rem);
+  max-height: calc(100dvh - 4.5rem);
+  display: flex;
+  flex-direction: column;
 }
 
 .pos-installment-modal .modal-content {
   border: none;
   border-radius: 0.75rem;
   box-shadow: 0 12px 40px rgba(33, 43, 54, 0.2);
+  max-height: calc(100vh - 4.5rem);
+  max-height: calc(100dvh - 4.5rem);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .pos-installment-modal .modal-header {
   border-bottom: 1px solid #e8ecef;
-  padding: 1rem 1.25rem;
+  padding: 0.75rem 1.25rem;
+  flex-shrink: 0;
 }
 
 .pos-installment-modal .modal-body {
-  padding: 1.25rem;
+  padding: 1rem 1.25rem;
+  overflow-y: auto;
+  overflow-x: hidden;
+  flex: 1 1 auto;
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+.pos-installment-modal .modal-body .form-label {
+  margin-bottom: 0.2rem;
+  font-size: 0.8rem;
+}
+
+.pos-installment-modal .modal-body .mb-2 {
+  margin-bottom: 0.45rem !important;
+}
+
+.pos-installment-modal .modal-body .row.g-4 {
+  --bs-gutter-y: 0.65rem;
+}
+
+.pos-installment-modal .modal-body hr {
+  margin: 0.75rem 0;
 }
 
 .pos-installment-modal .modal-footer {
   border-top: 1px solid #e8ecef;
-  padding: 0.85rem 1.25rem;
+  padding: 0.65rem 1.25rem;
+  flex-shrink: 0;
+}
+
+/* Lock POS background scroll while installment modal is open */
+html.pos-installment-modal-open,
+body.pos-installment-modal-open {
+  overflow: hidden !important;
+}
+
+body.pos-installment-modal-open .app-shell,
+body.pos-installment-modal-open .app-body,
+body.pos-installment-modal-open .content-wrapper,
+body.pos-installment-modal-open .pos-content-wrapper,
+body.pos-installment-modal-open .pos-shell,
+body.pos-installment-modal-open .pos-page,
+body.pos-installment-modal-open .pos-main,
+body.pos-installment-modal-open .pos-products-area,
+body.pos-installment-modal-open .pos-product-grid-wrap,
+body.pos-installment-modal-open .pos-order-items,
+body.pos-installment-modal-open .pos-categories,
+body.pos-installment-modal-open .pos-payment-layout,
+body.pos-installment-modal-open .pos-plans-area {
+  overflow: hidden !important;
+}
+
+body.pos-installment-modal-open .pos-product-grid-wrap,
+body.pos-installment-modal-open .pos-order-items,
+body.pos-installment-modal-open .pos-categories,
+body.pos-installment-modal-open .pos-plans-area {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+body.pos-installment-modal-open .pos-product-grid-wrap::-webkit-scrollbar,
+body.pos-installment-modal-open .pos-order-items::-webkit-scrollbar,
+body.pos-installment-modal-open .pos-categories::-webkit-scrollbar,
+body.pos-installment-modal-open .pos-plans-area::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.pos-installment-modal .form-control.is-invalid,
+.pos-installment-modal .form-select.is-invalid {
+  border-color: #ea5455;
+  box-shadow: 0 0 0 0.15rem rgba(234, 84, 85, 0.15);
+}
+
+.pos-installment-modal .invalid-feedback {
+  font-size: 0.75rem;
+  margin-top: 0.2rem;
 }
 
 .pos-installment-order-summary {
@@ -695,8 +814,8 @@
 
 .pos-installment-section-title {
   font-weight: 700;
-  font-size: 0.95rem;
-  margin-bottom: 0.75rem;
+  font-size: 0.88rem;
+  margin-bottom: 0.5rem;
   color: #212b36;
 }
 
@@ -704,14 +823,14 @@
   background: #f8f9fa;
   border: 1px solid #e8ecef;
   border-radius: 0.5rem;
-  padding: 0.85rem 1rem;
+  padding: 0.6rem 0.85rem;
 }
 
 .pos-installment-preview .preview-row {
   display: flex;
   justify-content: space-between;
-  padding: 0.3rem 0;
-  font-size: 0.9rem;
+  padding: 0.2rem 0;
+  font-size: 0.82rem;
   color: #67748e;
 }
 

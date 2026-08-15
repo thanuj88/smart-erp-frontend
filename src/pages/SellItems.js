@@ -13,6 +13,14 @@ import {
 import CategoryIcon from '../components/CategoryIcon';
 import ProductThumbnail from '../components/ProductThumbnail';
 import { resolveCategoryIconKey } from '../config/categoryIcons';
+import { useCurrency } from '../contexts/TenantSettingsContext';
+import { useConfirm } from '../contexts/ConfirmContext';
+import {
+  validateDistinctCustomerAndWitness,
+  getInstallmentFieldErrors,
+  getInstallmentValidationMessage,
+  getCustomerWitnessDuplicates,
+} from '../utils/installmentValidation';
 import './SellItems.css';
 
 const HOLD_KEY = 'pos-held-order';
@@ -31,6 +39,8 @@ function SellItems() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { user, isAdmin } = useAuth();
+  const { formatMoney } = useCurrency();
+  const { confirm } = useConfirm();
 
   const [mode, setMode] = useState('cash');
   const [categories, setCategories] = useState([]);
@@ -41,6 +51,8 @@ function SellItems() {
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState('');
+  const [installmentModalError, setInstallmentModalError] = useState('');
+  const [installmentTouched, setInstallmentTouched] = useState(false);
   const [success, setSuccess] = useState('');
   const [itemSearch, setItemSearch] = useState('');
   const [planSearch, setPlanSearch] = useState('');
@@ -72,6 +84,16 @@ function SellItems() {
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentNotes, setPaymentNotes] = useState('');
   const [showInstallmentModal, setShowInstallmentModal] = useState(false);
+
+  useEffect(() => {
+    if (!showInstallmentModal) return undefined;
+    document.documentElement.classList.add('pos-installment-modal-open');
+    document.body.classList.add('pos-installment-modal-open');
+    return () => {
+      document.documentElement.classList.remove('pos-installment-modal-open');
+      document.body.classList.remove('pos-installment-modal-open');
+    };
+  }, [showInstallmentModal]);
 
   const newOrderRef = () => setOrderRef(`#ORD${Date.now().toString().slice(-6)}`);
 
@@ -207,8 +229,8 @@ function SellItems() {
   };
 
   const incrementQuantity = (itemId) => {
-    setBill(
-      bill.map((item) => {
+    setBill((currentBill) =>
+      currentBill.map((item) => {
         if (item.id === itemId && item.quantity < item.maxQuantity) {
           const quantity = item.quantity + 1;
           return { ...item, quantity, total: quantity * item.price };
@@ -219,19 +241,24 @@ function SellItems() {
   };
 
   const decrementQuantity = (itemId) => {
-    setBill(
-      bill.map((item) => {
-        if (item.id === itemId && item.quantity > 1) {
+    setBill((currentBill) => {
+      const target = currentBill.find((item) => item.id === itemId);
+      if (!target) return currentBill;
+      if (target.quantity <= 1) {
+        return currentBill.filter((item) => item.id !== itemId);
+      }
+      return currentBill.map((item) => {
+        if (item.id === itemId) {
           const quantity = item.quantity - 1;
           return { ...item, quantity, total: quantity * item.price };
         }
         return item;
-      })
-    );
+      });
+    });
   };
 
   const removeFromBill = (itemId) => {
-    setBill(bill.filter((item) => item.id !== itemId));
+    setBill((currentBill) => currentBill.filter((item) => item.id !== itemId));
   };
 
   const handleProductQty = (item, delta, e) => {
@@ -246,14 +273,22 @@ function SellItems() {
     }
   };
 
-  const clearBill = () => {
-    if (bill.length > 0 && window.confirm(t('Are you sure you want to clear the entire bill?'))) {
-      setBill([]);
-      setCustomer({ name: '', phone: '', idCardNo: '', email: '', address: '', idImage: null });
-      setWitness({ name: '', phone: '', idCardNo: '', address: '', idImage: null });
-      setDownPayment('');
-      newOrderRef();
-    }
+  const clearBill = async () => {
+    if (bill.length === 0) return;
+    const ok = await confirm({
+      title: t('Clear bill'),
+      message: t('Are you sure you want to clear the entire bill?'),
+      confirmLabel: t('Clear'),
+      cancelLabel: t('Cancel'),
+      variant: 'warning',
+      icon: 'bi-trash3',
+    });
+    if (!ok) return;
+    setBill([]);
+    setCustomer({ name: '', phone: '', idCardNo: '', email: '', address: '', idImage: null });
+    setWitness({ name: '', phone: '', idCardNo: '', address: '', idImage: null });
+    setDownPayment('');
+    newOrderRef();
   };
 
   const calculateTotal = () => bill.reduce((sum, item) => sum + item.total, 0);
@@ -269,13 +304,13 @@ function SellItems() {
     const months = parseInt(installmentMonths, 10) || 1;
     const monthlyPayment = totalWithInterest / months;
     return {
-      total: total.toFixed(2),
-      downPayment: down.toFixed(2),
-      remaining: remaining.toFixed(2),
+      total,
+      downPayment: down,
+      remaining,
       interestRate: rate,
-      interestAmount: interestAmount.toFixed(2),
-      totalWithInterest: totalWithInterest.toFixed(2),
-      monthlyPayment: monthlyPayment.toFixed(2),
+      interestAmount,
+      totalWithInterest,
+      monthlyPayment,
     };
   };
 
@@ -286,11 +321,22 @@ function SellItems() {
       return;
     }
     setError('');
+    setInstallmentModalError('');
+    setInstallmentTouched(false);
     setShowInstallmentModal(true);
   };
 
   const closeInstallmentModal = () => {
     setShowInstallmentModal(false);
+    setInstallmentModalError('');
+    setInstallmentTouched(false);
+  };
+
+  const showInstallmentModalError = (message, autoClearMs = 0) => {
+    setInstallmentModalError(message);
+    if (autoClearMs > 0) {
+      setTimeout(() => setInstallmentModalError(''), autoClearMs);
+    }
   };
 
   const handleImageCapture = (field, type) => {
@@ -321,7 +367,15 @@ function SellItems() {
       setTimeout(() => setError(''), 3000);
       return;
     }
-    if (!window.confirm(t('Confirm sale and process payment?'))) return;
+    const ok = await confirm({
+      title: t('Confirm sale'),
+      message: t('Confirm sale and process payment?'),
+      confirmLabel: t('Process payment'),
+      cancelLabel: t('Cancel'),
+      variant: 'primary',
+      icon: 'bi-cash-stack',
+    });
+    if (!ok) return;
 
     try {
       setProcessing(true);
@@ -343,36 +397,38 @@ function SellItems() {
 
   const handleInstallmentSaleCheckout = async () => {
     if (bill.length === 0) {
-      setError('Add items to bill');
-      setTimeout(() => setError(''), 3000);
+      showInstallmentModalError('Add items to bill', 3000);
       return;
     }
-    if (!customer.name || !customer.phone || !customer.idCardNo || !customer.address) {
-      setError('Please fill in all customer details');
-      setTimeout(() => setError(''), 3000);
+
+    setInstallmentTouched(true);
+    const orderTotal = calculateTotal();
+    const fieldErrors = getInstallmentFieldErrors(customer, witness, downPayment, orderTotal);
+    if (Object.keys(fieldErrors).length > 0) {
+      const message = getInstallmentValidationMessage(
+        fieldErrors,
+        customer,
+        witness,
+        downPayment,
+        orderTotal
+      );
+      showInstallmentModalError(message, 4000);
       return;
     }
-    if (!witness.name || !witness.phone || !witness.idCardNo || !witness.address) {
-      setError('Please fill in all witness details');
-      setTimeout(() => setError(''), 3000);
-      return;
-    }
-    if (!downPayment || parseFloat(downPayment) <= 0) {
-      setError('Please enter a valid down payment');
-      setTimeout(() => setError(''), 3000);
-      return;
-    }
-    const total = calculateTotal();
-    if (parseFloat(downPayment) >= total) {
-      setError('Down payment must be less than total amount');
-      setTimeout(() => setError(''), 3000);
-      return;
-    }
-    if (!window.confirm('Confirm installment sale?')) return;
+
+    const ok = await confirm({
+      title: t('Confirm installment sale'),
+      message: t('Confirm installment sale?'),
+      confirmLabel: t('Create installment'),
+      cancelLabel: t('Cancel'),
+      variant: 'primary',
+      icon: 'bi-clipboard-check',
+    });
+    if (!ok) return;
 
     try {
       setProcessing(true);
-      setError('');
+      setInstallmentModalError('');
       const firstItem = bill[0];
       const totalQuantity = bill.reduce((sum, item) => sum + item.quantity, 0);
       await saleService.processInstallmentSale({
@@ -389,11 +445,13 @@ function SellItems() {
       setWitness({ name: '', phone: '', idCardNo: '', address: '', idImage: null });
       setDownPayment('');
       setShowInstallmentModal(false);
+      setInstallmentModalError('');
+      setInstallmentTouched(false);
       newOrderRef();
       await loadData();
       setTimeout(() => setSuccess(''), 5000);
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to process installment sale');
+      setInstallmentModalError(err.response?.data?.error || 'Failed to process installment sale');
     } finally {
       setProcessing(false);
     }
@@ -405,7 +463,15 @@ function SellItems() {
       setTimeout(() => setError(''), 3000);
       return;
     }
-    if (!window.confirm('Confirm payment recording?')) return;
+    const ok = await confirm({
+      title: t('Confirm payment'),
+      message: t('Confirm payment recording?'),
+      confirmLabel: t('Record payment'),
+      cancelLabel: t('Cancel'),
+      variant: 'primary',
+      icon: 'bi-credit-card',
+    });
+    if (!ok) return;
 
     try {
       setProcessing(true);
@@ -481,6 +547,64 @@ function SellItems() {
 
   const total = calculateTotal();
   const installmentPreview = downPayment ? calculateInstallmentPreview() : null;
+  const witnessDuplicateError = useMemo(
+    () => validateDistinctCustomerAndWitness(customer, witness),
+    [customer, witness]
+  );
+
+  const highlightedInstallmentFields = useMemo(() => {
+    const errors = installmentTouched
+      ? getInstallmentFieldErrors(customer, witness, downPayment, total)
+      : {};
+
+    getCustomerWitnessDuplicates(customer, witness).forEach((dup) => {
+      if (dup === 'name') {
+        errors['customer.name'] = true;
+        errors['witness.name'] = true;
+      }
+      if (dup === 'phone') {
+        errors['customer.phone'] = true;
+        errors['witness.phone'] = true;
+      }
+      if (dup === 'id') {
+        errors['customer.idCardNo'] = true;
+        errors['witness.idCardNo'] = true;
+      }
+    });
+
+    return errors;
+  }, [installmentTouched, customer, witness, downPayment, total]);
+
+  const isInstallmentFieldInvalid = (fieldKey) => Boolean(highlightedInstallmentFields[fieldKey]);
+  const installmentControlClass = (fieldKey) =>
+    `form-control${isInstallmentFieldInvalid(fieldKey) ? ' is-invalid' : ''}`;
+
+  const getInstallmentFieldMessage = (fieldKey, requiredMessage, duplicateMessage) => {
+    if (!isInstallmentFieldInvalid(fieldKey)) return null;
+    const duplicates = getCustomerWitnessDuplicates(customer, witness);
+
+    if (fieldKey === 'downPayment') {
+      const down = parseFloat(downPayment);
+      if (String(downPayment ?? '').trim() && !Number.isNaN(down) && down >= total) {
+        return duplicateMessage;
+      }
+      return requiredMessage;
+    }
+
+    const duplicateActive =
+      ((fieldKey === 'customer.name' || fieldKey === 'witness.name') && duplicates.includes('name')) ||
+      ((fieldKey === 'customer.phone' || fieldKey === 'witness.phone') && duplicates.includes('phone')) ||
+      ((fieldKey === 'customer.idCardNo' || fieldKey === 'witness.idCardNo') && duplicates.includes('id'));
+
+    if (duplicateActive) return duplicateMessage;
+    return requiredMessage;
+  };
+
+  const installmentFieldFeedback = (fieldKey, requiredMessage, duplicateMessage) => {
+    const message = getInstallmentFieldMessage(fieldKey, requiredMessage, duplicateMessage);
+    if (!message) return null;
+    return <div className="invalid-feedback d-block">{message}</div>;
+  };
 
   const renderInstallmentModal = () => {
     if (!showInstallmentModal) return null;
@@ -493,7 +617,7 @@ function SellItems() {
         aria-modal="true"
         aria-labelledby="installmentModalTitle"
       >
-        <div className="modal-dialog modal-lg modal-dialog-scrollable">
+        <div className="modal-dialog modal-lg pos-installment-modal-dialog">
           <div className="modal-content">
             <div className="modal-header">
               <h5 className="modal-title" id="installmentModalTitle">
@@ -509,9 +633,16 @@ function SellItems() {
               />
             </div>
             <div className="modal-body">
+              {installmentModalError && (
+                <div className="alert alert-danger py-2 small mb-3" role="alert">
+                  <i className="bi bi-exclamation-triangle-fill me-2"></i>
+                  {installmentModalError}
+                </div>
+              )}
+
               <div className="pos-installment-order-summary mb-3">
                 <span>{t('Order Total')}</span>
-                <strong>${total.toFixed(2)}</strong>
+                <strong>{formatMoney(total)}</strong>
                 <span className="text-muted small ms-2">
                   ({bill.length} {bill.length === 1 ? t('item') : t('items')})
                 </span>
@@ -523,34 +654,50 @@ function SellItems() {
                   <div className="mb-2">
                     <label className="form-label">{t('Customer Name')} *</label>
                     <input
-                      className="form-control"
+                      className={installmentControlClass('customer.name')}
                       value={customer.name}
                       onChange={(e) => setCustomer({ ...customer, name: e.target.value })}
                     />
+                    {installmentFieldFeedback(
+                      'customer.name',
+                      t('Customer name is required'),
+                      t('Must differ from witness name')
+                    )}
                   </div>
                   <div className="mb-2">
                     <label className="form-label">{t('Phone')} *</label>
                     <input
-                      className="form-control"
+                      className={installmentControlClass('customer.phone')}
                       value={customer.phone}
                       onChange={(e) => setCustomer({ ...customer, phone: e.target.value })}
                     />
+                    {installmentFieldFeedback(
+                      'customer.phone',
+                      t('Phone is required'),
+                      t('Must differ from witness phone')
+                    )}
                   </div>
                   <div className="mb-2">
                     <label className="form-label">{t('ID Card No')} *</label>
                     <input
-                      className="form-control"
+                      className={installmentControlClass('customer.idCardNo')}
                       value={customer.idCardNo}
                       onChange={(e) => setCustomer({ ...customer, idCardNo: e.target.value })}
                     />
+                    {installmentFieldFeedback(
+                      'customer.idCardNo',
+                      t('ID card number is required'),
+                      t('Must differ from witness ID')
+                    )}
                   </div>
                   <div className="mb-2">
                     <label className="form-label">{t('Address')} *</label>
                     <input
-                      className="form-control"
+                      className={installmentControlClass('customer.address')}
                       value={customer.address}
                       onChange={(e) => setCustomer({ ...customer, address: e.target.value })}
                     />
+                    {installmentFieldFeedback('customer.address', t('Address is required'))}
                   </div>
                   <div className="mb-2">
                     <label className="form-label">{t('Email')}</label>
@@ -576,34 +723,50 @@ function SellItems() {
                   <div className="mb-2">
                     <label className="form-label">{t('Witness Name')} *</label>
                     <input
-                      className="form-control"
+                      className={installmentControlClass('witness.name')}
                       value={witness.name}
                       onChange={(e) => setWitness({ ...witness, name: e.target.value })}
                     />
+                    {installmentFieldFeedback(
+                      'witness.name',
+                      t('Witness name is required'),
+                      t('Must differ from customer name')
+                    )}
                   </div>
                   <div className="mb-2">
                     <label className="form-label">{t('Witness Phone')} *</label>
                     <input
-                      className="form-control"
+                      className={installmentControlClass('witness.phone')}
                       value={witness.phone}
                       onChange={(e) => setWitness({ ...witness, phone: e.target.value })}
                     />
+                    {installmentFieldFeedback(
+                      'witness.phone',
+                      t('Witness phone is required'),
+                      t('Must differ from customer phone')
+                    )}
                   </div>
                   <div className="mb-2">
                     <label className="form-label">{t('Witness ID')} *</label>
                     <input
-                      className="form-control"
+                      className={installmentControlClass('witness.idCardNo')}
                       value={witness.idCardNo}
                       onChange={(e) => setWitness({ ...witness, idCardNo: e.target.value })}
                     />
+                    {installmentFieldFeedback(
+                      'witness.idCardNo',
+                      t('Witness ID is required'),
+                      t('Must differ from customer ID')
+                    )}
                   </div>
                   <div className="mb-2">
                     <label className="form-label">{t('Witness Address')} *</label>
                     <input
-                      className="form-control"
+                      className={installmentControlClass('witness.address')}
                       value={witness.address}
                       onChange={(e) => setWitness({ ...witness, address: e.target.value })}
                     />
+                    {installmentFieldFeedback('witness.address', t('Witness address is required'))}
                   </div>
                   <button
                     type="button"
@@ -616,6 +779,12 @@ function SellItems() {
                 </div>
               </div>
 
+              {witnessDuplicateError && !installmentTouched && (
+                <div className="alert alert-warning py-2 small mb-0 mt-3" role="alert">
+                  {witnessDuplicateError}
+                </div>
+              )}
+
               <hr className="my-4" />
 
               <h6 className="pos-installment-section-title">{t('Payment Terms')}</h6>
@@ -626,10 +795,15 @@ function SellItems() {
                     type="number"
                     min="0"
                     step="0.01"
-                    className="form-control"
+                    className={installmentControlClass('downPayment')}
                     value={downPayment}
                     onChange={(e) => setDownPayment(e.target.value)}
                   />
+                  {installmentFieldFeedback(
+                    'downPayment',
+                    t('Enter a valid down payment'),
+                    t('Down payment must be less than order total')
+                  )}
                 </div>
                 <div className="col-sm-6">
                   <label className="form-label">{t('Installment Period')} *</label>
@@ -652,27 +826,27 @@ function SellItems() {
                 <div className="pos-installment-preview mt-3">
                   <div className="preview-row">
                     <span>{t('Total')}</span>
-                    <span>${installmentPreview.total}</span>
+                    <span>{formatMoney(installmentPreview.total)}</span>
                   </div>
                   <div className="preview-row">
                     <span>{t('Down Payment')}</span>
-                    <span>${installmentPreview.downPayment}</span>
+                    <span>{formatMoney(installmentPreview.downPayment)}</span>
                   </div>
                   <div className="preview-row">
                     <span>{t('Remaining')}</span>
-                    <span>${installmentPreview.remaining}</span>
+                    <span>{formatMoney(installmentPreview.remaining)}</span>
                   </div>
                   <div className="preview-row">
                     <span>{t('Interest')} ({installmentPreview.interestRate}%)</span>
-                    <span>${installmentPreview.interestAmount}</span>
+                    <span>{formatMoney(installmentPreview.interestAmount)}</span>
                   </div>
                   <div className="preview-row highlight">
                     <span>{t('Total with Interest')}</span>
-                    <span>${installmentPreview.totalWithInterest}</span>
+                    <span>{formatMoney(installmentPreview.totalWithInterest)}</span>
                   </div>
                   <div className="preview-row highlight">
                     <span>{t('Monthly Payment')}</span>
-                    <span>${installmentPreview.monthlyPayment}</span>
+                    <span>{formatMoney(installmentPreview.monthlyPayment)}</span>
                   </div>
                 </div>
               )}
@@ -689,7 +863,7 @@ function SellItems() {
               <button
                 type="button"
                 className="btn btn-primary"
-                disabled={processing}
+                disabled={processing || Boolean(witnessDuplicateError)}
                 onClick={handleInstallmentSaleCheckout}
               >
                 {processing ? t('Processing...') : `📋 ${t('Create Installment')}`}
@@ -749,25 +923,34 @@ function SellItems() {
                       <ProductThumbnail item={item} categories={categories} size={22} />
                     </span>
                     <span className="pos-order-item-name">{item.name}</span>
+                    <button
+                      type="button"
+                      className="pos-order-item-remove"
+                      onClick={() => removeFromBill(item.id)}
+                      title={t('Remove item')}
+                      aria-label={t('Remove item')}
+                    >
+                      <i className="bi bi-x-lg"></i>
+                    </button>
                   </div>
                   <div className="pos-order-item-qty">
                     <button type="button" className="pos-qty-btn" onClick={() => decrementQuantity(item.id)}>−</button>
                     <span className="pos-qty-value">{item.quantity}</span>
                     <button type="button" className="pos-qty-btn" onClick={() => incrementQuantity(item.id)}>+</button>
                   </div>
-                  <div className="pos-order-item-cost">${item.total.toFixed(2)}</div>
+                  <div className="pos-order-item-cost">{formatMoney(item.total)}</div>
                 </div>
               ))
             )}
           </div>
 
           <div className="pos-summary">
-            <div className="pos-summary-row"><span>Shipping</span><span>$0.00</span></div>
-            <div className="pos-summary-row"><span>Tax</span><span>$0.00</span></div>
-            <div className="pos-summary-row discount"><span>Discount</span><span>$0.00</span></div>
+            <div className="pos-summary-row"><span>Shipping</span><span>{formatMoney(0)}</span></div>
+            <div className="pos-summary-row"><span>Tax</span><span>{formatMoney(0)}</span></div>
+            <div className="pos-summary-row discount"><span>Discount</span><span>{formatMoney(0)}</span></div>
             <div className="pos-summary-total">
               <span>{t('Sub Total')}</span>
-              <span>${total.toFixed(2)}</span>
+              <span>{formatMoney(total)}</span>
             </div>
           </div>
 
@@ -792,7 +975,7 @@ function SellItems() {
         <div className="p-3">
           <div className="bg-light rounded p-3 mb-3 small">
             <strong>{selectedPlan.customer_name}</strong>
-            <div>{t('Remaining')}: ${(selectedPlan.total_with_interest - selectedPlan.paid_amount).toFixed(2)}</div>
+            <div>{t('Remaining')}: {formatMoney(selectedPlan.total_with_interest - selectedPlan.paid_amount)}</div>
           </div>
           <label className="form-label">{t('Payment Amount')}</label>
           <input type="number" className="form-control mb-2" value={paymentAmount} onChange={(e) => setPaymentAmount(e.target.value)} />
@@ -841,7 +1024,7 @@ function SellItems() {
       </div>
 
       <div className="pos-alerts">
-        {error && <div className="pos-alert pos-alert-error">{error}</div>}
+        {error && !showInstallmentModal && <div className="pos-alert pos-alert-error">{error}</div>}
         {success && <div className="pos-alert pos-alert-success">{success}</div>}
       </div>
 
@@ -879,7 +1062,7 @@ function SellItems() {
                     <div className="fw-bold">{plan.customer_name}</div>
                     {plan.customer_id_card && <div className="small text-muted">NIC: {plan.customer_id_card}</div>}
                     <div className="small mt-2">
-                      {t('Remaining')}: ${(plan.total_with_interest - plan.paid_amount).toFixed(2)}
+                      {t('Remaining')}: {formatMoney(plan.total_with_interest - plan.paid_amount)}
                     </div>
                   </button>
                 ))
@@ -971,7 +1154,7 @@ function SellItems() {
                         </div>
                         <div className="pos-product-cat">{cat?.name || 'General'}</div>
                         <div className="pos-product-name">{item.name}</div>
-                        <div className="pos-product-price">${(item.selling_price ?? item.price ?? 0).toFixed(2)}</div>
+                        <div className="pos-product-price">{formatMoney(item.selling_price ?? item.price ?? 0)}</div>
                         <div className="pos-product-qty" onClick={(e) => e.stopPropagation()}>
                           <button type="button" className="pos-qty-btn" onClick={(e) => handleProductQty(item, -1, e)} disabled={qty === 0}>−</button>
                           <span className="pos-qty-value">{qty}</span>

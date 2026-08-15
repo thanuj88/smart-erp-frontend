@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { saleService } from '../services';
+import { useCurrency } from '../contexts/TenantSettingsContext';
 
 const PAGE_SIZE = 10;
 
@@ -16,7 +17,7 @@ const MetricCard = ({ label, value, sub, variant = 'metric-orange', icon }) => (
   </div>
 );
 
-const PeriodPanel = ({ title, icon, summary }) => {
+const PeriodPanel = ({ title, icon, summary, formatMoney }) => {
   if (!summary) return null;
   return (
     <div className="card shadow-sm rounded-4 h-100">
@@ -32,25 +33,25 @@ const PeriodPanel = ({ title, icon, summary }) => {
             <div className="report-stat-pill">
               <small>Cash sales</small>
               <strong>{summary.total_sales || 0}</strong>
-              <span>${(summary.total_revenue || 0).toFixed(2)}</span>
+              <span>{formatMoney(summary.total_revenue || 0)}</span>
             </div>
           </div>
           <div className="col-6">
             <div className="report-stat-pill">
               <small>Down payments</small>
-              <strong>${(summary.down_payment_income || 0).toFixed(2)}</strong>
+              <strong>{formatMoney(summary.down_payment_income || 0)}</strong>
             </div>
           </div>
           <div className="col-6">
             <div className="report-stat-pill">
               <small>Installments</small>
-              <strong>${(summary.installment_income || 0).toFixed(2)}</strong>
+              <strong>{formatMoney(summary.installment_income || 0)}</strong>
             </div>
           </div>
           <div className="col-6">
             <div className="report-stat-pill report-stat-pill-highlight">
               <small>Total income</small>
-              <strong>${(summary.total_actual_income || 0).toFixed(2)}</strong>
+              <strong>{formatMoney(summary.total_actual_income || 0)}</strong>
             </div>
           </div>
         </div>
@@ -60,6 +61,7 @@ const PeriodPanel = ({ title, icon, summary }) => {
 };
 
 const SalesReport = () => {
+  const { formatMoney } = useCurrency();
   const [allSales, setAllSales] = useState([]);
   const [overallSummary, setOverallSummary] = useState(null);
   const [dailySummary, setDailySummary] = useState(null);
@@ -211,7 +213,7 @@ const SalesReport = () => {
           <MetricCard
             label="Cash Sales Today"
             value={dailySummary?.total_sales || 0}
-            sub={`$${(dailySummary?.total_revenue || 0).toFixed(2)} revenue`}
+            sub={`${formatMoney(dailySummary?.total_revenue || 0)} revenue`}
             variant="metric-orange"
             icon="bi-basket3"
           />
@@ -219,7 +221,7 @@ const SalesReport = () => {
         <div className="col-12 col-sm-6 col-xl-3">
           <MetricCard
             label="Down Payments"
-            value={`$${(dailySummary?.down_payment_income || 0).toFixed(2)}`}
+            value={formatMoney(dailySummary?.down_payment_income || 0)}
             sub="Installment down payments"
             variant="metric-blue"
             icon="bi-cash-stack"
@@ -228,7 +230,7 @@ const SalesReport = () => {
         <div className="col-12 col-sm-6 col-xl-3">
           <MetricCard
             label="Installment Collections"
-            value={`$${(dailySummary?.installment_income || 0).toFixed(2)}`}
+            value={formatMoney(dailySummary?.installment_income || 0)}
             sub="Payments collected today"
             variant="metric-teal"
             icon="bi-calendar-check"
@@ -237,7 +239,7 @@ const SalesReport = () => {
         <div className="col-12 col-sm-6 col-xl-3">
           <MetricCard
             label="Total Actual Income"
-            value={`$${(dailySummary?.total_actual_income || 0).toFixed(2)}`}
+            value={formatMoney(dailySummary?.total_actual_income || 0)}
             sub={`${dailySummary?.total_items_sold || 0} items sold`}
             variant="metric-dark"
             icon="bi-graph-up-arrow"
@@ -249,7 +251,7 @@ const SalesReport = () => {
         <div className="col-12 col-sm-6">
           <MetricCard
             label="Today's Profit"
-            value={`$${(dailySummary?.total_profit || 0).toFixed(2)}`}
+            value={formatMoney(dailySummary?.total_profit || 0)}
             sub="Cash sales profit"
             variant="metric-teal"
             icon="bi-piggy-bank"
@@ -268,10 +270,10 @@ const SalesReport = () => {
 
       <div className="row g-4 mb-4">
         <div className="col-12 col-lg-6">
-          <PeriodPanel title="This Week" icon="bi-calendar-week" summary={weeklySummary} />
+          <PeriodPanel title="This Week" icon="bi-calendar-week" summary={weeklySummary} formatMoney={formatMoney} />
         </div>
         <div className="col-12 col-lg-6">
-          <PeriodPanel title="This Month" icon="bi-calendar-month" summary={monthlySummary} />
+          <PeriodPanel title="This Month" icon="bi-calendar-month" summary={monthlySummary} formatMoney={formatMoney} />
         </div>
       </div>
 
@@ -289,7 +291,7 @@ const SalesReport = () => {
         <div className="col-12 col-sm-6 col-xl-3">
           <MetricCard
             label="Total Revenue"
-            value={`$${(overallSummary?.total_revenue || 0).toFixed(2)}`}
+            value={formatMoney(overallSummary?.total_revenue || 0)}
             variant="metric-orange"
             icon="bi-currency-dollar"
           />
@@ -297,7 +299,7 @@ const SalesReport = () => {
         <div className="col-12 col-sm-6 col-xl-3">
           <MetricCard
             label="Total Profit"
-            value={`$${(overallSummary?.total_profit || 0).toFixed(2)}`}
+            value={formatMoney(overallSummary?.total_profit || 0)}
             variant="metric-teal"
             icon="bi-graph-up"
           />
@@ -432,8 +434,8 @@ const SalesReport = () => {
                             </td>
                             <td className="fw-semibold">{sale.item_name}</td>
                             <td>{sale.quantity}</td>
-                            <td>${sale.price?.toFixed(2) || '0.00'}</td>
-                            <td className="fw-semibold">${sale.total?.toFixed(2) || '0.00'}</td>
+                            <td>{formatMoney(sale.price || 0)}</td>
+                            <td className="fw-semibold">{formatMoney(sale.total || 0)}</td>
                             <td>{sale.teller_name || '—'}</td>
                           </tr>
                         ))}

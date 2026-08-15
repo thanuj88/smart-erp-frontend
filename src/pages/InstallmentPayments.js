@@ -3,8 +3,10 @@ import PageHeader from '../components/PageHeader';
 import AdminAlerts from '../components/AdminAlerts';
 import AdminLoading from '../components/AdminLoading';
 import { installmentPaymentService } from '../services';
+import { useCurrency } from '../contexts/TenantSettingsContext';
 
 const InstallmentPayments = () => {
+  const { formatMoney } = useCurrency();
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('pending');
@@ -163,9 +165,9 @@ const InstallmentPayments = () => {
                             <span className="badge bg-danger ms-2">Overdue</span>
                           )}
                         </td>
-                        <td>${payment.amount_due.toFixed(2)}</td>
-                        <td>${payment.amount_paid.toFixed(2)}</td>
-                        <td className="text-danger fw-semibold">${(payment.amount_due - payment.amount_paid).toFixed(2)}</td>
+                        <td>{formatMoney(payment.amount_due)}</td>
+                        <td>{formatMoney(payment.amount_paid)}</td>
+                        <td className="text-danger fw-semibold">{formatMoney(payment.amount_due - payment.amount_paid)}</td>
                         <td>
                           <span className={`badge ${isOverdue(payment.due_date, payment.status) ? 'bg-danger' : payment.status === 'paid' ? 'bg-success' : 'bg-warning text-dark'}`}>
                             {isOverdue(payment.due_date, payment.status) ? 'Overdue' : payment.status}
@@ -212,9 +214,9 @@ const InstallmentPayments = () => {
                     <p className="mb-1"><strong>Phone:</strong> {selectedPayment.customer_phone}</p>
                     <p className="mb-1"><strong>Payment #:</strong> {selectedPayment.payment_number}</p>
                     <p className="mb-1"><strong>Due Date:</strong> {new Date(selectedPayment.due_date).toLocaleDateString()}</p>
-                    <p className="mb-1"><strong>Amount Due:</strong> ${selectedPayment.amount_due.toFixed(2)}</p>
-                    <p className="mb-1"><strong>Already Paid:</strong> ${selectedPayment.amount_paid.toFixed(2)}</p>
-                    <p className="mb-0 text-danger"><strong>Remaining:</strong> ${(selectedPayment.amount_due - selectedPayment.amount_paid).toFixed(2)}</p>
+                    <p className="mb-1"><strong>Amount Due:</strong> {formatMoney(selectedPayment.amount_due)}</p>
+                    <p className="mb-1"><strong>Already Paid:</strong> {formatMoney(selectedPayment.amount_paid)}</p>
+                    <p className="mb-0 text-danger"><strong>Remaining:</strong> {formatMoney(selectedPayment.amount_due - selectedPayment.amount_paid)}</p>
                   </div>
                   <div className="mb-3">
                     <label className="form-label fw-semibold">Payment Amount *</label>

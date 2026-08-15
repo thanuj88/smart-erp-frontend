@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { installmentSettingsService } from '../services';
+import { useCurrency } from '../contexts/TenantSettingsContext';
 
 const InstallmentSettings = () => {
+  const { formatMoney } = useCurrency();
   const [settings, setSettings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -166,12 +168,24 @@ const InstallmentSettings = () => {
             Interest Rate Calculation Example
           </h3>
           <div style={{ color: '#7f8c8d' }}>
-            <p><strong>Example:</strong> Item price = $1000, Down payment = $200</p>
+            <p><strong>Example:</strong> Item price = {formatMoney(1000)}, Down payment = {formatMoney(200)}</p>
             <ul style={{ marginLeft: '1.5rem', marginTop: '0.5rem' }}>
-              <li>Remaining amount = $800</li>
-              <li>With 3 months ({formData[3]}%): Interest = ${(800 * formData[3] / 100).toFixed(2)}, Total = ${(800 + 800 * formData[3] / 100).toFixed(2)}, Monthly = ${((800 + 800 * formData[3] / 100) / 3).toFixed(2)}</li>
-              <li>With 6 months ({formData[6]}%): Interest = ${(800 * formData[6] / 100).toFixed(2)}, Total = ${(800 + 800 * formData[6] / 100).toFixed(2)}, Monthly = ${((800 + 800 * formData[6] / 100) / 6).toFixed(2)}</li>
-              <li>With 12 months ({formData[12]}%): Interest = ${(800 * formData[12] / 100).toFixed(2)}, Total = ${(800 + 800 * formData[12] / 100).toFixed(2)}, Monthly = ${((800 + 800 * formData[12] / 100) / 12).toFixed(2)}</li>
+              <li>Remaining amount = {formatMoney(800)}</li>
+              <li>
+                With 3 months ({formData[3]}%): Interest = {formatMoney((800 * formData[3]) / 100)}, Total ={' '}
+                {formatMoney(800 + (800 * formData[3]) / 100)}, Monthly ={' '}
+                {formatMoney((800 + (800 * formData[3]) / 100) / 3)}
+              </li>
+              <li>
+                With 6 months ({formData[6]}%): Interest = {formatMoney((800 * formData[6]) / 100)}, Total ={' '}
+                {formatMoney(800 + (800 * formData[6]) / 100)}, Monthly ={' '}
+                {formatMoney((800 + (800 * formData[6]) / 100) / 6)}
+              </li>
+              <li>
+                With 12 months ({formData[12]}%): Interest = {formatMoney((800 * formData[12]) / 100)}, Total ={' '}
+                {formatMoney(800 + (800 * formData[12]) / 100)}, Monthly ={' '}
+                {formatMoney((800 + (800 * formData[12]) / 100) / 12)}
+              </li>
             </ul>
           </div>
         </div>

@@ -62,6 +62,12 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
+  const refreshUser = async () => {
+    const profile = await authService.getProfile();
+    setUser(profile);
+    return profile;
+  };
+
   const normalizeRole = (role) =>
     typeof role === 'string' ? role.toUpperCase() : role;
 
@@ -120,6 +126,7 @@ export const AuthProvider = ({ children }) => {
     canManagePlatform,
     hasRole,
     hasPermission,
+    refreshUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

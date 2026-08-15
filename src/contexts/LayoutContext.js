@@ -19,7 +19,7 @@ export const LayoutProvider = ({ children }) => {
       setMobileMenuOpen((open) => !open);
       return;
     }
-    setSidebarCollapsed(!sidebarCollapsed);
+    setSidebarCollapsed((collapsed) => !collapsed);
   };
 
   const closeMobileMenu = () => setMobileMenuOpen(false);

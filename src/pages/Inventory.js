@@ -5,8 +5,12 @@ import ProductImageField from '../components/ProductImageField';
 import CategoryFormModal from '../components/CategoryFormModal';
 import '../components/ProductThumbnail.css';
 import { resolveProductImageUrl } from '../utils/productImage';
+import { useCurrency } from '../contexts/TenantSettingsContext';
+import { useConfirm } from '../contexts/ConfirmContext';
 
 const Inventory = () => {
+  const { formatMoney, symbol } = useCurrency();
+  const { confirm } = useConfirm();
   const [items, setItems] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -206,15 +210,21 @@ const Inventory = () => {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this item?')) {
-      try {
-        await itemService.delete(id);
-        setSuccess('Item deleted successfully');
-        loadItems();
-        setTimeout(() => setSuccess(''), 3000);
-      } catch (error) {
-        setError('Failed to delete item');
-      }
+    const ok = await confirm({
+      title: 'Delete item',
+      message: 'Are you sure you want to delete this item?',
+      confirmLabel: 'Delete',
+      cancelLabel: 'Cancel',
+      variant: 'danger',
+    });
+    if (!ok) return;
+    try {
+      await itemService.delete(id);
+      setSuccess('Item deleted successfully');
+      loadItems();
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (error) {
+      setError('Failed to delete item');
     }
   };
 
@@ -330,7 +340,7 @@ const Inventory = () => {
                       <td>{item.category_name || item.category || '—'}</td>
                       <td className="text-muted">{item.barcode || '—'}</td>
                       <td className="fw-semibold">
-                        ${(item.selling_price ?? item.price)?.toFixed(2) || '0.00'}
+                        {formatMoney(item.selling_price ?? item.price ?? 0)}
                       </td>
                       <td>
                         {(() => {
@@ -447,7 +457,7 @@ const Inventory = () => {
                     <div className="col-md-6">
                       <label className="form-label fw-semibold">Buying Price *</label>
                       <div className="input-group">
-                        <span className="input-group-text">$</span>
+                        <span className="input-group-text">{symbol}</span>
                         <input
                           type="number"
                           name="buyingPrice"
@@ -464,7 +474,7 @@ const Inventory = () => {
                     <div className="col-md-6">
                       <label className="form-label fw-semibold">Selling Price *</label>
                       <div className="input-group">
-                        <span className="input-group-text">$</span>
+                        <span className="input-group-text">{symbol}</span>
                         <input
                           type="number"
                           name="sellingPrice"

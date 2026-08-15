@@ -1,28 +1,76 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import PageHeader from '../components/PageHeader';
 import AdminAlerts from '../components/AdminAlerts';
-import { APP_NAME } from '../config/app';
+import { settingsService } from '../services';
+import { useAuth } from '../contexts/AuthContext';
+import { useTenantSettings } from '../contexts/TenantSettingsContext';
+import { CURRENCY_OPTIONS } from '../utils/currency';
 
 const Settings = () => {
+  const { refreshUser } = useAuth();
+  const { settings, reloadSettings, setSettings } = useTenantSettings();
   const [formData, setFormData] = useState({
-    businessName: APP_NAME,
-    currency: 'USD ($)',
-    currencySymbol: 'Rs',
-    taxRate: '8',
+    businessName: '',
+    currency: CURRENCY_OPTIONS[0].label,
+    currencySymbol: CURRENCY_OPTIONS[0].symbol,
+    taxRate: '0',
     lowStockThreshold: '15',
     receiptFooter: 'Thank you for shopping with us!',
   });
   const [success, setSuccess] = useState('');
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!settings) return;
+    setFormData({
+      businessName: settings.businessName || '',
+      currency: settings.currencyLabel || CURRENCY_OPTIONS[0].label,
+      currencySymbol: settings.currencySymbol || CURRENCY_OPTIONS[0].symbol,
+      taxRate: String(settings.taxRate ?? 0),
+      lowStockThreshold: String(settings.lowStockThreshold ?? 15),
+      receiptFooter: settings.receiptFooter || '',
+    });
+  }, [settings]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    if (name === 'currency') {
+      const option = CURRENCY_OPTIONS.find((c) => c.label === value);
+      setFormData((prev) => ({
+        ...prev,
+        currency: value,
+        currencySymbol: option?.symbol ?? prev.currencySymbol,
+      }));
+      return;
+    }
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setSuccess('Settings saved successfully.');
-    setTimeout(() => setSuccess(''), 3000);
+    setSaving(true);
+    setError('');
+    setSuccess('');
+    try {
+      const updated = await settingsService.update({
+        businessName: formData.businessName,
+        currency: formData.currency,
+        currencySymbol: formData.currencySymbol,
+        taxRate: parseFloat(formData.taxRate) || 0,
+        lowStockThreshold: parseInt(formData.lowStockThreshold, 10) || 0,
+        receiptFooter: formData.receiptFooter,
+      });
+      setSettings(updated);
+      await reloadSettings();
+      await refreshUser();
+      setSuccess('Settings saved. Currency updates apply for all staff in this store.');
+      setTimeout(() => setSuccess(''), 4000);
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to save settings');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -32,7 +80,7 @@ const Settings = () => {
         subtitle="Customize your business information, currency and tax behavior."
       />
 
-      <AdminAlerts success={success} onClearSuccess={() => setSuccess('')} />
+      <AdminAlerts success={success} error={error} onClearSuccess={() => setSuccess('')} onClearError={() => setError('')} />
 
       <div className="card settings-card">
         <div className="card-body">
@@ -62,9 +110,11 @@ const Settings = () => {
                   value={formData.currency}
                   onChange={handleChange}
                 >
-                  <option>USD ($)</option>
-                  <option>EUR (€)</option>
-                  <option>LKR (Rs)</option>
+                  {CURRENCY_OPTIONS.map((opt) => (
+                    <option key={opt.code} value={opt.label}>
+                      {opt.label}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div className="col-md-6">
@@ -123,8 +173,8 @@ const Settings = () => {
                 />
               </div>
               <div className="col-12 pt-2 d-flex justify-content-end">
-                <button type="submit" className="btn btn-primary">
-                  Save settings
+                <button type="submit" className="btn btn-primary" disabled={saving}>
+                  {saving ? 'Saving…' : 'Save settings'}
                 </button>
               </div>
             </div>

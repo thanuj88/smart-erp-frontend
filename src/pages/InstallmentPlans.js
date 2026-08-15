@@ -4,10 +4,13 @@ import AdminAlerts from '../components/AdminAlerts';
 import AdminLoading from '../components/AdminLoading';
 import { installmentPlanService, installmentPaymentService, installmentSettingsService } from '../services';
 import { useAuth } from '../contexts/AuthContext';
-
+import { useCurrency } from '../contexts/TenantSettingsContext';
+import { useConfirm } from '../contexts/ConfirmContext';
 
 const InstallmentPlans = () => {
   const { isAdmin } = useAuth();
+  const { formatMoney } = useCurrency();
+  const { confirm } = useConfirm();
   const [plans, setPlans] = useState([]);
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -160,9 +163,14 @@ const InstallmentPlans = () => {
   };
 
   const handleDeleteSetting = async (months) => {
-    if (!window.confirm(`Are you sure you want to delete settings for ${months} months?`)) {
-      return;
-    }
+    const ok = await confirm({
+      title: 'Delete settings',
+      message: `Are you sure you want to delete settings for ${months} months?`,
+      confirmLabel: 'Delete',
+      cancelLabel: 'Cancel',
+      variant: 'danger',
+    });
+    if (!ok) return;
 
     try {
       await installmentSettingsService.delete(months);
@@ -171,25 +179,6 @@ const InstallmentPlans = () => {
       setTimeout(() => setSuccess(''), 3000);
     } catch (error) {
       setError(error.response?.data?.error || 'Failed to delete settings');
-    }
-  };
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'active':
-        return 'text-blue-600';
-      case 'completed':
-        return 'text-green-600';
-      case 'defaulted':
-        return 'text-red-600';
-      case 'paid':
-        return 'text-green-600';
-      case 'pending':
-        return 'text-yellow-600';
-      case 'overdue':
-        return 'text-red-600';
-      default:
-        return 'text-gray-600';
     }
   };
 
@@ -310,12 +299,12 @@ const InstallmentPlans = () => {
                           <td className="fw-semibold">#{plan.id}</td>
                           <td>{plan.customer_name}</td>
                           <td className="text-muted">{plan.customer_phone}</td>
-                          <td>${plan.total_with_interest.toFixed(2)}</td>
-                          <td>${plan.paid_amount.toFixed(2)}</td>
+                          <td>{formatMoney(plan.total_with_interest)}</td>
+                          <td>{formatMoney(plan.paid_amount)}</td>
                           <td className="text-danger fw-semibold">
-                            ${(plan.total_with_interest - plan.paid_amount).toFixed(2)}
+                            {formatMoney(plan.total_with_interest - plan.paid_amount)}
                           </td>
-                          <td>${plan.monthly_payment.toFixed(2)}</td>
+                          <td>{formatMoney(plan.monthly_payment)}</td>
                           <td>
                             <span className={`badge text-capitalize ${getStatusBadgeClass(plan.status)}`}>
                               {plan.status}
@@ -387,8 +376,8 @@ const InstallmentPlans = () => {
                           <td className="fw-semibold">{setting.months} months</td>
                           <td className="text-primary fw-semibold">{setting.interest_rate}%</td>
                           <td className="text-muted">
-                            <div>Total: ${totalWithInterest.toFixed(2)}</div>
-                            <div>Monthly: ${monthlyPayment.toFixed(2)}</div>
+                            <div>Total: {formatMoney(totalWithInterest)}</div>
+                            <div>Monthly: {formatMoney(monthlyPayment)}</div>
                           </td>
                           <td className="text-muted">{new Date(setting.updated_at).toLocaleDateString()}</td>
                           <td>
@@ -422,99 +411,109 @@ const InstallmentPlans = () => {
 
       {/* Plan Details Modal */}
       {selectedPlan && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900">Plan Details - #{selectedPlan.id}</h2>
-              <button
-                className="text-gray-400 hover:text-gray-600 text-2xl"
-                onClick={() => setSelectedPlan(null)}
-              >
-                ×
-              </button>
-            </div>
-
-            <div className="p-6 space-y-6">
-              <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-3">Customer Information</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-gray-600">
-                  <div><strong className="text-gray-900">Name:</strong> {selectedPlan.customer_name}</div>
-                  <div><strong className="text-gray-900">Phone:</strong> {selectedPlan.customer_phone}</div>
-                  <div><strong className="text-gray-900">ID Card:</strong> {selectedPlan.customer_id_card}</div>
-                </div>
+        <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="modal-dialog modal-lg modal-dialog-scrollable">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">Plan Details — #{selectedPlan.id}</h5>
+                <button type="button" className="btn-close" onClick={() => setSelectedPlan(null)} aria-label="Close" />
               </div>
-
-              <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-3">Witness Information</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-600">
-                  <div><strong className="text-gray-900">Name:</strong> {selectedPlan.witness_name}</div>
-                  <div><strong className="text-gray-900">Phone:</strong> {selectedPlan.witness_phone}</div>
+              <div className="modal-body">
+                <h6 className="fw-semibold mb-3">Customer Information</h6>
+                <div className="row g-3 mb-4 small">
+                  <div className="col-md-4">
+                    <span className="text-muted d-block">Name</span>
+                    <span className="fw-semibold">{selectedPlan.customer_name}</span>
+                  </div>
+                  <div className="col-md-4">
+                    <span className="text-muted d-block">Phone</span>
+                    <span className="fw-semibold">{selectedPlan.customer_phone}</span>
+                  </div>
+                  <div className="col-md-4">
+                    <span className="text-muted d-block">ID Card</span>
+                    <span className="fw-semibold">{selectedPlan.customer_id_card}</span>
+                  </div>
                 </div>
-              </div>
 
-              <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-3">Payment Summary</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-gray-600">
-                  <div><strong className="text-gray-900">Total Amount:</strong> ${selectedPlan.total_amount.toFixed(2)}</div>
-                  <div><strong className="text-gray-900">Down Payment:</strong> ${selectedPlan.down_payment.toFixed(2)}</div>
-                  <div><strong className="text-gray-900">Interest Rate:</strong> {selectedPlan.interest_rate}%</div>
-                  <div><strong className="text-gray-900">Interest Amount:</strong> ${selectedPlan.interest_amount.toFixed(2)}</div>
-                  <div><strong className="text-gray-900">Total with Interest:</strong> ${selectedPlan.total_with_interest.toFixed(2)}</div>
-                  <div><strong className="text-gray-900">Monthly Payment:</strong> ${selectedPlan.monthly_payment.toFixed(2)}</div>
-                  <div><strong className="text-gray-900">Paid Amount:</strong> ${selectedPlan.paid_amount.toFixed(2)}</div>
-                  <div><strong className="text-gray-900">Remaining:</strong> ${(selectedPlan.total_with_interest - selectedPlan.paid_amount).toFixed(2)}</div>
+                <h6 className="fw-semibold mb-3">Witness Information</h6>
+                <div className="row g-3 mb-4 small">
+                  <div className="col-md-6">
+                    <span className="text-muted d-block">Name</span>
+                    <span className="fw-semibold">{selectedPlan.witness_name}</span>
+                  </div>
+                  <div className="col-md-6">
+                    <span className="text-muted d-block">Phone</span>
+                    <span className="fw-semibold">{selectedPlan.witness_phone}</span>
+                  </div>
                 </div>
-              </div>
 
-              <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-3">Payment Schedule</h3>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-gray-50">
+                <h6 className="fw-semibold mb-3">Payment Summary</h6>
+                <div className="row g-3 mb-4 small">
+                  <div className="col-sm-6 col-lg-3">
+                    <span className="text-muted d-block">Total Amount</span>
+                    <span className="fw-semibold">{formatMoney(selectedPlan.total_amount)}</span>
+                  </div>
+                  <div className="col-sm-6 col-lg-3">
+                    <span className="text-muted d-block">Down Payment</span>
+                    <span className="fw-semibold">{formatMoney(selectedPlan.down_payment)}</span>
+                  </div>
+                  <div className="col-sm-6 col-lg-3">
+                    <span className="text-muted d-block">Interest Rate</span>
+                    <span className="fw-semibold">{selectedPlan.interest_rate}%</span>
+                  </div>
+                  <div className="col-sm-6 col-lg-3">
+                    <span className="text-muted d-block">Interest Amount</span>
+                    <span className="fw-semibold">{formatMoney(selectedPlan.interest_amount)}</span>
+                  </div>
+                  <div className="col-sm-6 col-lg-3">
+                    <span className="text-muted d-block">Total with Interest</span>
+                    <span className="fw-semibold">{formatMoney(selectedPlan.total_with_interest)}</span>
+                  </div>
+                  <div className="col-sm-6 col-lg-3">
+                    <span className="text-muted d-block">Monthly Payment</span>
+                    <span className="fw-semibold">{formatMoney(selectedPlan.monthly_payment)}</span>
+                  </div>
+                  <div className="col-sm-6 col-lg-3">
+                    <span className="text-muted d-block">Paid Amount</span>
+                    <span className="fw-semibold">{formatMoney(selectedPlan.paid_amount)}</span>
+                  </div>
+                  <div className="col-sm-6 col-lg-3">
+                    <span className="text-muted d-block">Remaining</span>
+                    <span className="fw-semibold text-danger">
+                      {formatMoney(selectedPlan.total_with_interest - selectedPlan.paid_amount)}
+                    </span>
+                  </div>
+                </div>
+
+                <h6 className="fw-semibold mb-3">Payment Schedule</h6>
+                <div className="table-responsive">
+                  <table className="table table-sm table-hover admin-table mb-0">
+                    <thead className="table-light">
                       <tr>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Payment #
-                        </th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Due Date
-                        </th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Amount Due
-                        </th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Amount Paid
-                        </th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Status
-                        </th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Action
-                        </th>
+                        <th>Payment #</th>
+                        <th>Due Date</th>
+                        <th>Amount Due</th>
+                        <th>Amount Paid</th>
+                        <th>Status</th>
+                        <th>Action</th>
                       </tr>
                     </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
+                    <tbody>
                       {selectedPlan.payments?.map((payment) => (
-                        <tr key={payment.id} className="hover:bg-gray-50">
-                          <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
-                            {payment.payment_number}
-                          </td>
-                          <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">
-                            {new Date(payment.due_date).toLocaleDateString()}
-                          </td>
-                          <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">
-                            ${payment.amount_due.toFixed(2)}
-                          </td>
-                          <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">
-                            ${payment.amount_paid.toFixed(2)}
-                          </td>
-                          <td className="px-4 py-2 whitespace-nowrap text-sm font-medium capitalize">
-                            <span className={getStatusColor(payment.status)}>
+                        <tr key={payment.id}>
+                          <td>{payment.payment_number}</td>
+                          <td>{new Date(payment.due_date).toLocaleDateString()}</td>
+                          <td>{formatMoney(payment.amount_due)}</td>
+                          <td>{formatMoney(payment.amount_paid)}</td>
+                          <td>
+                            <span className={`badge text-capitalize ${getStatusBadgeClass(payment.status)}`}>
                               {payment.status}
                             </span>
                           </td>
-                          <td className="px-4 py-2 whitespace-nowrap text-sm font-medium">
+                          <td>
                             {payment.status !== 'paid' && (
                               <button
+                                type="button"
                                 onClick={() => openPaymentModal(payment)}
                                 className="btn btn-primary btn-sm"
                               >
@@ -528,12 +527,8 @@ const InstallmentPlans = () => {
                   </table>
                 </div>
               </div>
-
-              <div className="flex justify-end pt-4">
-                <button
-                  onClick={() => setSelectedPlan(null)}
-                  className="btn btn-ghost"
-                >
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" onClick={() => setSelectedPlan(null)}>
                   Close
                 </button>
               </div>
@@ -544,73 +539,76 @@ const InstallmentPlans = () => {
 
       {/* Payment Modal */}
       {showPaymentModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900">Record Payment</h2>
-              <button
-                className="text-gray-400 hover:text-gray-600 text-2xl"
-                onClick={() => setShowPaymentModal(false)}
-              >
-                ×
-              </button>
-            </div>
-
-            <div className="p-6">
-              {error && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-lg mb-4">
-                  <p className="text-sm text-red-700">{error}</p>
-                </div>
-              )}
-
-              <div className="bg-gray-50 p-4 rounded-lg mb-6 text-sm text-gray-600 space-y-1">
-                <p><strong className="text-gray-900">Payment #:</strong> {selectedPayment?.payment_number}</p>
-                <p><strong className="text-gray-900">Due Date:</strong> {new Date(selectedPayment?.due_date).toLocaleDateString()}</p>
-                <p><strong className="text-gray-900">Amount Due:</strong> ${selectedPayment?.amount_due.toFixed(2)}</p>
-                <p><strong className="text-gray-900">Already Paid:</strong> ${selectedPayment?.amount_paid.toFixed(2)}</p>
-                <p><strong className="text-gray-900">Remaining:</strong> ${(selectedPayment?.amount_due - selectedPayment?.amount_paid).toFixed(2)}</p>
+        <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="modal-dialog">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">
+                  <i className="bi bi-cash-coin me-2"></i>
+                  Record Payment
+                </h5>
+                <button type="button" className="btn-close" onClick={() => setShowPaymentModal(false)} aria-label="Close" />
               </div>
+              <form onSubmit={handleRecordPayment}>
+                <div className="modal-body">
+                  {error && (
+                    <div className="alert alert-danger">
+                      <i className="bi bi-exclamation-triangle-fill me-2"></i>
+                      {error}
+                    </div>
+                  )}
 
-              <form onSubmit={handleRecordPayment} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Payment Amount *
-                  </label>
-                  <input
-                    type="number"
-                    className="input"
-                    value={paymentAmount}
-                    onChange={(e) => setPaymentAmount(e.target.value)}
-                    step="0.01"
-                    min="0.01"
-                    max={selectedPayment?.amount_due - selectedPayment?.amount_paid}
-                    required
-                  />
+                  <div className="bg-light rounded p-3 mb-3 small">
+                    <p className="mb-1">
+                      <strong>Payment #:</strong> {selectedPayment?.payment_number}
+                    </p>
+                    <p className="mb-1">
+                      <strong>Due Date:</strong> {new Date(selectedPayment?.due_date).toLocaleDateString()}
+                    </p>
+                    <p className="mb-1">
+                      <strong>Amount Due:</strong> {formatMoney(selectedPayment?.amount_due)}
+                    </p>
+                    <p className="mb-1">
+                      <strong>Already Paid:</strong> {formatMoney(selectedPayment?.amount_paid)}
+                    </p>
+                    <p className="mb-0 text-danger">
+                      <strong>Remaining:</strong>{' '}
+                      {formatMoney((selectedPayment?.amount_due || 0) - (selectedPayment?.amount_paid || 0))}
+                    </p>
+                  </div>
+
+                  <div className="mb-3">
+                    <label className="form-label fw-semibold">Payment Amount *</label>
+                    <input
+                      type="number"
+                      className="form-control"
+                      value={paymentAmount}
+                      onChange={(e) => setPaymentAmount(e.target.value)}
+                      step="0.01"
+                      min="0.01"
+                      max={selectedPayment?.amount_due - selectedPayment?.amount_paid}
+                      required
+                    />
+                  </div>
+
+                  <div className="mb-0">
+                    <label className="form-label fw-semibold">Notes (Optional)</label>
+                    <textarea
+                      className="form-control"
+                      value={paymentNotes}
+                      onChange={(e) => setPaymentNotes(e.target.value)}
+                      rows={3}
+                      placeholder="Add any notes about this payment..."
+                    />
+                  </div>
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Notes (Optional)
-                  </label>
-                  <textarea
-                    className="input"
-                    value={paymentNotes}
-                    onChange={(e) => setPaymentNotes(e.target.value)}
-                    rows="3"
-                    placeholder="Add any notes about this payment..."
-                  />
-                </div>
-
-                <div className="flex gap-3 pt-4">
-                  <button type="submit" className="btn btn-primary flex-1">
-                    Record Payment
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowPaymentModal(false)}
-                    className="btn btn-ghost flex-1"
-                  >
+                <div className="modal-footer">
+                  <button type="button" className="btn btn-secondary" onClick={() => setShowPaymentModal(false)}>
                     Cancel
+                  </button>
+                  <button type="submit" className="btn btn-primary">
+                    <i className="bi bi-check-circle me-2"></i>
+                    Record Payment
                   </button>
                 </div>
               </form>
@@ -621,89 +619,91 @@ const InstallmentPlans = () => {
 
       {/* Settings Add/Edit Modal */}
       {showSettingsModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900">
-                {editingSetting ? 'Edit Installment Setting' : 'Add New Installment Setting'}
-              </h2>
-              <button
-                className="text-gray-400 hover:text-gray-600 text-2xl"
-                onClick={() => setShowSettingsModal(false)}
-              >
-                ×
-              </button>
-            </div>
+        <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="modal-dialog">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">
+                  {editingSetting ? 'Edit Installment Setting' : 'Add New Installment Setting'}
+                </h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={() => setShowSettingsModal(false)}
+                  aria-label="Close"
+                />
+              </div>
+              <form onSubmit={handleSaveSetting}>
+                <div className="modal-body">
+                  {error && (
+                    <div className="alert alert-danger">
+                      <i className="bi bi-exclamation-triangle-fill me-2"></i>
+                      {error}
+                    </div>
+                  )}
 
-            <div className="p-6">
-              {error && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-lg mb-4">
-                  <p className="text-sm text-red-700">{error}</p>
-                </div>
-              )}
+                  <div className="mb-3">
+                    <label className="form-label fw-semibold">Number of Months *</label>
+                    <input
+                      type="number"
+                      className="form-control"
+                      value={settingMonths}
+                      onChange={(e) => setSettingMonths(e.target.value)}
+                      min="1"
+                      required
+                      disabled={!!editingSetting}
+                      placeholder="e.g., 3, 6, 12, 18, 24..."
+                    />
+                    {editingSetting && (
+                      <div className="form-text">
+                        Months cannot be changed. Delete and create a new setting if needed.
+                      </div>
+                    )}
+                  </div>
 
-              <form onSubmit={handleSaveSetting} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Number of Months *
-                  </label>
-                  <input
-                    type="number"
-                    className="input"
-                    value={settingMonths}
-                    onChange={(e) => setSettingMonths(e.target.value)}
-                    min="1"
-                    required
-                    disabled={!!editingSetting}
-                    placeholder="e.g., 3, 6, 12, 18, 24..."
-                  />
-                  {editingSetting && (
-                    <p className="text-xs text-gray-500 mt-1">
-                      Months cannot be changed. Delete and create a new setting if needed.
-                    </p>
+                  <div className="mb-3">
+                    <label className="form-label fw-semibold">Interest Rate (%) *</label>
+                    <input
+                      type="number"
+                      className="form-control"
+                      value={settingInterestRate}
+                      onChange={(e) => setSettingInterestRate(e.target.value)}
+                      step="0.01"
+                      min="0"
+                      required
+                      placeholder="e.g., 5.5, 10, 15.75..."
+                    />
+                  </div>
+
+                  {settingMonths && settingInterestRate && (
+                    <div className="bg-light rounded p-3">
+                      <h6 className="fw-semibold mb-2 small">
+                        Preview: {formatMoney(1000)} item over {settingMonths} months
+                      </h6>
+                      <div className="small text-muted">
+                        <p className="mb-1">
+                          Interest: {formatMoney((1000 * parseFloat(settingInterestRate || 0)) / 100)}
+                        </p>
+                        <p className="mb-1">
+                          Total Amount: {formatMoney(1000 + (1000 * parseFloat(settingInterestRate || 0)) / 100)}
+                        </p>
+                        <p className="mb-0 fw-semibold text-dark">
+                          Monthly Payment:{' '}
+                          {formatMoney(
+                            (1000 + (1000 * parseFloat(settingInterestRate || 0)) / 100) /
+                              parseInt(settingMonths || 1, 10)
+                          )}
+                        </p>
+                      </div>
+                    </div>
                   )}
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Interest Rate (%) *
-                  </label>
-                  <input
-                    type="number"
-                    className="input"
-                    value={settingInterestRate}
-                    onChange={(e) => setSettingInterestRate(e.target.value)}
-                    step="0.01"
-                    min="0"
-                    required
-                    placeholder="e.g., 5.5, 10, 15.75..."
-                  />
-                </div>
-
-                {/* Preview Calculation */}
-                {settingMonths && settingInterestRate && (
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <h4 className="text-sm font-medium text-gray-900 mb-2">
-                      Preview: $1000 item over {settingMonths} months
-                    </h4>
-                    <div className="text-sm text-gray-600 space-y-1">
-                      <p>Interest: ${((1000 * parseFloat(settingInterestRate || 0)) / 100).toFixed(2)}</p>
-                      <p>Total Amount: ${(1000 + (1000 * parseFloat(settingInterestRate || 0)) / 100).toFixed(2)}</p>
-                      <p className="font-medium">Monthly Payment: ${((1000 + (1000 * parseFloat(settingInterestRate || 0)) / 100) / parseInt(settingMonths || 1)).toFixed(2)}</p>
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex gap-3 pt-4">
-                  <button type="submit" className="btn btn-primary flex-1">
-                    {editingSetting ? 'Update Setting' : 'Add Setting'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowSettingsModal(false)}
-                    className="btn btn-ghost flex-1"
-                  >
+                <div className="modal-footer">
+                  <button type="button" className="btn btn-secondary" onClick={() => setShowSettingsModal(false)}>
                     Cancel
+                  </button>
+                  <button type="submit" className="btn btn-primary">
+                    {editingSetting ? 'Update Setting' : 'Add Setting'}
                   </button>
                 </div>
               </form>

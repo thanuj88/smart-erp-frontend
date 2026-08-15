@@ -6,13 +6,15 @@ import AdminAlerts from '../components/AdminAlerts';
 import AdminLoading from '../components/AdminLoading';
 import CategoryIcon from '../components/CategoryIcon';
 import {
-  CATEGORY_ICON_LIBRARY,
   DEFAULT_CATEGORY_ICON,
+  filterCategoryIcons,
   isBsIconName,
 } from '../config/categoryIcons';
+import { useConfirm } from '../contexts/ConfirmContext';
 
 function Categories() {
   const { t } = useTranslation();
+  const { confirm } = useConfirm();
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -70,9 +72,14 @@ function Categories() {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm(t('Are you sure you want to delete this category?'))) {
-      return;
-    }
+    const ok = await confirm({
+      title: t('Delete category'),
+      message: t('Are you sure you want to delete this category?'),
+      confirmLabel: t('Delete'),
+      cancelLabel: t('Cancel'),
+      variant: 'danger',
+    });
+    if (!ok) return;
 
     try {
       await categoryService.delete(id);
@@ -104,13 +111,7 @@ function Categories() {
     setShowModal(true);
   };
 
-  const filteredIcons = useMemo(() => {
-    const q = iconSearch.trim().toLowerCase();
-    if (!q) return CATEGORY_ICON_LIBRARY;
-    return CATEGORY_ICON_LIBRARY.filter((icon) =>
-      icon.replace(/^Bs/, '').toLowerCase().includes(q)
-    );
-  }, [iconSearch]);
+  const filteredIcons = useMemo(() => filterCategoryIcons(iconSearch), [iconSearch]);
 
   const handleCloseModal = () => {
     setShowModal(false);

@@ -2,8 +2,9 @@ import React, { useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { APP_NAME, APP_PRODUCT_SUFFIX } from '../config/app';
-import UserMenu from './UserMenu';
+import { useLayout } from '../contexts/LayoutContext';
+import Header from './Header';
+import Sidebar from './Sidebar';
 
 const formatTimer = (seconds) => {
   const h = Math.floor(seconds / 3600);
@@ -15,6 +16,7 @@ const formatTimer = (seconds) => {
 const PosLayout = ({ children }) => {
   const navigate = useNavigate();
   const { canViewDashboard, getHomePath } = useAuth();
+  const { sidebarCollapsed, mobileMenuOpen, closeMobileMenu } = useLayout();
   const [elapsed, setElapsed] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -45,47 +47,49 @@ const PosLayout = ({ children }) => {
   const fullscreenLabel = isFullscreen ? 'Exit full screen' : 'Enter full screen';
 
   return (
-    <div className="pos-shell">
-      <header className="pos-topbar">
-        <div className="pos-topbar-left">
-          <div
-            className="pos-logo"
-            onClick={() => navigate(getHomePath())}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => e.key === 'Enter' && navigate(getHomePath())}
-          >
-            <span className="pos-logo-icon"><i className="bi bi-bag-check-fill"></i></span>
-            <span className="pos-logo-text">
-              {APP_NAME} {APP_PRODUCT_SUFFIX && <small>{APP_PRODUCT_SUFFIX}</small>}
-            </span>
-          </div>
-          <span className="pos-timer">
-            <i className="bi bi-clock"></i>
-            {formatTimer(elapsed)}
-          </span>
-        </div>
-
-        <div className="pos-topbar-right">
+    <div className="app-shell pos-app-shell">
+      <Header />
+      <div className="app-body">
+        {mobileMenuOpen && (
           <button
             type="button"
-            className="pos-icon-btn"
-            title={fullscreenLabel}
-            aria-label={fullscreenLabel}
-            onClick={toggleFullscreen}
-          >
-            <i className={`bi ${isFullscreen ? 'bi-fullscreen-exit' : 'bi-arrows-fullscreen'}`}></i>
-          </button>
-          {canViewDashboard && (
-            <button type="button" className="pos-btn pos-btn-dashboard" onClick={() => navigate('/')}>
-              <i className="bi bi-grid-1x2-fill"></i>
-              Dashboard
-            </button>
-          )}
-          <UserMenu />
+            className="sidebar-backdrop"
+            onClick={closeMobileMenu}
+            aria-label="Close menu"
+          />
+        )}
+        <Sidebar />
+        <div className={`content-wrapper pos-content-wrapper${sidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
+          <div className="pos-shell">
+            <header className="pos-topbar">
+              <div className="pos-topbar-left">
+                <span className="pos-timer">
+                  <i className="bi bi-clock"></i>
+                  {formatTimer(elapsed)}
+                </span>
+              </div>
+              <div className="pos-topbar-right">
+                <button
+                  type="button"
+                  className="pos-icon-btn"
+                  title={fullscreenLabel}
+                  aria-label={fullscreenLabel}
+                  onClick={toggleFullscreen}
+                >
+                  <i className={`bi ${isFullscreen ? 'bi-fullscreen-exit' : 'bi-arrows-fullscreen'}`}></i>
+                </button>
+                {canViewDashboard && (
+                  <button type="button" className="pos-btn pos-btn-dashboard" onClick={() => navigate(getHomePath())}>
+                    <i className="bi bi-grid-1x2-fill"></i>
+                    Dashboard
+                  </button>
+                )}
+              </div>
+            </header>
+            <main className="pos-content">{children}</main>
+          </div>
         </div>
-      </header>
-      <main className="pos-content">{children}</main>
+      </div>
     </div>
   );
 };

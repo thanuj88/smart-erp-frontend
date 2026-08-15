@@ -535,6 +535,25 @@ body {
   width: calc(100% - var(--dreams-sidebar-collapsed));
 }
 
+/* POS register inside shared app shell (teller / manager / etc.) */
+.pos-app-shell .content-wrapper.pos-content-wrapper {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.pos-app-shell .pos-shell {
+  flex: 1;
+  min-height: calc(100vh - var(--dreams-topbar-height));
+  min-height: calc(100dvh - var(--dreams-topbar-height));
+  width: 100%;
+}
+
+.pos-app-shell .pos-page {
+  height: calc(100vh - var(--dreams-topbar-height) - 60px);
+  height: calc(100dvh - var(--dreams-topbar-height) - 60px);
+}
+
 .content {
   padding: 1.5rem;
 }

@@ -3,8 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { categoryService } from '../services';
 import CategoryIcon from './CategoryIcon';
 import {
-  CATEGORY_ICON_LIBRARY,
   DEFAULT_CATEGORY_ICON,
+  filterCategoryIcons,
   isBsIconName,
 } from '../config/categoryIcons';
 import '../pages/Categories.css';
@@ -30,13 +30,7 @@ const CategoryFormModal = ({ open, onClose, onCreated }) => {
     setSaving(false);
   }, [open]);
 
-  const filteredIcons = useMemo(() => {
-    const q = iconSearch.trim().toLowerCase();
-    if (!q) return CATEGORY_ICON_LIBRARY;
-    return CATEGORY_ICON_LIBRARY.filter((icon) =>
-      icon.replace(/^Bs/, '').toLowerCase().includes(q)
-    );
-  }, [iconSearch]);
+  const filteredIcons = useMemo(() => filterCategoryIcons(iconSearch), [iconSearch]);
 
   const handleClose = () => {
     if (saving) return;

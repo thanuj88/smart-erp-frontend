@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import PropTypes from 'prop-types';
+import { useCurrency } from '../contexts/TenantSettingsContext';
 
 const RANGES = ['1D', '1W', '1M', '3M', '6M', '1Y'];
 
@@ -24,6 +25,7 @@ const SalesPurchaseChart = ({
   summary,
   trendData,
 }) => {
+  const { formatMoney } = useCurrency();
   const chartModel = useMemo(() => {
     const points = trendData || [];
     const stackMax = Math.max(
@@ -33,7 +35,7 @@ const SalesPurchaseChart = ({
     const axisMax = niceMax(stackMax);
     const ticks = Array.from({ length: 6 }, (_, i) => {
       const value = (axisMax / 5) * i;
-      return { value, label: formatCompact(value) };
+      return { index: i, value, label: formatCompact(value) };
     }).reverse();
 
     return { points, axisMax, ticks };
@@ -85,7 +87,7 @@ const SalesPurchaseChart = ({
         <div className="sp-chart-area">
           <div className="sp-y-axis" aria-hidden="true">
             {chartModel.ticks.map((tick) => (
-              <span key={tick.label} className="sp-y-tick">
+              <span key={`y-tick-${tick.index}-${tick.value}`} className="sp-y-tick">
                 {tick.label}
               </span>
             ))}
@@ -94,7 +96,7 @@ const SalesPurchaseChart = ({
           <div className="sp-chart-main">
             <div className="sp-grid-lines" aria-hidden="true">
               {chartModel.ticks.map((tick) => (
-                <span key={`grid-${tick.label}`} className="sp-grid-line" />
+                <span key={`grid-${tick.index}-${tick.value}`} className="sp-grid-line" />
               ))}
             </div>
 
@@ -114,7 +116,7 @@ const SalesPurchaseChart = ({
                     <div
                       key={`${point.label}-${idx}`}
                       className="sp-bar-column"
-                      title={`${point.label}: Sales $${sales.toFixed(0)}, Purchase $${purchase.toFixed(0)}`}
+                      title={`${point.label}: Sales ${formatMoney(sales)}, Purchase ${formatMoney(purchase)}`}
                     >
                       <div className="sp-bar-track">
                         <div

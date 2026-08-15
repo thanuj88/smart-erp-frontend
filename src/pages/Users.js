@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { userService } from '../services';
 import { useAuth } from '../contexts/AuthContext';
+import { useConfirm } from '../contexts/ConfirmContext';
 
 const usernamePrefix = (tenantSlug) => {
   if (!tenantSlug) return '';
@@ -13,6 +14,7 @@ const usernamePrefix = (tenantSlug) => {
 
 const Users = () => {
   const { user: currentUser } = useAuth();
+  const { confirm } = useConfirm();
   const storePrefix = usernamePrefix(currentUser?.tenantSlug);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -80,15 +82,21 @@ const Users = () => {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this user?')) {
-      try {
-        await userService.delete(id);
-        setSuccess('User deleted successfully');
-        loadUsers();
-        setTimeout(() => setSuccess(''), 3000);
-      } catch (err) {
-        setError(err.response?.data?.error || 'Failed to delete user');
-      }
+    const ok = await confirm({
+      title: 'Delete user',
+      message: 'Are you sure you want to delete this user?',
+      confirmLabel: 'Delete',
+      cancelLabel: 'Cancel',
+      variant: 'danger',
+    });
+    if (!ok) return;
+    try {
+      await userService.delete(id);
+      setSuccess('User deleted successfully');
+      loadUsers();
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to delete user');
     }
   };
 

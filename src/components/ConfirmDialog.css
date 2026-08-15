@@ -1,0 +1,122 @@
+.app-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1400;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  background: rgba(33, 43, 54, 0.22);
+}
+
+.app-confirm-dialog {
+  width: 100%;
+  max-width: 26rem;
+  background: var(--dreams-surface, #fff);
+  border: 1px solid var(--dreams-border, #e8ecef);
+  border-radius: 1rem;
+  box-shadow: 0 18px 48px rgba(33, 43, 54, 0.22);
+  padding: 1rem 1.2rem 0.95rem;
+  outline: none;
+  animation: app-confirm-in 0.18s ease-out;
+}
+
+@keyframes app-confirm-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.app-confirm-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--dreams-navy, #212b36);
+  margin: 0 0 0.2rem;
+  line-height: 1.25;
+}
+
+.app-confirm-message {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--dreams-text-muted, #67748e);
+  line-height: 1.3;
+}
+
+.app-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  margin-top: 0.85rem;
+}
+
+.app-confirm-btn {
+  border: none;
+  border-radius: 0.55rem;
+  padding: 0.55rem 1.1rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  min-width: 5.5rem;
+}
+
+.app-confirm-btn:focus-visible {
+  outline: 2px solid var(--dreams-orange, #ff9f43);
+  outline-offset: 2px;
+}
+
+.app-confirm-btn--cancel {
+  background: #f5f6fa;
+  color: var(--dreams-text, #212b36);
+  border: 1px solid var(--dreams-border, #e8ecef);
+}
+
+.app-confirm-btn--cancel:hover {
+  background: #eef0f4;
+}
+
+.app-confirm-btn--primary {
+  background: linear-gradient(135deg, #ff9f43, #ff8510);
+  color: #fff;
+}
+
+.app-confirm-btn--primary:hover {
+  filter: brightness(0.97);
+}
+
+.app-confirm-btn--danger {
+  background: #ea5455;
+  color: #fff;
+}
+
+.app-confirm-btn--danger:hover {
+  background: #d94848;
+}
+
+.app-confirm-btn--warning {
+  background: linear-gradient(135deg, #ff9f43, #ff8510);
+  color: #fff;
+}
+
+.app-confirm-btn--success {
+  background: #28c76f;
+  color: #fff;
+}
+
+.pos-app-shell .app-confirm-dialog {
+  border-radius: 0.85rem;
+}
+
+@media (max-width: 480px) {
+  .app-confirm-actions {
+    flex-direction: column-reverse;
+  }
+
+  .app-confirm-btn {
+    width: 100%;
+  }
+}

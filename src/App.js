@@ -4,6 +4,11 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 
+import { LayoutProvider } from './contexts/LayoutContext';
+
+import { TenantSettingsProvider } from './contexts/TenantSettingsContext';
+import { ConfirmProvider } from './contexts/ConfirmContext';
+
 import ProtectedRoute from './components/ProtectedRoute';
 
 import Layout from './components/Layout';
@@ -187,7 +192,15 @@ function App() {
 
       <AuthProvider>
 
-        <AppRoutes />
+        <TenantSettingsProvider>
+
+          <LayoutProvider>
+            <ConfirmProvider>
+              <AppRoutes />
+            </ConfirmProvider>
+          </LayoutProvider>
+
+        </TenantSettingsProvider>
 
       </AuthProvider>
 

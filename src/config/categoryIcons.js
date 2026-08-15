@@ -1,8 +1,11 @@
 /**
- * Bootstrap Icons (react-icons/bs) for category picker.
+ * Category picker icons: Bootstrap (Bs*) plus Material furniture (Md*).
  * @see https://react-icons.github.io/react-icons/icons/bs/
+ * @see https://react-icons.github.io/react-icons/icons/md/
  */
 export const DEFAULT_CATEGORY_ICON = 'BsBox';
+
+const ICON_PREFIX = /^(Bs|Md)/;
 
 export const CATEGORY_ICON_LIBRARY = [
   // Electronics & tech
@@ -77,6 +80,9 @@ export const CATEGORY_ICON_LIBRARY = [
   'BsCake2',
   'BsCookie',
   'BsApple',
+  'BsForkKnife',
+  'BsMeasuringCup',
+  'BsMeasuringCupFill',
   'BsDroplet',
   'BsDropletHalf',
   'BsDropletFill',
@@ -95,13 +101,44 @@ export const CATEGORY_ICON_LIBRARY = [
   'BsPersonHeart',
   'BsEmojiSmile',
   'BsEmojiLaughing',
-  // Home & garden
+  // Furniture (Material Design — Bootstrap has no chair/sofa/bed glyphs)
+  'MdChair',
+  'MdChairAlt',
+  'MdWeekend',
+  'MdBed',
+  'MdKingBed',
+  'MdSingleBed',
+  'MdBedroomParent',
+  'MdBedroomChild',
+  'MdBedroomBaby',
+  'MdTableRestaurant',
+  'MdTableBar',
+  'MdDining',
+  'MdDesk',
+  'MdKitchen',
+  'MdLiving',
+  'MdBathtub',
+  'MdCountertops',
+  'MdDeck',
+  'MdYard',
+  'MdDoorFront',
+  'MdDoorSliding',
+  'MdBlinds',
+  'MdCurtains',
+  'MdLight',
+  // Home, furniture & garden (Bootstrap)
   'BsHouse',
   'BsHouseDoor',
   'BsHouseHeart',
+  'BsHouseGear',
+  'BsFillHouseGearFill',
   'BsBuilding',
   'BsBuildings',
   'BsDoorOpen',
+  'BsWindow',
+  'BsTable',
+  'BsBookshelf',
+  'BsColumns',
   'BsLamp',
   'BsLampFill',
   'BsLightbulb',
@@ -268,15 +305,113 @@ export const CATEGORY_ICON_LIBRARY = [
   'BsCheck2',
 ];
 
-export function isBsIconName(value) {
-  return typeof value === 'string' && /^Bs[A-Z]/.test(value);
+/** Search aliases — lets users find icons by typing "furniture", "kitchen", "food", etc. */
+const CATEGORY_ICON_TAGS = {
+  BsForkKnife: ['kitchen', 'food', 'dining', 'utensils', 'items', 'eat'],
+  BsMeasuringCup: ['kitchen', 'cooking', 'baking', 'food', 'items'],
+  BsMeasuringCupFill: ['kitchen', 'cooking', 'baking', 'food', 'items'],
+  BsCup: ['kitchen', 'food', 'beverage', 'drink', 'items'],
+  BsCupStraw: ['kitchen', 'food', 'beverage', 'drink', 'items'],
+  BsCupHot: ['kitchen', 'food', 'beverage', 'coffee', 'tea', 'items'],
+  BsCupFill: ['kitchen', 'food', 'beverage', 'items'],
+  BsEggFried: ['kitchen', 'food', 'breakfast', 'items'],
+  BsEgg: ['kitchen', 'food', 'breakfast', 'items'],
+  BsCake: ['food', 'bakery', 'dessert', 'items'],
+  BsCake2: ['food', 'bakery', 'dessert', 'items'],
+  BsCookie: ['food', 'bakery', 'snack', 'items'],
+  BsApple: ['food', 'fruit', 'grocery', 'items'],
+  BsDroplet: ['kitchen', 'beverage', 'drink', 'water'],
+  BsWater: ['kitchen', 'beverage', 'drink'],
+  BsBasket: ['food', 'grocery', 'kitchen', 'items'],
+  BsBasket2: ['food', 'grocery', 'kitchen', 'items'],
+  BsBasket3: ['food', 'grocery', 'kitchen', 'items'],
+  BsCart: ['food', 'grocery', 'items'],
+  BsCart2: ['food', 'grocery', 'items'],
+  BsCart3: ['food', 'grocery', 'items'],
+  BsShop: ['food', 'grocery', 'items'],
+  BsShopWindow: ['food', 'grocery', 'items'],
+  MdChair: ['furniture', 'sofa', 'couch', 'armchair', 'living', 'home'],
+  MdChairAlt: ['furniture', 'chair', 'dining', 'seat', 'home'],
+  MdWeekend: ['furniture', 'sofa', 'couch', 'living', 'home'],
+  MdBed: ['furniture', 'bed', 'bedroom', 'sleep', 'home'],
+  MdKingBed: ['furniture', 'bed', 'bedroom', 'sleep', 'home'],
+  MdSingleBed: ['furniture', 'bed', 'bedroom', 'sleep', 'home'],
+  MdBedroomParent: ['furniture', 'bed', 'bedroom', 'home'],
+  MdBedroomChild: ['furniture', 'bed', 'bedroom', 'kids', 'home'],
+  MdBedroomBaby: ['furniture', 'crib', 'bedroom', 'baby', 'home'],
+  MdTableRestaurant: ['furniture', 'table', 'dining', 'kitchen', 'home'],
+  MdTableBar: ['furniture', 'table', 'dining', 'bar', 'home'],
+  MdDining: ['furniture', 'dining', 'table', 'kitchen', 'home'],
+  MdDesk: ['furniture', 'desk', 'office', 'table', 'home'],
+  MdKitchen: ['furniture', 'kitchen', 'appliance', 'home'],
+  MdLiving: ['furniture', 'living', 'sofa', 'tv', 'home'],
+  MdBathtub: ['furniture', 'bathroom', 'bath', 'home'],
+  MdCountertops: ['furniture', 'kitchen', 'counter', 'home'],
+  MdDeck: ['furniture', 'outdoor', 'garden', 'patio', 'home'],
+  MdYard: ['furniture', 'garden', 'outdoor', 'home'],
+  MdDoorFront: ['furniture', 'door', 'home'],
+  MdDoorSliding: ['furniture', 'door', 'wardrobe', 'closet', 'home'],
+  MdBlinds: ['furniture', 'window', 'curtains', 'home'],
+  MdCurtains: ['furniture', 'window', 'drapes', 'home'],
+  MdLight: ['furniture', 'lamp', 'lighting', 'home'],
+  BsTable: ['furniture', 'dining', 'kitchen', 'home'],
+  BsBookshelf: ['furniture', 'shelf', 'storage', 'home'],
+  BsColumns: ['furniture', 'shelf', 'storage', 'home'],
+  BsWindow: ['furniture', 'home', 'house'],
+  BsLamp: ['furniture', 'home', 'lighting'],
+  BsLampFill: ['furniture', 'home', 'lighting'],
+  BsLightbulb: ['furniture', 'home', 'lighting', 'kitchen'],
+  BsLightbulbFill: ['furniture', 'home', 'lighting', 'kitchen'],
+  BsHouse: ['furniture', 'home', 'house'],
+  BsHouseDoor: ['furniture', 'home', 'house'],
+  BsHouseHeart: ['furniture', 'home', 'house'],
+  BsHouseGear: ['kitchen', 'home', 'appliance'],
+  BsFillHouseGearFill: ['kitchen', 'home', 'appliance'],
+  BsBuilding: ['furniture', 'home'],
+  BsBuildings: ['furniture', 'home'],
+  BsDoorOpen: ['furniture', 'home'],
+  BsFan: ['furniture', 'home', 'appliance', 'kitchen'],
+  BsTree: ['furniture', 'home', 'garden'],
+  BsFlower1: ['furniture', 'home', 'garden'],
+  BsFlower2: ['furniture', 'home', 'garden'],
+  BsFlower3: ['furniture', 'home', 'garden'],
+  BsBucket: ['kitchen', 'home', 'cleaning'],
+  BsHammer: ['furniture', 'home', 'tools'],
+  BsTools: ['furniture', 'home', 'kitchen', 'tools'],
+  BsWrench: ['furniture', 'home', 'tools'],
+  BsScrewdriver: ['furniture', 'home', 'tools'],
+};
+
+export function filterCategoryIcons(query) {
+  const q = query.trim().toLowerCase();
+  if (!q) return CATEGORY_ICON_LIBRARY;
+
+  const terms = q.split(/\s+/).filter(Boolean);
+
+  return CATEGORY_ICON_LIBRARY.filter((icon) => {
+    const name = icon.replace(ICON_PREFIX, '').toLowerCase();
+    const tags = CATEGORY_ICON_TAGS[icon] || [];
+
+    return terms.some(
+      (term) =>
+        name.includes(term) ||
+        tags.some((tag) => tag.includes(term) || term.includes(tag))
+    );
+  });
 }
 
+export function isCategoryIconName(value) {
+  return typeof value === 'string' && /^(Bs|Md)[A-Z]/.test(value);
+}
+
+/** @deprecated Use isCategoryIconName */
+export const isBsIconName = isCategoryIconName;
+
 export function resolveCategoryIconKey(stored, categories = [], categoryId = null) {
-  if (isBsIconName(stored)) return stored;
+  if (isCategoryIconName(stored)) return stored;
   if (categoryId != null && categories.length) {
     const cat = categories.find((c) => String(c.id) === String(categoryId));
-    if (cat?.icon && isBsIconName(cat.icon)) return cat.icon;
+    if (cat?.icon && isCategoryIconName(cat.icon)) return cat.icon;
   }
   return DEFAULT_CATEGORY_ICON;
 }
