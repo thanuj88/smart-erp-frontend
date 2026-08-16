@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { saleService } from '../services';
 import { useCurrency } from '../contexts/TenantSettingsContext';
+import { formatOrderId } from '../utils/orderId';
 
 const PAGE_SIZE = 10;
 
@@ -428,6 +429,7 @@ const SalesReport = () => {
                     <table className="table table-hover mb-0">
                       <thead className="table-light">
                         <tr>
+                          <th className="border-0 fw-semibold">Order ID</th>
                           <th className="border-0 fw-semibold">Date &amp; Time</th>
                           <th className="border-0 fw-semibold">Item</th>
                           <th className="border-0 fw-semibold">Qty</th>
@@ -439,6 +441,9 @@ const SalesReport = () => {
                       <tbody>
                         {paginatedSales.map((sale) => (
                           <tr key={sale.id}>
+                            <td className="order-id-cell">
+                              <span className="order-id-badge">{formatOrderId(sale.order_number, sale.id)}</span>
+                            </td>
                             <td className="text-muted">
                               {new Date(sale.sale_date).toLocaleString()}
                             </td>

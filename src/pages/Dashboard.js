@@ -4,13 +4,15 @@ import { saleService, itemService } from '../services';
 import { useTranslation } from 'react-i18next';
 import SalesPurchaseChart from '../components/SalesPurchaseChart';
 import { useCurrency } from '../contexts/TenantSettingsContext';
+import { formatOrderId } from '../utils/orderId';
 
 const Dashboard = () => {
   const { isAdmin, user } = useAuth();
-  const { formatMoney } = useCurrency();
+  const { formatMoney, settings } = useCurrency();
   const { t } = useTranslation();
   const [dailySummary, setDailySummary] = useState(null);
   const [todaySales, setTodaySales] = useState([]);
+  const [recentSales, setRecentSales] = useState([]);
   const [lowStock, setLowStock] = useState([]);
   const [loading, setLoading] = useState(true);
   const [topProducts, setTopProducts] = useState([]);
@@ -57,17 +59,20 @@ const Dashboard = () => {
 
   const loadData = useCallback(async () => {
     try {
-      const [daily, salesData] = await Promise.all([
+      const [daily, salesData, recentData] = await Promise.all([
         saleService.getDailySummary(),
-        saleService.getToday()
+        saleService.getToday(),
+        saleService.getRecent(7),
       ]);
 
       setDailySummary(daily);
       setTodaySales(salesData);
+      setRecentSales(recentData || []);
 
       if (isAdmin) {
         const items = await itemService.getAll();
-        const lowStockItems = items.filter(item => item.quantity < 10);
+        const threshold = Number(settings?.lowStockThreshold ?? 15);
+        const lowStockItems = items.filter((item) => Number(item.quantity) <= threshold);
         setLowStock(lowStockItems);
       }
     } catch (error) {
@@ -75,7 +80,7 @@ const Dashboard = () => {
     } finally {
       setLoading(false);
     }
-  }, [isAdmin]);
+  }, [isAdmin, settings?.lowStockThreshold]);
 
   useEffect(() => {
     loadData();
@@ -126,7 +131,8 @@ const Dashboard = () => {
       {isAdmin && lowStock.length > 0 && (
         <div className="alert-dreams mb-4">
           <i className="bi bi-exclamation-triangle me-2"></i>
-          Your Product <strong>{lowStock[0].name}</strong> is running Low, already below {lowStock[0].quantity} Pcs.
+          Your Product <strong>{lowStock[0].name}</strong> is running Low, already at {lowStock[0].quantity} Pcs
+          {settings?.lowStockThreshold != null ? ` (threshold ${settings.lowStockThreshold})` : ''}.
           <a href="/inventory" className="ms-2 fw-semibold text-decoration-none">Manage Inventory</a>
         </div>
       )}
@@ -195,7 +201,7 @@ const Dashboard = () => {
           />
         </div>
         <div className="col-12 col-xl-4 dashboard-side-col">
-          <div className="dashboard-side-stack h-100">
+          <div className="dashboard-side-stack h-100 d-flex flex-column gap-4">
             <div className="card shadow-sm rounded-4 dashboard-side-card">
               <div className="card-body">
                 <div className="d-flex align-items-center justify-content-between mb-3">
@@ -260,15 +266,15 @@ const Dashboard = () => {
               <div className="d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between mb-4 gap-3">
                 <div>
                   <h5 className="card-title">Recent Sales</h5>
-                  <p className="text-muted mb-0">Latest sales activity from today.</p>
+                  <p className="text-muted mb-0">Latest sales activity from the last 7 days.</p>
                 </div>
-                <span className="badge bg-info text-dark rounded-pill py-2 px-3">{todaySales.length} total</span>
+                <span className="badge bg-info text-dark rounded-pill py-2 px-3">{recentSales.length} total</span>
               </div>
               <div className="table-responsive">
                 <table className="table table-borderless align-middle mb-0">
                   <thead className="table-light">
                     <tr>
-                      <th>Receipt #</th>
+                      <th>Order ID</th>
                       <th>Time</th>
                       <th>Items</th>
                       <th>Payment</th>
@@ -276,14 +282,16 @@ const Dashboard = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {todaySales.length === 0 ? (
+                    {recentSales.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="text-center text-muted py-4">No sales recorded today.</td>
+                        <td colSpan={5} className="text-center text-muted py-4">No sales recorded in the last 7 days.</td>
                       </tr>
                     ) : (
-                      todaySales.map((sale) => (
+                      recentSales.map((sale) => (
                         <tr key={sale.id}>
-                          <td className="fw-semibold">#{sale.id}</td>
+                          <td className="order-id-cell">
+                            <span className="order-id-badge">{formatOrderId(sale.order_number, sale.id)}</span>
+                          </td>
                           <td>{new Date(sale.sale_date).toLocaleString()}</td>
                           <td>{sale.quantity}</td>
                           <td>

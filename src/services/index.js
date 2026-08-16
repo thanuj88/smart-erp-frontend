@@ -249,8 +249,8 @@ export const categoryService = {
 };
 
 export const saleService = {
-  processCashSale: async (itemId, quantity) => {
-    const response = await api.post('/sales/cash', { itemId, quantity });
+  processCashSale: async (itemId, quantity, extra = {}) => {
+    const response = await api.post('/sales/cash', { itemId, quantity, ...extra });
     return response.data;
   },
 
@@ -266,6 +266,11 @@ export const saleService = {
 
   getToday: async () => {
     const response = await api.get('/sales/today');
+    return response.data;
+  },
+
+  getRecent: async (days = 7) => {
+    const response = await api.get(`/sales/recent?days=${days}`);
     return response.data;
   },
 

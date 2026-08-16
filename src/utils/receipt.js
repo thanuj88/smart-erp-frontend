@@ -1,4 +1,5 @@
 import { formatMoney } from './currency';
+import { formatOrderId } from './orderId';
 
 export const RECEIPT_PAPER_SIZES = [
   {
@@ -192,7 +193,7 @@ export function buildInstallmentPaymentReceipt(plan, { currentAmount } = {}) {
     extraTotalLines: [{ label: 'Balance', value: remaining }],
     infoLines: [
       { label: 'Customer', value: plan?.customer_name || plan?.customer?.name || '—' },
-      { label: 'Plan', value: `#${plan?.id || ''}` },
+      { label: 'Order ID', value: formatOrderId(plan?.order_number, plan?.sale_id, plan?.id) },
     ].filter((line) => line.value && line.value !== '#'),
     invoiceTitle: 'Installment Payment Receipt',
     subtotalLabel: 'Total paid',
@@ -218,7 +219,7 @@ export function createInstallmentReceiptPrintJob({
       receipt: { ...template, invoiceTitle: built.invoiceTitle },
       items: built.items,
       cashierName: cashierName || 'CASHIER',
-      saleNumber: `P${plan?.id || Date.now()}`,
+      saleNumber: formatOrderId(plan?.order_number, plan?.sale_id, plan?.id).replace(/^#/, '') || `P${plan?.id || Date.now()}`,
       soldAt: new Date().toISOString(),
       subtotal: built.subtotal,
       tax: 0,

@@ -7,6 +7,7 @@ import { installmentPaymentService, installmentPlanService } from '../services';
 import { useCurrency } from '../contexts/TenantSettingsContext';
 import { useAuth } from '../contexts/AuthContext';
 import { createInstallmentReceiptPrintJob } from '../utils/receipt';
+import { formatOrderId } from '../utils/orderId';
 
 const InstallmentPayments = () => {
   const { formatMoney, currency, settings } = useCurrency();
@@ -45,6 +46,8 @@ const InstallmentPayments = () => {
           planId: payment.installment_plan_id,
           customer_name: payment.customer_name,
           customer_phone: payment.customer_phone,
+          order_number: payment.order_number,
+          sale_id: payment.sale_id,
           payments: [],
         });
       }
@@ -52,6 +55,8 @@ const InstallmentPayments = () => {
       group.payments.push(payment);
       if (!group.customer_name && payment.customer_name) group.customer_name = payment.customer_name;
       if (!group.customer_phone && payment.customer_phone) group.customer_phone = payment.customer_phone;
+      if (!group.order_number && payment.order_number) group.order_number = payment.order_number;
+      if (!group.sale_id && payment.sale_id) group.sale_id = payment.sale_id;
     });
     return Array.from(map.values()).map((group) => ({
       ...group,
@@ -369,7 +374,8 @@ const InstallmentPayments = () => {
                   <table className="table table-hover admin-table mb-0">
                     <thead className="table-light">
                       <tr>
-                        <th className="border-0 fw-semibold">Plan #</th>
+                        <th className="border-0 order-id-toggle" aria-label="Expand"></th>
+                        <th className="border-0 fw-semibold">Order ID</th>
                         <th className="border-0 fw-semibold">Customer</th>
                         <th className="border-0 fw-semibold">Phone</th>
                         <th className="border-0 fw-semibold">Total Amount</th>
@@ -390,11 +396,15 @@ const InstallmentPayments = () => {
                               className={`plan-expand-row${isExpanded ? ' is-expanded' : ''}`}
                               onClick={() => togglePlan(plan.id)}
                             >
-                              <td className="fw-semibold">
+                              <td className="order-id-toggle">
                                 <span className="plan-expand-icon">
                                   <i className={`bi ${isExpanded ? 'bi-chevron-down' : 'bi-chevron-right'}`}></i>
                                 </span>
-                                #{plan.id}
+                              </td>
+                              <td className="order-id-cell">
+                                <span className="order-id-badge">
+                                  {formatOrderId(plan.order_number, plan.sale_id, plan.id)}
+                                </span>
                               </td>
                               <td>{plan.customer_name}</td>
                               <td className="text-muted">{plan.customer_phone}</td>
@@ -412,7 +422,7 @@ const InstallmentPayments = () => {
                             </tr>
                             {isExpanded && (
                               <tr className="plan-installments-row">
-                                <td colSpan={8}>
+                                <td colSpan={9}>
                                   <div className="plan-installments-wrap">
                                     <div className="d-flex justify-content-end mb-2">
                                       <button
@@ -474,7 +484,8 @@ const InstallmentPayments = () => {
                   <table className="table table-hover admin-table mb-0">
                     <thead className="table-light">
                       <tr>
-                        <th className="border-0 fw-semibold">Plan #</th>
+                        <th className="border-0 order-id-toggle" aria-label="Expand"></th>
+                        <th className="border-0 fw-semibold">Order ID</th>
                         <th className="border-0 fw-semibold">Customer</th>
                         <th className="border-0 fw-semibold">Phone</th>
                         <th className="border-0 fw-semibold">
@@ -496,11 +507,15 @@ const InstallmentPayments = () => {
                               }`}
                               onClick={() => togglePlan(group.planId)}
                             >
-                              <td className="fw-semibold">
+                              <td className="order-id-toggle">
                                 <span className="plan-expand-icon">
                                   <i className={`bi ${isExpanded ? 'bi-chevron-down' : 'bi-chevron-right'}`}></i>
                                 </span>
-                                #{group.planId}
+                              </td>
+                              <td className="order-id-cell">
+                                <span className="order-id-badge">
+                                  {formatOrderId(group.order_number, group.sale_id, group.planId)}
+                                </span>
                               </td>
                               <td>{group.customer_name || details?.customer_name || '—'}</td>
                               <td className="text-muted">{group.customer_phone || details?.customer_phone || '—'}</td>
@@ -513,7 +528,7 @@ const InstallmentPayments = () => {
                             </tr>
                             {isExpanded && (
                               <tr className="plan-installments-row">
-                                <td colSpan={5}>
+                                <td colSpan={6}>
                                   <div className="plan-installments-wrap">
                                     <div className="d-flex justify-content-end mb-2">
                                       <button

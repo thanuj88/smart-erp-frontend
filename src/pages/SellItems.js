@@ -24,6 +24,7 @@ import {
   sanitizeNicInput,
   NIC_FORMAT_MESSAGE,
 } from '../utils/installmentValidation';
+import { generateOrderId, formatOrderId } from '../utils/orderId';
 import { billToReceiptItems, mergeReceipt, getReceiptPaperSize, receiptPrintPageSize, createInstallmentReceiptPrintJob } from '../utils/receipt';
 import ReceiptPrintLayer from '../components/ReceiptPrintLayer';
 import './SellItems.css';
@@ -67,7 +68,7 @@ function SellItems() {
   const [success, setSuccess] = useState('');
   const [itemSearch, setItemSearch] = useState('');
   const [planSearch, setPlanSearch] = useState('');
-  const [orderRef, setOrderRef] = useState(() => `#ORD${Date.now().toString().slice(-6)}`);
+  const [orderRef, setOrderRef] = useState(() => generateOrderId());
   const [elapsed, setElapsed] = useState(0);
   const [walkInCustomer, setWalkInCustomer] = useState('Walk in Customer');
 
@@ -117,7 +118,7 @@ function SellItems() {
     return () => clearInterval(timer);
   }, []);
 
-  const newOrderRef = () => setOrderRef(`#ORD${Date.now().toString().slice(-6)}`);
+  const newOrderRef = () => setOrderRef(generateOrderId());
 
   const printSaleReceipt = useCallback(
     (billItems, extras = {}) => {
@@ -434,7 +435,7 @@ function SellItems() {
       setProcessing(true);
       setError('');
       for (const item of bill) {
-        await saleService.processCashSale(item.id, item.quantity);
+        await saleService.processCashSale(item.id, item.quantity, { orderNumber: orderRef });
       }
       printSaleReceipt(bill);
       setSuccess(t('Sale completed successfully!'));
@@ -507,6 +508,7 @@ function SellItems() {
         witness: includeWitness ? normalizedWitness : null,
         downPayment: parseFloat(downPayment),
         installmentMonths: parseInt(installmentMonths, 10),
+        orderNumber: orderRef,
       });
       const preview = calculateInstallmentPreview();
       printSaleReceipt(bill, {
@@ -1157,6 +1159,9 @@ function SellItems() {
         <div className="p-3">
           <div className="bg-light rounded p-3 mb-3 small">
             <strong>{selectedPlan.customer_name}</strong>
+            <div className="mt-1">
+              <span className="order-id-badge">{formatOrderId(selectedPlan.order_number, selectedPlan.sale_id, selectedPlan.id)}</span>
+            </div>
             <div>{t('Remaining')}: {formatMoney(selectedPlan.total_with_interest - selectedPlan.paid_amount)}</div>
           </div>
           <label className="form-label">{t('Payment Amount')}</label>
@@ -1250,6 +1255,9 @@ function SellItems() {
                     onClick={() => setSelectedPlan(plan)}
                   >
                     <div className="fw-bold">{plan.customer_name}</div>
+                    <div className="small mt-1">
+                      <span className="order-id-badge">{formatOrderId(plan.order_number, plan.sale_id, plan.id)}</span>
+                    </div>
                     {plan.customer_id_card && <div className="small text-muted">NIC: {plan.customer_id_card}</div>}
                     <div className="small mt-2">
                       {t('Remaining')}: {formatMoney(plan.total_with_interest - plan.paid_amount)}

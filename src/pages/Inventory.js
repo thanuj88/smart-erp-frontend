@@ -9,7 +9,7 @@ import { useCurrency } from '../contexts/TenantSettingsContext';
 import { useConfirm } from '../contexts/ConfirmContext';
 
 const Inventory = () => {
-  const { formatMoney, symbol } = useCurrency();
+  const { formatMoney, symbol, settings } = useCurrency();
   const { confirm } = useConfirm();
   const [items, setItems] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -344,9 +344,10 @@ const Inventory = () => {
                       </td>
                       <td>
                         {(() => {
-                          const quantity = item.quantity;
-                          if (quantity < 10) return <span className="badge bg-danger">{quantity}</span>;
-                          if (quantity < 50) return <span className="badge bg-warning text-dark">{quantity}</span>;
+                          const quantity = Number(item.quantity);
+                          const threshold = Number(settings?.lowStockThreshold ?? 15);
+                          if (quantity <= 0) return <span className="badge bg-danger">{quantity}</span>;
+                          if (quantity <= threshold) return <span className="badge bg-warning text-dark">{quantity}</span>;
                           return <span className="badge bg-success">{quantity}</span>;
                         })()}
                       </td>
