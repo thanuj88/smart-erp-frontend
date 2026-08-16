@@ -248,6 +248,38 @@ export const categoryService = {
   },
 };
 
+export const promotionService = {
+  getAll: async () => {
+    const response = await api.get('/promotions');
+    return response.data;
+  },
+
+  getActive: async () => {
+    const response = await api.get('/promotions/active');
+    return response.data;
+  },
+
+  getById: async (id) => {
+    const response = await api.get(`/promotions/${id}`);
+    return response.data;
+  },
+
+  create: async (data) => {
+    const response = await api.post('/promotions', data);
+    return response.data;
+  },
+
+  update: async (id, data) => {
+    const response = await api.put(`/promotions/${id}`, data);
+    return response.data;
+  },
+
+  delete: async (id) => {
+    const response = await api.delete(`/promotions/${id}`);
+    return response.data;
+  },
+};
+
 export const saleService = {
   processCashSale: async (itemId, quantity, extra = {}) => {
     const response = await api.post('/sales/cash', { itemId, quantity, ...extra });

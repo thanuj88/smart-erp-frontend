@@ -75,6 +75,9 @@ const Sidebar = () => {
           {showCategories && (
             <NavItem to="/categories" icon="bi-tags" label={t('categories')} />
           )}
+          {showCategories && (
+            <NavItem to="/promotions" icon="bi-megaphone" label={t('promotions')} />
+          )}
         </SidebarSection>
 
         <SidebarSection title={t('sidebarReporting') || 'Reporting'}>

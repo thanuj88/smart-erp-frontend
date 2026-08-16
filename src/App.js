@@ -35,6 +35,8 @@ import Inventory from './pages/Inventory';
 
 import Categories from './pages/Categories';
 
+import Promotions from './pages/Promotions';
+
 import SellItems from './pages/SellItems';
 
 import SalesReport from './pages/SalesReport';
@@ -153,6 +155,8 @@ function AppRoutes() {
       <Route path="/settings" element={<ProtectedRoute requirePermission={PERMISSIONS.SETTINGS_MANAGE}><Layout><Settings /></Layout></ProtectedRoute>} />
 
       <Route path="/categories" element={<ProtectedRoute requirePermission={PERMISSIONS.INVENTORY_MANAGE}><Layout><Categories /></Layout></ProtectedRoute>} />
+
+      <Route path="/promotions" element={<ProtectedRoute requirePermission={PERMISSIONS.INVENTORY_MANAGE}><Layout><Promotions /></Layout></ProtectedRoute>} />
 
       <Route path="/sell" element={<ProtectedRoute requirePermission={PERMISSIONS.SALES_CREATE}><PosLayout><SellItems /></PosLayout></ProtectedRoute>} />
 

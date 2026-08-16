@@ -19,7 +19,7 @@ const ProtectedRoute = ({ children, requireAdmin = false, requirePermission = nu
     return <Navigate to="/login" replace />;
   }
 
-  const storePaths = ['/', '/sell', '/inventory', '/categories', '/sales-report', '/users', '/settings', '/installment-plans', '/installment-payments'];
+  const storePaths = ['/', '/sell', '/inventory', '/categories', '/promotions', '/sales-report', '/users', '/settings', '/installment-plans', '/installment-payments'];
   if (isSuperAdmin && storePaths.includes(location.pathname) && !requirePermission) {
     return <Navigate to="/platform" replace />;
   }

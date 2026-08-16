@@ -407,6 +407,22 @@
   margin-bottom: 0.65rem;
   color: #ff9f43;
   overflow: hidden;
+  position: relative;
+}
+
+.pos-promo-badge {
+  position: absolute;
+  top: 0.4rem;
+  left: 0.4rem;
+  z-index: 1;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0.28rem 0.45rem;
+  border-radius: 999px;
+  background: #ea5455;
+  color: #fff;
+  white-space: nowrap;
 }
 
 .pos-product-footer {
@@ -466,6 +482,17 @@
   font-size: 0.95rem;
   color: #212b36;
   margin-bottom: 0.65rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem;
+}
+
+.pos-product-price-original {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #9aa3af;
+  text-decoration: line-through;
 }
 
 .pos-product-qty {

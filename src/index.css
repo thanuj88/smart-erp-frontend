@@ -1243,6 +1243,11 @@ body {
   margin-bottom: 0;
 }
 
+.promotion-picker {
+  max-height: 220px;
+  overflow-y: auto;
+}
+
 .admin-table thead th {
   background: #f8f9fb;
   border-bottom: 1px solid var(--dreams-border);

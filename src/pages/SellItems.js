@@ -7,6 +7,7 @@ import {
   installmentSettingsService,
   installmentPaymentService,
   installmentPlanService,
+  promotionService,
 } from '../services';
 import CategoryIcon from '../components/CategoryIcon';
 import ProductThumbnail from '../components/ProductThumbnail';
@@ -26,6 +27,7 @@ import {
 } from '../utils/installmentValidation';
 import { generateOrderId, formatOrderId } from '../utils/orderId';
 import { billToReceiptItems, mergeReceipt, getReceiptPaperSize, receiptPrintPageSize, createInstallmentReceiptPrintJob } from '../utils/receipt';
+import { applyPromotionPrice } from '../utils/promotions';
 import ReceiptPrintLayer from '../components/ReceiptPrintLayer';
 import './SellItems.css';
 
@@ -95,6 +97,7 @@ function SellItems() {
   const [shippingPercent, setShippingPercent] = useState('');
   const [discount, setDiscount] = useState('');
   const [discountPercent, setDiscountPercent] = useState('');
+  const [activePromotions, setActivePromotions] = useState([]);
 
   const [installmentPlans, setInstallmentPlans] = useState([]);
   const [selectedPlan, setSelectedPlan] = useState(null);
@@ -160,14 +163,16 @@ function SellItems() {
       setLoading(true);
 
       if (mode === 'cash' || mode === 'installment') {
-        const [categoriesData, itemsData, settingsData] = await Promise.all([
+        const [categoriesData, itemsData, settingsData, promotionsData] = await Promise.all([
           categoryService.getAll(),
           itemService.getAvailable(),
           installmentSettingsService.getAll(),
+          promotionService.getActive().catch(() => []),
         ]);
         setCategories(categoriesData);
         setAllItems(itemsData);
         setItems(itemsData);
+        setActivePromotions(promotionsData || []);
 
         const rates = {};
         (settingsData || []).forEach((setting) => {
@@ -255,7 +260,7 @@ function SellItems() {
 
   const addToBill = (item) => {
     const existingIndex = bill.findIndex((billItem) => billItem.id === item.id);
-    const price = item.selling_price ?? item.price;
+    const { price, listPrice, promotion } = applyPromotionPrice(item, activePromotions);
 
     if (existingIndex !== -1) {
       const newBill = [...bill];
@@ -274,6 +279,8 @@ function SellItems() {
           id: item.id,
           name: item.name,
           price,
+          listPrice,
+          promotionPercent: promotion?.percent || 0,
           quantity: 1,
           maxQuantity: item.quantity,
           total: price,
@@ -1460,6 +1467,7 @@ function SellItems() {
                     const threshold = Number(settings?.lowStockThreshold ?? 15);
                     const stockLevel = remaining <= 0 ? 'out' : remaining <= threshold ? 'low' : 'ok';
                     const cat = categories.find((c) => c.id === item.category_id);
+                    const { listPrice, price, promotion } = applyPromotionPrice(item, activePromotions);
                     return (
                       <button
                         key={item.id}
@@ -1469,11 +1477,23 @@ function SellItems() {
                       >
                         <span className="pos-product-check"><i className="bi bi-check-lg"></i></span>
                         <div className="pos-product-image">
+                          {promotion ? (
+                            <span className="pos-promo-badge">{Number(promotion.percent)}% off</span>
+                          ) : null}
                           <ProductThumbnail item={item} categories={categories} size={36} />
                         </div>
                         <div className="pos-product-cat">{cat?.name || 'General'}</div>
                         <div className="pos-product-name">{item.name}</div>
-                        <div className="pos-product-price">{formatMoney(item.selling_price ?? item.price ?? 0)}</div>
+                        <div className="pos-product-price">
+                          {promotion ? (
+                            <>
+                              <span className="pos-product-price-original">{formatMoney(listPrice)}</span>
+                              <span>{formatMoney(price)}</span>
+                            </>
+                          ) : (
+                            formatMoney(listPrice)
+                          )}
+                        </div>
                         <div className="pos-product-footer">
                           <span className={`pos-stock-badge pos-stock-badge--${stockLevel}`}>
                             {remaining <= 0 ? t('outOfStock') : `${remaining} ${t('left')}`}
