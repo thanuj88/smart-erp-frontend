@@ -117,6 +117,8 @@ const resources = {
       downPayment: "Down Payment",
       installmentPeriod: "Installment Period",
       months: "Months",
+      left: "left",
+      outOfStock: "Out of stock",
       submitSale: "Submit Sale",
       
       // Sales Report
@@ -281,6 +283,8 @@ const resources = {
       downPayment: 'පූර්ව ගෙවීම',
       installmentPeriod: 'වාරික කාලය',
       months: 'මාස',
+      left: 'ඉතිරි',
+      outOfStock: 'තොගයෙන් ඉවත්',
       submitSale: 'විකුණුම ඉදිරිපත් කරන්න',
       
       // Sales Report - Sinhala

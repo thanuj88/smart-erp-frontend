@@ -113,11 +113,8 @@
   margin: 0.35rem 0 0.45rem;
 }
 
-.receipt-preview-total,
-.receipt-preview-change {
-  font-size: 16px;
-  font-weight: 700;
-  margin-top: 0.15rem;
+.receipt-preview-discount {
+  color: #c0392b;
 }
 
 .receipt-preview-meta {

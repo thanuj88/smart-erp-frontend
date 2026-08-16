@@ -91,6 +91,9 @@ function SellItems() {
   const [includeWitness, setIncludeWitness] = useState(false);
   const [downPayment, setDownPayment] = useState('');
   const [installmentMonths, setInstallmentMonths] = useState('3');
+  const [shipping, setShipping] = useState('');
+  const [tax, setTax] = useState('');
+  const [discount, setDiscount] = useState('');
 
   const [installmentPlans, setInstallmentPlans] = useState([]);
   const [selectedPlan, setSelectedPlan] = useState(null);
@@ -143,6 +146,7 @@ function SellItems() {
           change: extras.change != null ? extras.change : 0,
           tenderedLabel: extras.tenderedLabel || 'Tendered Cash',
           extraTotalLines: extras.extraTotalLines || [],
+          adjustmentLines: extras.adjustmentLines || [],
           showChange: extras.showChange !== false,
         },
       });
@@ -342,10 +346,44 @@ function SellItems() {
     setWitness({ name: '', phone: '', idCardNo: '', address: '', idImage: null });
     setIncludeWitness(false);
     setDownPayment('');
+    resetBillCharges();
     newOrderRef();
   };
 
-  const calculateTotal = () => bill.reduce((sum, item) => sum + item.total, 0);
+  const parseBillAmount = (value) => {
+    const n = parseFloat(value);
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  };
+
+  const resetBillCharges = () => {
+    setShipping('');
+    setTax('');
+    setDiscount('');
+  };
+
+  const calculateItemsTotal = () => bill.reduce((sum, item) => sum + Number(item.total || 0), 0);
+
+  const calculateCharges = () => {
+    const itemsTotal = calculateItemsTotal();
+    const shippingAmount = parseBillAmount(shipping);
+    const taxAmount = parseBillAmount(tax);
+    const maxDiscount = itemsTotal + shippingAmount + taxAmount;
+    const discountAmount = Math.min(parseBillAmount(discount), maxDiscount);
+    const grandTotal = Math.max(0, itemsTotal + shippingAmount + taxAmount - discountAmount);
+    return { itemsTotal, shippingAmount, taxAmount, discountAmount, grandTotal };
+  };
+
+  const getAdjustmentLines = (charges = calculateCharges()) => {
+    const lines = [];
+    if (charges.shippingAmount > 0) lines.push({ label: 'Shipping', value: charges.shippingAmount });
+    if (charges.taxAmount > 0) lines.push({ label: 'Tax', value: charges.taxAmount });
+    if (charges.discountAmount > 0) {
+      lines.push({ label: 'Discount', value: charges.discountAmount, negative: true });
+    }
+    return lines;
+  };
+
+  const calculateTotal = () => calculateCharges().grandTotal;
 
   const calculateInstallmentPreview = () => {
     const total = calculateTotal();
@@ -437,9 +475,15 @@ function SellItems() {
       for (const item of bill) {
         await saleService.processCashSale(item.id, item.quantity, { orderNumber: orderRef });
       }
-      printSaleReceipt(bill);
+      const charges = calculateCharges();
+      printSaleReceipt(bill, {
+        total: charges.grandTotal,
+        tendered: charges.grandTotal,
+        adjustmentLines: getAdjustmentLines(charges),
+      });
       setSuccess(t('Sale completed successfully!'));
       setBill([]);
+      resetBillCharges();
       newOrderRef();
       await loadData();
       setTimeout(() => setSuccess(''), 5000);
@@ -516,6 +560,7 @@ function SellItems() {
         tendered: preview.downPayment,
         tenderedLabel: 'Down payment',
         showChange: false,
+        adjustmentLines: getAdjustmentLines(),
         extraTotalLines: [
           { label: 'Balance', value: preview.remaining },
           { label: `${preview.interestRate}% interest`, value: preview.interestAmount },
@@ -528,6 +573,7 @@ function SellItems() {
       setWitness({ name: '', phone: '', idCardNo: '', address: '', idImage: null });
       setIncludeWitness(false);
       setDownPayment('');
+      resetBillCharges();
       setShowInstallmentModal(false);
       setInstallmentModalError('');
       setInstallmentTouched(false);
@@ -615,10 +661,14 @@ function SellItems() {
         downPayment,
         installmentMonths,
         walkInCustomer,
+        shipping,
+        tax,
+        discount,
       })
     );
     setSuccess('Order held successfully');
     setBill([]);
+    resetBillCharges();
     newOrderRef();
     setTimeout(() => setSuccess(''), 3000);
   };
@@ -640,6 +690,9 @@ function SellItems() {
       if (data.downPayment) setDownPayment(data.downPayment);
       if (data.installmentMonths) setInstallmentMonths(data.installmentMonths);
       if (data.walkInCustomer) setWalkInCustomer(data.walkInCustomer);
+      setShipping(data.shipping != null ? String(data.shipping) : '');
+      setTax(data.tax != null ? String(data.tax) : '');
+      setDiscount(data.discount != null ? String(data.discount) : '');
       setSuccess('Held order restored');
       setTimeout(() => setSuccess(''), 3000);
     } catch {
@@ -1129,11 +1182,56 @@ function SellItems() {
           </div>
 
           <div className="pos-summary">
-            <div className="pos-summary-row"><span>Shipping</span><span>{formatMoney(0)}</span></div>
-            <div className="pos-summary-row"><span>Tax</span><span>{formatMoney(0)}</span></div>
-            <div className="pos-summary-row discount"><span>Discount</span><span>{formatMoney(0)}</span></div>
+            <div className="pos-summary-row">
+              <span>{t('Shipping')}</span>
+              <div className="pos-summary-input-wrap">
+                <span className="pos-summary-currency">{currency?.symbol}</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  className="pos-summary-input"
+                  value={shipping}
+                  placeholder="0.00"
+                  aria-label={t('Shipping')}
+                  onChange={(e) => setShipping(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="pos-summary-row">
+              <span>{t('Tax')}</span>
+              <div className="pos-summary-input-wrap">
+                <span className="pos-summary-currency">{currency?.symbol}</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  className="pos-summary-input"
+                  value={tax}
+                  placeholder="0.00"
+                  aria-label={t('Tax')}
+                  onChange={(e) => setTax(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="pos-summary-row discount">
+              <span>{t('Discount')}</span>
+              <div className="pos-summary-input-wrap">
+                <span className="pos-summary-currency">{currency?.symbol}</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  className="pos-summary-input pos-summary-input-discount"
+                  value={discount}
+                  placeholder="0.00"
+                  aria-label={t('Discount')}
+                  onChange={(e) => setDiscount(e.target.value)}
+                />
+              </div>
+            </div>
             <div className="pos-summary-total">
-              <span>{t('Sub Total')}</span>
+              <span>{t('Total')}</span>
               <span>{formatMoney(total)}</span>
             </div>
           </div>
@@ -1320,6 +1418,9 @@ function SellItems() {
                   displayItems.map((item) => {
                     const inBill = bill.find((b) => b.id === item.id);
                     const qty = inBill?.quantity || 0;
+                    const remaining = Math.max(0, Number(item.quantity || 0) - qty);
+                    const threshold = Number(settings?.lowStockThreshold ?? 15);
+                    const stockLevel = remaining <= 0 ? 'out' : remaining <= threshold ? 'low' : 'ok';
                     const cat = categories.find((c) => c.id === item.category_id);
                     return (
                       <button
@@ -1335,17 +1436,22 @@ function SellItems() {
                         <div className="pos-product-cat">{cat?.name || 'General'}</div>
                         <div className="pos-product-name">{item.name}</div>
                         <div className="pos-product-price">{formatMoney(item.selling_price ?? item.price ?? 0)}</div>
-                        <div className="pos-product-qty" onClick={(e) => e.stopPropagation()}>
-                          <button type="button" className="pos-qty-btn" onClick={(e) => handleProductQty(item, -1, e)} disabled={qty === 0}>−</button>
-                          <span className="pos-qty-value">{qty}</span>
-                          <button
-                            type="button"
-                            className="pos-qty-btn"
-                            onClick={(e) => handleProductQty(item, 1, e)}
-                            disabled={qty >= item.quantity}
-                          >
-                            +
-                          </button>
+                        <div className="pos-product-footer">
+                          <span className={`pos-stock-badge pos-stock-badge--${stockLevel}`}>
+                            {remaining <= 0 ? t('outOfStock') : `${remaining} ${t('left')}`}
+                          </span>
+                          <div className="pos-product-qty" onClick={(e) => e.stopPropagation()}>
+                            <button type="button" className="pos-qty-btn" onClick={(e) => handleProductQty(item, -1, e)} disabled={qty === 0}>−</button>
+                            <span className="pos-qty-value">{qty}</span>
+                            <button
+                              type="button"
+                              className="pos-qty-btn"
+                              onClick={(e) => handleProductQty(item, 1, e)}
+                              disabled={qty >= item.quantity}
+                            >
+                              +
+                            </button>
+                          </div>
                         </div>
                       </button>
                     );

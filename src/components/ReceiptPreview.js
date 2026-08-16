@@ -21,6 +21,7 @@ const ReceiptPreview = ({
   change,
   tenderedLabel = 'Tendered Cash',
   extraTotalLines = [],
+  adjustmentLines = [],
   showChange = true,
   infoLines = [],
   totalLabel = 'Total',
@@ -113,6 +114,18 @@ const ReceiptPreview = ({
             <span>{formatMoney(tax, currency)}</span>
           </div>
         ) : null}
+        {adjustmentLines.map((line) => (
+          <div
+            className={`receipt-preview-item-row${line.negative ? ' receipt-preview-discount' : ''}`}
+            key={line.label}
+          >
+            <span>{line.label}</span>
+            <span>
+              {line.negative ? '-' : ''}
+              {formatMoney(line.value, currency)}
+            </span>
+          </div>
+        ))}
         <div className="receipt-preview-item-row receipt-preview-total">
           <span>{totalLabel}</span>
           <span>{formatMoney(total, currency)}</span>
