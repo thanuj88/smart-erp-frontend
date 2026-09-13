@@ -4,6 +4,12 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 
+import { LayoutProvider } from './contexts/LayoutContext';
+
+import { TenantSettingsProvider } from './contexts/TenantSettingsContext';
+import { ConfirmProvider } from './contexts/ConfirmContext';
+import { PosSaleGuardProvider } from './contexts/PosSaleGuardContext';
+
 import ProtectedRoute from './components/ProtectedRoute';
 
 import Layout from './components/Layout';
@@ -29,6 +35,8 @@ import Dashboard from './pages/Dashboard';
 import Inventory from './pages/Inventory';
 
 import Categories from './pages/Categories';
+
+import Promotions from './pages/Promotions';
 
 import SellItems from './pages/SellItems';
 
@@ -65,7 +73,14 @@ import './index.css';
 function HomeRedirect() {
   const { isSuperAdmin, isTellerOnly, loading } = useAuth();
 
-  if (loading) return null;
+  if (loading) {
+    return (
+      <div className="loading">
+        <div className="spinner"></div>
+        <p>Loading...</p>
+      </div>
+    );
+  }
   if (isSuperAdmin) return <Navigate to="/platform" replace />;
   if (isTellerOnly) return <Navigate to="/sell" replace />;
 
@@ -142,13 +157,15 @@ function AppRoutes() {
 
       <Route path="/categories" element={<ProtectedRoute requirePermission={PERMISSIONS.INVENTORY_MANAGE}><Layout><Categories /></Layout></ProtectedRoute>} />
 
+      <Route path="/promotions" element={<ProtectedRoute requirePermission={PERMISSIONS.INVENTORY_MANAGE}><Layout><Promotions /></Layout></ProtectedRoute>} />
+
       <Route path="/sell" element={<ProtectedRoute requirePermission={PERMISSIONS.SALES_CREATE}><PosLayout><SellItems /></PosLayout></ProtectedRoute>} />
 
       <Route path="/sales-report" element={<ProtectedRoute requirePermission={PERMISSIONS.REPORTS_VIEW}><Layout><SalesReport /></Layout></ProtectedRoute>} />
 
       <Route path="/users" element={<ProtectedRoute requirePermission={[PERMISSIONS.USERS_MANAGE, PERMISSIONS.USERS_VIEW]}><Layout><Users /></Layout></ProtectedRoute>} />
 
-      <Route path="/installment-plans" element={<ProtectedRoute><Layout><InstallmentPlans /></Layout></ProtectedRoute>} />
+      <Route path="/installment-plans" element={<ProtectedRoute requireAdmin><Layout><InstallmentPlans /></Layout></ProtectedRoute>} />
 
       <Route path="/installment-payments" element={<ProtectedRoute><Layout><InstallmentPayments /></Layout></ProtectedRoute>} />
 
@@ -180,7 +197,17 @@ function App() {
 
       <AuthProvider>
 
-        <AppRoutes />
+        <TenantSettingsProvider>
+
+          <LayoutProvider>
+            <ConfirmProvider>
+              <PosSaleGuardProvider>
+                <AppRoutes />
+              </PosSaleGuardProvider>
+            </ConfirmProvider>
+          </LayoutProvider>
+
+        </TenantSettingsProvider>
 
       </AuthProvider>
 

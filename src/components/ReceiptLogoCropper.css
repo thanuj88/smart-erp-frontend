@@ -1,0 +1,116 @@
+.logo-crop-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1450;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  background: rgba(33, 43, 54, 0.35);
+}
+
+.logo-crop-dialog {
+  width: 100%;
+  max-width: 22.5rem;
+  background: #fff;
+  border: 1px solid var(--dreams-border, #e8ecef);
+  border-radius: 1rem;
+  box-shadow: 0 18px 48px rgba(33, 43, 54, 0.22);
+  padding: 1rem 1.15rem 1rem;
+}
+
+.logo-crop-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--dreams-navy, #212b36);
+  margin: 0 0 0.15rem;
+}
+
+.logo-crop-help {
+  margin: 0 0 0.85rem;
+  font-size: 0.8rem;
+  color: var(--dreams-text-muted, #67748e);
+}
+
+.logo-crop-viewport {
+  position: relative;
+  width: 280px;
+  height: 280px;
+  margin: 0 auto;
+  overflow: hidden;
+  border-radius: 0.6rem;
+  background: #1a222b;
+  touch-action: none;
+  cursor: grab;
+  user-select: none;
+}
+
+.logo-crop-viewport:active {
+  cursor: grabbing;
+}
+
+.logo-crop-image {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  max-width: none;
+  transform-origin: center center;
+  pointer-events: none;
+}
+
+.logo-crop-mask {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  box-shadow: 0 0 0 80px rgba(0, 0, 0, 0.48);
+  pointer-events: none;
+}
+
+.logo-crop-zoom {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin: 0.9rem 0 0;
+}
+
+.logo-crop-zoom-btn {
+  width: 2.1rem;
+  height: 2.1rem;
+  border: 1px solid var(--dreams-border, #e8ecef);
+  border-radius: 0.5rem;
+  background: #fff;
+  color: var(--dreams-text, #212b36);
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo-crop-zoom-btn:hover:not(:disabled) {
+  background: #f5f6fa;
+  border-color: var(--dreams-orange, #ff9f43);
+}
+
+.logo-crop-zoom-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.logo-crop-zoom-value {
+  min-width: 2.5rem;
+  text-align: center;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--dreams-text, #212b36);
+  font-variant-numeric: tabular-nums;
+}
+
+.logo-crop-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  margin-top: 0.95rem;
+}

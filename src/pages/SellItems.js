@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useAuth } from '../contexts/AuthContext';
 import {
   itemService,
   categoryService,
@@ -9,33 +7,86 @@ import {
   installmentSettingsService,
   installmentPaymentService,
   installmentPlanService,
+  promotionService,
 } from '../services';
+import CategoryIcon from '../components/CategoryIcon';
+import ProductThumbnail from '../components/ProductThumbnail';
+import { resolveCategoryIconKey } from '../config/categoryIcons';
+import { useCurrency } from '../contexts/TenantSettingsContext';
+import { useAuth } from '../contexts/AuthContext';
+import { useConfirm } from '../contexts/ConfirmContext';
+import { usePosSaleGuard } from '../contexts/PosSaleGuardContext';
+import {
+  validateDistinctCustomerAndWitness,
+  getInstallmentFieldErrors,
+  getInstallmentValidationMessage,
+  getCustomerWitnessDuplicates,
+  isValidNic,
+  normalizeNic,
+  sanitizeNicInput,
+  NIC_FORMAT_MESSAGE,
+} from '../utils/installmentValidation';
+import { generateOrderId, formatOrderId } from '../utils/orderId';
+import { billToReceiptItems, mergeReceipt, getReceiptPaperSize, receiptPrintPageSize, createInstallmentReceiptPrintJob, createReturnReceiptPrintJob } from '../utils/receipt';
+import { applyPromotionPrice } from '../utils/promotions';
+import { resolveBusinessName } from '../config/app';
+import ReceiptPrintLayer from '../components/ReceiptPrintLayer';
 import './SellItems.css';
 
-const HOLD_KEY = 'pos-held-order';
+const HOLD_KEY_PREFIX = 'pos-held-order';
+const LEGACY_HOLD_KEY = 'pos-held-order';
 
-const getCategoryIcon = (name) => {
-  const n = (name || '').toLowerCase();
-  if (n.includes('head') || n.includes('audio')) return 'bi-headphones';
-  if (n.includes('shoe') || n.includes('foot')) return 'bi-bag';
-  if (n.includes('mobile') || n.includes('phone')) return 'bi-phone';
-  if (n.includes('watch')) return 'bi-smartwatch';
-  if (n.includes('laptop') || n.includes('computer')) return 'bi-laptop';
-  if (n.includes('appliance') || n.includes('home')) return 'bi-house';
-  if (n.includes('food') || n.includes('grocery')) return 'bi-cart3';
-  return 'bi-box-seam';
-};
+function holdStorageKey(userId) {
+  return `${HOLD_KEY_PREFIX}:${userId}`;
+}
 
-const getProductEmoji = (item, categories) => {
-  if (item.category_icon) return item.category_icon;
-  const cat = categories.find((c) => c.id === item.category_id);
-  return cat?.icon || '🛍️';
+function readHeldOrder(userId) {
+  if (userId == null || userId === '') return null;
+  try {
+    const raw = localStorage.getItem(holdStorageKey(userId));
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    if (!data?.bill?.length) return null;
+    if (data.userId != null && String(data.userId) !== String(userId)) return null;
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+function writeHeldOrder(userId, data) {
+  if (userId == null || userId === '') return;
+  localStorage.setItem(holdStorageKey(userId), JSON.stringify({ ...data, userId }));
+}
+
+function clearHeldOrder(userId) {
+  if (userId == null || userId === '') return;
+  localStorage.removeItem(holdStorageKey(userId));
+}
+
+/** Fallback when tenant has no installment settings configured yet */
+const DEFAULT_INSTALLMENT_PERIODS = [
+  { months: 3, interest_rate: 0 },
+  { months: 6, interest_rate: 0 },
+  { months: 12, interest_rate: 0 },
+];
+
+const getItemCategoryIcon = (item, categories) =>
+  resolveCategoryIconKey(item.category_icon, categories, item.category_id);
+
+const formatTimer = (seconds) => {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  return [h, m, s].map((v) => String(v).padStart(2, '0')).join(':');
 };
 
 function SellItems() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
-  const { user, isAdmin } = useAuth();
+  const { formatMoney, currency, settings } = useCurrency();
+  const { user } = useAuth();
+  const { confirm } = useConfirm();
+  const { setSaleGuard } = usePosSaleGuard();
 
   const [mode, setMode] = useState('cash');
   const [categories, setCategories] = useState([]);
@@ -46,10 +97,14 @@ function SellItems() {
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState('');
+  const [installmentModalError, setInstallmentModalError] = useState('');
+  const [installmentTouched, setInstallmentTouched] = useState(false);
   const [success, setSuccess] = useState('');
   const [itemSearch, setItemSearch] = useState('');
   const [planSearch, setPlanSearch] = useState('');
-  const [orderRef, setOrderRef] = useState(() => `#ORD${Date.now().toString().slice(-6)}`);
+  const [orderRef, setOrderRef] = useState(() => generateOrderId());
+  const [elapsed, setElapsed] = useState(0);
+  const [orderStartedAt, setOrderStartedAt] = useState(null);
   const [walkInCustomer, setWalkInCustomer] = useState('Walk in Customer');
 
   const [interestRates, setInterestRates] = useState({});
@@ -68,41 +123,236 @@ function SellItems() {
     address: '',
     idImage: null,
   });
+  const [includeWitness, setIncludeWitness] = useState(false);
   const [downPayment, setDownPayment] = useState('');
   const [installmentMonths, setInstallmentMonths] = useState('3');
+  const [shipping, setShipping] = useState('');
+  const [shippingPercent, setShippingPercent] = useState('');
+  const [discount, setDiscount] = useState('');
+  const [discountPercent, setDiscountPercent] = useState('');
+  const [activePromotions, setActivePromotions] = useState([]);
 
   const [installmentPlans, setInstallmentPlans] = useState([]);
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [pendingPayments, setPendingPayments] = useState([]);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentNotes, setPaymentNotes] = useState('');
+  const [showInstallmentModal, setShowInstallmentModal] = useState(false);
+  const [printJob, setPrintJob] = useState(null);
+  const [hasHeldBill, setHasHeldBill] = useState(false);
+  const [openedHold, setOpenedHold] = useState(false);
+  const [returnSearch, setReturnSearch] = useState('');
+  const [returnOrder, setReturnOrder] = useState(null);
+  const [returnQtys, setReturnQtys] = useState({});
+  const [returnReason, setReturnReason] = useState('');
+  const [returnType, setReturnType] = useState('cash');
+  const openedHoldRef = React.useRef(false);
+  openedHoldRef.current = openedHold;
 
-  const newOrderRef = () => setOrderRef(`#ORD${Date.now().toString().slice(-6)}`);
+  useEffect(() => {
+    if (!showInstallmentModal) return undefined;
+    document.documentElement.classList.add('pos-installment-modal-open');
+    document.body.classList.add('pos-installment-modal-open');
+    return () => {
+      document.documentElement.classList.remove('pos-installment-modal-open');
+      document.body.classList.remove('pos-installment-modal-open');
+    };
+  }, [showInstallmentModal]);
+
+  useEffect(() => {
+    if (bill.length === 0) {
+      setOrderStartedAt(null);
+      setElapsed(0);
+      return undefined;
+    }
+    if (!orderStartedAt) {
+      setOrderStartedAt(Date.now());
+      setElapsed(0);
+      return undefined;
+    }
+    const tick = () => setElapsed(Math.floor((Date.now() - orderStartedAt) / 1000));
+    tick();
+    const timer = setInterval(tick, 1000);
+    return () => clearInterval(timer);
+  }, [bill.length, orderStartedAt]);
+
+  const newOrderRef = () => setOrderRef(generateOrderId());
+
+  const saleStateRef = React.useRef({});
+  saleStateRef.current = {
+    bill,
+    mode,
+    customer,
+    witness,
+    includeWitness,
+    downPayment,
+    installmentMonths,
+    walkInCustomer,
+    shipping,
+    shippingPercent,
+    discount,
+    discountPercent,
+    orderRef,
+    orderStartedAt,
+    userId: user?.id,
+  };
+
+  useEffect(() => {
+    localStorage.removeItem(LEGACY_HOLD_KEY);
+  }, []);
+
+  useEffect(() => {
+    setHasHeldBill(Boolean(readHeldOrder(user?.id)));
+    setOpenedHold(false);
+  }, [user?.id]);
+
+  const resetBillCharges = useCallback(() => {
+    setShipping('');
+    setShippingPercent('');
+    setDiscount('');
+    setDiscountPercent('');
+  }, []);
+
+  const voidBillNow = useCallback(() => {
+    setBill([]);
+    setCustomer({ name: '', phone: '', idCardNo: '', email: '', address: '', idImage: null });
+    setWitness({ name: '', phone: '', idCardNo: '', address: '', idImage: null });
+    setIncludeWitness(false);
+    setDownPayment('');
+    resetBillCharges();
+    setShowInstallmentModal(false);
+    setOpenedHold(false);
+    newOrderRef();
+  }, [resetBillCharges]);
+
+  const holdBillNow = useCallback(() => {
+    const sale = saleStateRef.current;
+    if (!sale.bill?.length) return false;
+    writeHeldOrder(sale.userId, {
+      bill: sale.bill,
+      mode: sale.mode,
+      customer: sale.customer,
+      witness: sale.witness,
+      includeWitness: sale.includeWitness,
+      downPayment: sale.downPayment,
+      installmentMonths: sale.installmentMonths,
+      walkInCustomer: sale.walkInCustomer,
+      shipping: sale.shipping,
+      shippingPercent: sale.shippingPercent,
+      discount: sale.discount,
+      discountPercent: sale.discountPercent,
+      orderRef: sale.orderRef,
+      orderStartedAt: sale.orderStartedAt,
+    });
+    setHasHeldBill(true);
+    setOpenedHold(false);
+    setBill([]);
+    resetBillCharges();
+    setShowInstallmentModal(false);
+    newOrderRef();
+    return true;
+  }, [resetBillCharges]);
+
+  const applyHeldOrder = useCallback((data) => {
+    setBill(data.bill || []);
+    if (data.mode) setMode(data.mode);
+    if (data.customer) setCustomer(data.customer);
+    if (data.witness) setWitness(data.witness);
+    if (typeof data.includeWitness === 'boolean') setIncludeWitness(data.includeWitness);
+    if (data.downPayment != null) setDownPayment(data.downPayment);
+    if (data.installmentMonths) setInstallmentMonths(data.installmentMonths);
+    if (data.walkInCustomer) setWalkInCustomer(data.walkInCustomer);
+    setShipping(data.shipping != null ? String(data.shipping) : '');
+    setShippingPercent(data.shippingPercent != null ? String(data.shippingPercent) : '');
+    setDiscount(data.discount != null ? String(data.discount) : '');
+    setDiscountPercent(data.discountPercent != null ? String(data.discountPercent) : '');
+    if (data.orderRef) setOrderRef(data.orderRef);
+    if (data.orderStartedAt) {
+      setOrderStartedAt(data.orderStartedAt);
+      setElapsed(Math.max(0, Math.floor((Date.now() - data.orderStartedAt) / 1000)));
+    }
+    setOpenedHold(true);
+  }, []);
+
+  const releaseOpenedHoldIfNeeded = useCallback(() => {
+    if (!openedHoldRef.current) return;
+    clearHeldOrder(saleStateRef.current.userId);
+    setHasHeldBill(false);
+    setOpenedHold(false);
+  }, []);
+
+  useEffect(() => {
+    return setSaleGuard({
+      hasOpenSale: () => saleStateRef.current.bill.length > 0,
+      hold: holdBillNow,
+      voidSale: voidBillNow,
+    });
+  }, [holdBillNow, setSaleGuard, voidBillNow]);
+
+  useEffect(() => {
+    if (bill.length === 0) return undefined;
+    const onBeforeUnload = (event) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [bill.length]);
+
+  const printSaleReceipt = useCallback(
+    (billItems, extras = {}) => {
+      const template = mergeReceipt(settings?.receipt, settings?.receiptFooter);
+      const paper = getReceiptPaperSize(template.paperSize);
+      const charged = billItems.reduce((sum, item) => sum + Number(item.total || 0), 0);
+      setPrintJob({
+        pageSize: receiptPrintPageSize(paper),
+        preview: {
+          businessName: resolveBusinessName(settings),
+          currency,
+          taxRate: 0,
+          receipt: template,
+          items: billToReceiptItems(billItems, currency),
+          cashierName: user?.full_name || user?.fullName || user?.username || 'CASHIER',
+          saleNumber: String(orderRef || '').replace(/^#/, '') || `S${Date.now()}`,
+          soldAt: new Date().toISOString(),
+          subtotal: charged,
+          tax: 0,
+          total: extras.total != null ? extras.total : charged,
+          tendered: extras.tendered != null ? extras.tendered : charged,
+          change: extras.change != null ? extras.change : 0,
+          tenderedLabel: extras.tenderedLabel || 'Tendered Cash',
+          extraTotalLines: extras.extraTotalLines || [],
+          adjustmentLines: extras.adjustmentLines || [],
+          showChange: extras.showChange !== false,
+        },
+      });
+    },
+    [currency, orderRef, settings, user]
+  );
 
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
 
       if (mode === 'cash' || mode === 'installment') {
-        const [categoriesData, itemsData, settingsData] = await Promise.all([
+        const [categoriesData, itemsData, settingsData, promotionsData] = await Promise.all([
           categoryService.getAll(),
           itemService.getAvailable(),
           installmentSettingsService.getAll(),
+          promotionService.getActive().catch(() => []),
         ]);
         setCategories(categoriesData);
         setAllItems(itemsData);
         setItems(itemsData);
+        setActivePromotions(promotionsData || []);
 
         const rates = {};
-        settingsData.forEach((setting) => {
-          rates[setting.months] = setting.interest_rate;
+        (settingsData || []).forEach((setting) => {
+          if (setting?.months != null) {
+            rates[String(setting.months)] = Number(setting.interest_rate) || 0;
+          }
         });
         setInterestRates(rates);
-
-        if (!installmentMonths && settingsData.length > 0) {
-          const sortedSettings = settingsData.sort((a, b) => a.months - b.months);
-          setInstallmentMonths(sortedSettings[0].months.toString());
-        }
       } else if (mode === 'payment') {
         const [plansData, paymentsData] = await Promise.all([
           installmentPlanService.getActive(),
@@ -117,11 +367,32 @@ function SellItems() {
     } finally {
       setLoading(false);
     }
-  }, [mode, installmentMonths, t]);
+  }, [mode, t]);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  const installmentPeriodOptions = useMemo(() => {
+    const keys = Object.keys(interestRates).sort((a, b) => Number(a) - Number(b));
+    if (keys.length > 0) {
+      return keys.map((months) => ({
+        months,
+        interest_rate: interestRates[months],
+      }));
+    }
+    return DEFAULT_INSTALLMENT_PERIODS.map((opt) => ({
+      months: String(opt.months),
+      interest_rate: opt.interest_rate,
+    }));
+  }, [interestRates]);
+
+  useEffect(() => {
+    const available = installmentPeriodOptions.map((opt) => opt.months);
+    if (available.length > 0 && !available.includes(installmentMonths)) {
+      setInstallmentMonths(available[0]);
+    }
+  }, [installmentPeriodOptions, installmentMonths]);
 
   const handleCategorySelect = async (category) => {
     if (!category) {
@@ -161,7 +432,7 @@ function SellItems() {
 
   const addToBill = (item) => {
     const existingIndex = bill.findIndex((billItem) => billItem.id === item.id);
-    const price = item.selling_price || item.price;
+    const { price, listPrice, promotion } = applyPromotionPrice(item, activePromotions);
 
     if (existingIndex !== -1) {
       const newBill = [...bill];
@@ -180,18 +451,23 @@ function SellItems() {
           id: item.id,
           name: item.name,
           price,
+          listPrice,
+          promotionPercent: promotion?.percent || 0,
           quantity: 1,
           maxQuantity: item.quantity,
           total: price,
-          emoji: getProductEmoji(item, categories),
+          categoryIcon: getItemCategoryIcon(item, categories),
+          category_id: item.category_id,
+          category_icon: item.category_icon,
+          image_path: item.image_path,
         },
       ]);
     }
   };
 
   const incrementQuantity = (itemId) => {
-    setBill(
-      bill.map((item) => {
+    setBill((currentBill) =>
+      currentBill.map((item) => {
         if (item.id === itemId && item.quantity < item.maxQuantity) {
           const quantity = item.quantity + 1;
           return { ...item, quantity, total: quantity * item.price };
@@ -202,19 +478,24 @@ function SellItems() {
   };
 
   const decrementQuantity = (itemId) => {
-    setBill(
-      bill.map((item) => {
-        if (item.id === itemId && item.quantity > 1) {
+    setBill((currentBill) => {
+      const target = currentBill.find((item) => item.id === itemId);
+      if (!target) return currentBill;
+      if (target.quantity <= 1) {
+        return currentBill.filter((item) => item.id !== itemId);
+      }
+      return currentBill.map((item) => {
+        if (item.id === itemId) {
           const quantity = item.quantity - 1;
           return { ...item, quantity, total: quantity * item.price };
         }
         return item;
-      })
-    );
+      });
+    });
   };
 
   const removeFromBill = (itemId) => {
-    setBill(bill.filter((item) => item.id !== itemId));
+    setBill((currentBill) => currentBill.filter((item) => item.id !== itemId));
   };
 
   const handleProductQty = (item, delta, e) => {
@@ -229,17 +510,113 @@ function SellItems() {
     }
   };
 
-  const clearBill = () => {
-    if (bill.length > 0 && window.confirm(t('Are you sure you want to clear the entire bill?'))) {
-      setBill([]);
-      setCustomer({ name: '', phone: '', idCardNo: '', email: '', address: '', idImage: null });
-      setWitness({ name: '', phone: '', idCardNo: '', address: '', idImage: null });
-      setDownPayment('');
-      newOrderRef();
-    }
+  const clearBill = async () => {
+    if (bill.length === 0) return;
+    const ok = await confirm({
+      title: t('Clear bill'),
+      message: t('Are you sure you want to clear the entire bill?'),
+      confirmLabel: t('Clear'),
+      cancelLabel: t('Cancel'),
+      variant: 'warning',
+      icon: 'bi-trash3',
+    });
+    if (!ok) return;
+    voidBillNow();
   };
 
-  const calculateTotal = () => bill.reduce((sum, item) => sum + item.total, 0);
+  const parseBillAmount = (value) => {
+    const n = parseFloat(value);
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  };
+
+  const parseBillPercent = (value) => {
+    const n = parseFloat(value);
+    if (!Number.isFinite(n) || n <= 0) return 0;
+    return Math.min(n, 100);
+  };
+
+
+  const calculateItemsTotal = () => bill.reduce((sum, item) => sum + Number(item.total || 0), 0);
+
+  const calculateCharges = () => {
+    const itemsTotal = calculateItemsTotal();
+    const shippingPct = parseBillPercent(shippingPercent);
+    const discountPct = parseBillPercent(discountPercent);
+    const shippingAmount = parseBillAmount(shipping) + itemsTotal * (shippingPct / 100);
+    const maxDiscount = itemsTotal + shippingAmount;
+    const discountAmount = Math.min(
+      parseBillAmount(discount) + itemsTotal * (discountPct / 100),
+      maxDiscount
+    );
+    const grandTotal = Math.max(0, itemsTotal + shippingAmount - discountAmount);
+    return { itemsTotal, shippingAmount, shippingPct, discountAmount, discountPct, grandTotal };
+  };
+
+  const getAdjustmentLines = (charges = calculateCharges()) => {
+    const lines = [];
+    if (charges.shippingAmount > 0) {
+      lines.push({
+        label: charges.shippingPct > 0 ? `Shipping (${charges.shippingPct}%)` : 'Shipping',
+        value: charges.shippingAmount,
+      });
+    }
+    if (charges.discountAmount > 0) {
+      lines.push({
+        label: charges.discountPct > 0 ? `Discount (${charges.discountPct}%)` : 'Discount',
+        value: charges.discountAmount,
+        negative: true,
+      });
+    }
+    return lines;
+  };
+
+  const calculateTotal = () => calculateCharges().grandTotal;
+
+  const calculateInstallmentPreview = () => {
+    const total = calculateTotal();
+    const down = parseFloat(downPayment) || 0;
+    const remaining = total - down;
+    const selectedPeriod = installmentPeriodOptions.find((opt) => opt.months === installmentMonths);
+    const rate = selectedPeriod?.interest_rate ?? 0;
+    const interestAmount = (remaining * rate) / 100;
+    const totalWithInterest = remaining + interestAmount;
+    const months = parseInt(installmentMonths, 10) || 1;
+    const monthlyPayment = totalWithInterest / months;
+    return {
+      total,
+      downPayment: down,
+      remaining,
+      interestRate: rate,
+      interestAmount,
+      totalWithInterest,
+      monthlyPayment,
+    };
+  };
+
+  const openInstallmentModal = () => {
+    if (bill.length === 0) {
+      setError(t('Add items to bill before checkout'));
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
+    setError('');
+    setInstallmentModalError('');
+    setInstallmentTouched(false);
+    setShowInstallmentModal(true);
+  };
+
+  const closeInstallmentModal = () => {
+    setShowInstallmentModal(false);
+    setInstallmentModalError('');
+    setInstallmentTouched(false);
+  };
+
+  const showInstallmentModalError = (message, autoClearMs = 0) => {
+    setInstallmentModalError(message);
+    if (autoClearMs > 0) {
+      setTimeout(() => setInstallmentModalError(''), autoClearMs);
+    }
+  };
 
   const handleImageCapture = (field, type) => {
     const input = document.createElement('input');
@@ -251,8 +628,11 @@ function SellItems() {
       if (file) {
         const reader = new FileReader();
         reader.onloadend = () => {
-          if (type === 'customer') setCustomer({ ...customer, [field]: reader.result });
-          else setWitness({ ...witness, [field]: reader.result });
+          if (type === 'customer') {
+            setCustomer((prev) => ({ ...prev, [field]: reader.result }));
+          } else {
+            setWitness((prev) => ({ ...prev, [field]: reader.result }));
+          }
         };
         reader.readAsDataURL(file);
       }
@@ -266,16 +646,32 @@ function SellItems() {
       setTimeout(() => setError(''), 3000);
       return;
     }
-    if (!window.confirm(t('Confirm sale and process payment?'))) return;
+    const ok = await confirm({
+      title: t('Confirm sale'),
+      message: t('Confirm sale and process payment?'),
+      confirmLabel: t('Process payment'),
+      cancelLabel: t('Cancel'),
+      variant: 'primary',
+      icon: 'bi-cash-stack',
+    });
+    if (!ok) return;
 
     try {
       setProcessing(true);
       setError('');
       for (const item of bill) {
-        await saleService.processCashSale(item.id, item.quantity);
+        await saleService.processCashSale(item.id, item.quantity, { orderNumber: orderRef });
       }
+      const charges = calculateCharges();
+      printSaleReceipt(bill, {
+        total: charges.grandTotal,
+        tendered: charges.grandTotal,
+        adjustmentLines: getAdjustmentLines(charges),
+      });
       setSuccess(t('Sale completed successfully!'));
       setBill([]);
+      resetBillCharges();
+      releaseOpenedHoldIfNeeded();
       newOrderRef();
       await loadData();
       setTimeout(() => setSuccess(''), 5000);
@@ -288,56 +684,93 @@ function SellItems() {
 
   const handleInstallmentSaleCheckout = async () => {
     if (bill.length === 0) {
-      setError('Add items to bill');
-      setTimeout(() => setError(''), 3000);
+      showInstallmentModalError('Add items to bill', 3000);
       return;
     }
-    if (!customer.name || !customer.phone || !customer.idCardNo || !customer.address) {
-      setError('Please fill in all customer details');
-      setTimeout(() => setError(''), 3000);
+
+    setInstallmentTouched(true);
+    const orderTotal = calculateTotal();
+    const normalizedCustomer = { ...customer, idCardNo: normalizeNic(customer.idCardNo) };
+    const normalizedWitness = includeWitness
+      ? { ...witness, idCardNo: normalizeNic(witness.idCardNo) }
+      : { name: '', phone: '', idCardNo: '', address: '', idImage: null };
+    setCustomer(normalizedCustomer);
+    if (includeWitness) setWitness(normalizedWitness);
+
+    const fieldErrors = getInstallmentFieldErrors(
+      normalizedCustomer,
+      normalizedWitness,
+      downPayment,
+      orderTotal,
+      { includeWitness }
+    );
+    if (Object.keys(fieldErrors).length > 0) {
+      const message = getInstallmentValidationMessage(
+        fieldErrors,
+        normalizedCustomer,
+        normalizedWitness,
+        downPayment,
+        orderTotal,
+        { includeWitness }
+      );
+      showInstallmentModalError(message, 4000);
       return;
     }
-    if (!witness.name || !witness.phone || !witness.idCardNo || !witness.address) {
-      setError('Please fill in all witness details');
-      setTimeout(() => setError(''), 3000);
-      return;
-    }
-    if (!downPayment || parseFloat(downPayment) <= 0) {
-      setError('Please enter a valid down payment');
-      setTimeout(() => setError(''), 3000);
-      return;
-    }
-    const total = calculateTotal();
-    if (parseFloat(downPayment) >= total) {
-      setError('Down payment must be less than total amount');
-      setTimeout(() => setError(''), 3000);
-      return;
-    }
-    if (!window.confirm('Confirm installment sale?')) return;
+
+    const ok = await confirm({
+      title: t('Confirm installment sale'),
+      message: t('Confirm installment sale?'),
+      confirmLabel: t('Create installment'),
+      cancelLabel: t('Cancel'),
+      variant: 'primary',
+      icon: 'bi-clipboard-check',
+    });
+    if (!ok) return;
 
     try {
       setProcessing(true);
-      setError('');
+      setInstallmentModalError('');
       const firstItem = bill[0];
       const totalQuantity = bill.reduce((sum, item) => sum + item.quantity, 0);
       await saleService.processInstallmentSale({
         itemId: firstItem.id,
         quantity: totalQuantity,
-        customer,
-        witness,
+        customer: normalizedCustomer,
+        includeWitness,
+        witness: includeWitness ? normalizedWitness : null,
         downPayment: parseFloat(downPayment),
         installmentMonths: parseInt(installmentMonths, 10),
+        orderNumber: orderRef,
+      });
+      const preview = calculateInstallmentPreview();
+      printSaleReceipt(bill, {
+        total: preview.total,
+        tendered: preview.downPayment,
+        tenderedLabel: 'Down payment',
+        showChange: false,
+        adjustmentLines: getAdjustmentLines(),
+        extraTotalLines: [
+          { label: 'Balance', value: preview.remaining },
+          { label: `${preview.interestRate}% interest`, value: preview.interestAmount },
+          { label: `${installmentMonths} monthly`, value: preview.monthlyPayment },
+        ],
       });
       setSuccess('Installment sale created successfully!');
       setBill([]);
       setCustomer({ name: '', phone: '', idCardNo: '', email: '', address: '', idImage: null });
       setWitness({ name: '', phone: '', idCardNo: '', address: '', idImage: null });
+      setIncludeWitness(false);
       setDownPayment('');
+      resetBillCharges();
+      setShowInstallmentModal(false);
+      setInstallmentModalError('');
+      setInstallmentTouched(false);
+      releaseOpenedHoldIfNeeded();
       newOrderRef();
       await loadData();
       setTimeout(() => setSuccess(''), 5000);
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to process installment sale');
+      setInstallmentModalError(err.response?.data?.error || 'Failed to process installment sale');
     } finally {
       setProcessing(false);
     }
@@ -349,7 +782,15 @@ function SellItems() {
       setTimeout(() => setError(''), 3000);
       return;
     }
-    if (!window.confirm('Confirm payment recording?')) return;
+    const ok = await confirm({
+      title: t('Confirm payment'),
+      message: t('Confirm payment recording?'),
+      confirmLabel: t('Record payment'),
+      cancelLabel: t('Cancel'),
+      variant: 'primary',
+      icon: 'bi-credit-card',
+    });
+    if (!ok) return;
 
     try {
       setProcessing(true);
@@ -365,6 +806,20 @@ function SellItems() {
         parseFloat(paymentAmount),
         paymentNotes
       );
+      try {
+        const plan = await installmentPlanService.getById(selectedPlan.id);
+        setPrintJob(
+          createInstallmentReceiptPrintJob({
+            settings,
+            currency,
+            cashierName: user?.full_name || user?.fullName || user?.username || 'CASHIER',
+            plan,
+            currentAmount: parseFloat(paymentAmount),
+          })
+        );
+      } catch {
+        // Sale still recorded if receipt print fails.
+      }
       setSuccess('Payment recorded successfully!');
       setSelectedPlan(null);
       setPaymentAmount('');
@@ -379,127 +834,625 @@ function SellItems() {
   };
 
   const handleHold = () => {
-    if (bill.length === 0) {
-      setError('No items to hold');
+    if (!holdBillNow()) {
+      setError(t('No items to hold'));
       setTimeout(() => setError(''), 2000);
       return;
     }
-    localStorage.setItem(
-      HOLD_KEY,
-      JSON.stringify({ bill, mode, customer, witness, downPayment, installmentMonths, walkInCustomer })
-    );
-    setSuccess('Order held successfully');
-    setBill([]);
-    newOrderRef();
+    setSuccess(t('orderHeldNewBill'));
     setTimeout(() => setSuccess(''), 3000);
   };
 
-  const handleRestoreHold = () => {
-    const raw = localStorage.getItem(HOLD_KEY);
-    if (!raw) {
-      setError('No held order found');
+  const handleOpenHold = async () => {
+    const data = readHeldOrder(user?.id);
+    if (!data) {
+      setHasHeldBill(false);
+      setError(t('noHeldBill'));
       setTimeout(() => setError(''), 2000);
       return;
     }
+    if (openedHold && bill.length > 0) {
+      setSuccess(t('heldBillAlreadyOpen'));
+      setTimeout(() => setSuccess(''), 2000);
+      return;
+    }
+    if (bill.length > 0) {
+      const ok = await confirm({
+        title: t('openHoldBill'),
+        message: t('openHoldBillReplaceCurrent'),
+        confirmLabel: t('openHoldBill'),
+        cancelLabel: t('Cancel'),
+        variant: 'warning',
+        icon: 'bi-bag-check',
+      });
+      if (!ok) return;
+    }
+    applyHeldOrder(data);
+    setSuccess(t('heldBillOpened'));
+    setTimeout(() => setSuccess(''), 3000);
+  };
+
+  const handleDeleteHold = async () => {
+    if (!readHeldOrder(user?.id) && !hasHeldBill) return;
+    const ok = await confirm({
+      title: t('deleteHoldBill'),
+      message: t('deleteHoldBillConfirm'),
+      confirmLabel: t('Delete'),
+      cancelLabel: t('Cancel'),
+      variant: 'danger',
+      icon: 'bi-trash3',
+    });
+    if (!ok) return;
+    const clearOpenOrder = openedHold || openedHoldRef.current;
+    clearHeldOrder(user?.id);
+    setHasHeldBill(false);
+    if (clearOpenOrder) {
+      voidBillNow();
+    } else {
+      setOpenedHold(false);
+    }
+    setSuccess(t('heldBillDeleted'));
+    setTimeout(() => setSuccess(''), 3000);
+  };
+
+  const handleLookupReturn = async () => {
+    const query = returnSearch.trim();
+    if (!query) {
+      setError(t('Enter an order number'));
+      setTimeout(() => setError(''), 2500);
+      return;
+    }
     try {
-      const data = JSON.parse(raw);
-      setBill(data.bill || []);
-      if (data.mode) setMode(data.mode);
-      if (data.customer) setCustomer(data.customer);
-      if (data.witness) setWitness(data.witness);
-      if (data.downPayment) setDownPayment(data.downPayment);
-      if (data.installmentMonths) setInstallmentMonths(data.installmentMonths);
-      if (data.walkInCustomer) setWalkInCustomer(data.walkInCustomer);
-      setSuccess('Held order restored');
-      setTimeout(() => setSuccess(''), 3000);
-    } catch {
-      setError('Could not restore held order');
+      setProcessing(true);
+      setError('');
+      const order = await saleService.getOrder(query);
+      setReturnOrder(order);
+      const nextQty = {};
+      (order.lines || []).forEach((line) => {
+        nextQty[line.id] = 0;
+      });
+      setReturnQtys(nextQty);
+    } catch (err) {
+      setReturnOrder(null);
+      setReturnQtys({});
+      setError(err.response?.data?.error || t('Order not found'));
+      setTimeout(() => setError(''), 3000);
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const setReturnLineQty = (saleId, nextQty, maxQty) => {
+    const qty = Math.max(0, Math.min(maxQty, Number(nextQty) || 0));
+    setReturnQtys((prev) => ({ ...prev, [saleId]: qty }));
+  };
+
+  const selectedReturnLines = useMemo(() => {
+    if (!returnOrder?.lines) return [];
+    return returnOrder.lines
+      .map((line) => ({
+        ...line,
+        returnQty: Number(returnQtys[line.id]) || 0,
+      }))
+      .filter((line) => line.returnQty > 0);
+  }, [returnOrder, returnQtys]);
+
+  const returnPreview = useMemo(() => {
+    const refundValue = selectedReturnLines.reduce(
+      (sum, line) => sum + line.returnQty * Number(line.unit_price || 0),
+      0
+    );
+    if (!returnOrder || selectedReturnLines.length === 0) {
+      return { refundValue: 0, refundCash: 0, unpaidAfter: null, fullReturn: false, replacementQty: 0 };
+    }
+    const remainingAfter = (returnOrder.lines || []).map((line) => {
+      const qty = Number(returnQtys[line.id]) || 0;
+      return (line.returnable_qty || 0) - qty;
+    });
+    const fullReturn = remainingAfter.every((qty) => qty <= 0);
+    const replacementQty = returnType === 'warranty'
+      ? selectedReturnLines.reduce((sum, line) => sum + line.returnQty, 0)
+      : 0;
+    if (returnType !== 'cash') {
+      return { refundValue, refundCash: 0, unpaidAfter: null, fullReturn, replacementQty };
+    }
+    if (returnOrder.payment_type !== 'installment' || !returnOrder.plan) {
+      return { refundValue, refundCash: refundValue, unpaidAfter: null, fullReturn, replacementQty };
+    }
+    const plan = returnOrder.plan;
+    const unpaid = Math.max(0, Number(plan.total_with_interest || 0) - Number(plan.paid_amount || 0));
+    if (fullReturn) {
+      return {
+        refundValue,
+        refundCash: Number(plan.down_payment || 0) + Number(plan.paid_amount || 0),
+        unpaidAfter: 0,
+        fullReturn,
+        replacementQty,
+      };
+    }
+    if (refundValue <= unpaid) {
+      return { refundValue, refundCash: 0, unpaidAfter: unpaid - refundValue, fullReturn, replacementQty };
+    }
+    return { refundValue, refundCash: refundValue - unpaid, unpaidAfter: 0, fullReturn, replacementQty };
+  }, [returnOrder, returnQtys, returnType, selectedReturnLines]);
+
+  const handleProcessReturn = async () => {
+    if (!returnOrder || selectedReturnLines.length === 0) {
+      setError(t('Select items to return'));
+      setTimeout(() => setError(''), 2500);
+      return;
+    }
+    const confirmMessage =
+      returnType === 'warranty'
+        ? t('Process this warranty claim? A replacement will come from sellable stock. The returned item stays in return stock.')
+        : returnType === 'defect'
+          ? t('Process this defect return? The item goes to return stock and is not sold again until released.')
+          : t('Process this cash return? The till will be updated and the item goes to return stock.');
+    const ok = await confirm({
+      title: t('Confirm return'),
+      message: confirmMessage,
+      confirmLabel: t('Process return'),
+      cancelLabel: t('Cancel'),
+      variant: 'warning',
+      icon: 'bi-arrow-counterclockwise',
+    });
+    if (!ok) return;
+    try {
+      setProcessing(true);
+      setError('');
+      const result = await saleService.createReturn({
+        orderNumber: returnOrder.order_number,
+        returnType,
+        reason: returnReason,
+        lines: selectedReturnLines.map((line) => ({
+          saleId: line.id,
+          quantity: line.returnQty,
+        })),
+      });
+      setPrintJob(
+        createReturnReceiptPrintJob({
+          settings,
+          currency,
+          cashierName: user?.full_name || user?.fullName || user?.username || 'CASHIER',
+          result,
+        })
+      );
+      setSuccess(t('Return processed'));
+      setReturnOrder(result.order || null);
+      const nextQty = {};
+      (result.order?.lines || []).forEach((line) => {
+        nextQty[line.id] = 0;
+      });
+      setReturnQtys(nextQty);
+      setReturnReason('');
+      setReturnType('cash');
+      setTimeout(() => setSuccess(''), 4000);
+    } catch (err) {
+      setError(err.response?.data?.error || t('Failed to process return'));
+    } finally {
+      setProcessing(false);
     }
   };
 
   const handlePaymentAction = () => {
     if (mode === 'cash') handleCashSaleCheckout();
-    else if (mode === 'installment') handleInstallmentSaleCheckout();
+    else if (mode === 'installment') openInstallmentModal();
+    else if (mode === 'return') handleProcessReturn();
     else handleInstallmentPayment();
   };
 
   const total = calculateTotal();
-  const preview = mode === 'installment' ? (() => {
-    const down = parseFloat(downPayment) || 0;
-    const remaining = total - down;
-    const rate = interestRates[installmentMonths] || 0;
-    const interest = (remaining * rate) / 100;
-    const totalWithInterest = remaining + interest;
-    const monthly = totalWithInterest / parseInt(installmentMonths, 10);
-    return { monthly: monthly.toFixed(2), rate };
-  })() : null;
-
-  const renderInstallmentForm = () => (
-    <div className="pos-installment-form">
-      <div className="row g-2">
-        <div className="col-6">
-          <label className="form-label">{t('Customer Name')}</label>
-          <input className="form-control" value={customer.name} onChange={(e) => setCustomer({ ...customer, name: e.target.value })} />
-        </div>
-        <div className="col-6">
-          <label className="form-label">{t('Phone')}</label>
-          <input className="form-control" value={customer.phone} onChange={(e) => setCustomer({ ...customer, phone: e.target.value })} />
-        </div>
-        <div className="col-6">
-          <label className="form-label">NIC</label>
-          <input className="form-control" value={customer.idCardNo} onChange={(e) => setCustomer({ ...customer, idCardNo: e.target.value })} />
-        </div>
-        <div className="col-6">
-          <label className="form-label">{t('Down Payment')}</label>
-          <input type="number" className="form-control" value={downPayment} onChange={(e) => setDownPayment(e.target.value)} />
-        </div>
-        <div className="col-6">
-          <label className="form-label">{t('Months')}</label>
-          <select className="form-select" value={installmentMonths} onChange={(e) => setInstallmentMonths(e.target.value)}>
-            {Object.keys(interestRates).map((m) => (
-              <option key={m} value={m}>{m} months ({interestRates[m]}%)</option>
-            ))}
-          </select>
-        </div>
-        <div className="col-6">
-          <label className="form-label">{t('Address')}</label>
-          <input className="form-control" value={customer.address} onChange={(e) => setCustomer({ ...customer, address: e.target.value })} />
-        </div>
-        <div className="col-6">
-          <label className="form-label">Witness Name</label>
-          <input className="form-control" value={witness.name} onChange={(e) => setWitness({ ...witness, name: e.target.value })} />
-        </div>
-        <div className="col-6">
-          <label className="form-label">Witness Phone</label>
-          <input className="form-control" value={witness.phone} onChange={(e) => setWitness({ ...witness, phone: e.target.value })} />
-        </div>
-        <div className="col-6">
-          <label className="form-label">Witness NIC</label>
-          <input className="form-control" value={witness.idCardNo} onChange={(e) => setWitness({ ...witness, idCardNo: e.target.value })} />
-        </div>
-        <div className="col-6">
-          <label className="form-label">Witness Address</label>
-          <input className="form-control" value={witness.address} onChange={(e) => setWitness({ ...witness, address: e.target.value })} />
-        </div>
-        {preview && (
-          <div className="col-12 small text-muted">
-            Est. monthly: ${preview.monthly} @ {preview.rate}%
-          </div>
-        )}
-      </div>
-    </div>
+  const installmentPreview = downPayment ? calculateInstallmentPreview() : null;
+  const witnessDuplicateError = useMemo(
+    () => (includeWitness ? validateDistinctCustomerAndWitness(customer, witness) : null),
+    [includeWitness, customer, witness]
   );
+
+  const highlightedInstallmentFields = useMemo(() => {
+    const errors = installmentTouched
+      ? getInstallmentFieldErrors(customer, witness, downPayment, total, { includeWitness })
+      : {};
+
+    if (normalizeNic(customer.idCardNo) && !isValidNic(customer.idCardNo)) {
+      errors['customer.idCardNo'] = true;
+    }
+    if (includeWitness && normalizeNic(witness.idCardNo) && !isValidNic(witness.idCardNo)) {
+      errors['witness.idCardNo'] = true;
+    }
+
+    if (includeWitness) {
+      getCustomerWitnessDuplicates(customer, witness).forEach((dup) => {
+        if (dup === 'name') {
+          errors['customer.name'] = true;
+          errors['witness.name'] = true;
+        }
+        if (dup === 'phone') {
+          errors['customer.phone'] = true;
+          errors['witness.phone'] = true;
+        }
+        if (dup === 'id') {
+          errors['customer.idCardNo'] = true;
+          errors['witness.idCardNo'] = true;
+        }
+      });
+    }
+
+    return errors;
+  }, [installmentTouched, includeWitness, customer, witness, downPayment, total]);
+
+  const isInstallmentFieldInvalid = (fieldKey) => Boolean(highlightedInstallmentFields[fieldKey]);
+  const installmentControlClass = (fieldKey) =>
+    `form-control${isInstallmentFieldInvalid(fieldKey) ? ' is-invalid' : ''}`;
+
+  const getInstallmentFieldMessage = (fieldKey, requiredMessage, duplicateMessage, formatMessage) => {
+    if (!isInstallmentFieldInvalid(fieldKey)) return null;
+    const duplicates = includeWitness ? getCustomerWitnessDuplicates(customer, witness) : [];
+
+    if (fieldKey === 'downPayment') {
+      const down = parseFloat(downPayment);
+      if (String(downPayment ?? '').trim() && !Number.isNaN(down) && down >= total) {
+        return duplicateMessage;
+      }
+      return requiredMessage;
+    }
+
+    const duplicateActive =
+      ((fieldKey === 'customer.name' || fieldKey === 'witness.name') && duplicates.includes('name')) ||
+      ((fieldKey === 'customer.phone' || fieldKey === 'witness.phone') && duplicates.includes('phone')) ||
+      ((fieldKey === 'customer.idCardNo' || fieldKey === 'witness.idCardNo') && duplicates.includes('id'));
+
+    if (duplicateActive) return duplicateMessage;
+
+    if (
+      (fieldKey === 'customer.idCardNo' || fieldKey === 'witness.idCardNo') &&
+      formatMessage &&
+      String(
+        fieldKey === 'customer.idCardNo' ? customer.idCardNo : witness.idCardNo
+      ).trim() &&
+      !isValidNic(fieldKey === 'customer.idCardNo' ? customer.idCardNo : witness.idCardNo)
+    ) {
+      return formatMessage;
+    }
+
+    return requiredMessage;
+  };
+
+  const installmentFieldFeedback = (fieldKey, requiredMessage, duplicateMessage, formatMessage) => {
+    const message = getInstallmentFieldMessage(
+      fieldKey,
+      requiredMessage,
+      duplicateMessage,
+      formatMessage
+    );
+    if (!message) return null;
+    return <div className="invalid-feedback d-block">{message}</div>;
+  };
+
+  const renderInstallmentModal = () => {
+    if (!showInstallmentModal) return null;
+
+    return (
+      <div
+        className="modal show d-block pos-installment-modal"
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="installmentModalTitle"
+      >
+        <div className="modal-dialog modal-lg pos-installment-modal-dialog">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h5 className="modal-title" id="installmentModalTitle">
+                <i className="bi bi-clipboard-check me-2"></i>
+                {t('Installment Sale Details')}
+              </h5>
+              <button
+                type="button"
+                className="btn-close"
+                onClick={closeInstallmentModal}
+                disabled={processing}
+                aria-label={t('Close')}
+              />
+            </div>
+            <div className="modal-body">
+              {installmentModalError && (
+                <div className="alert alert-danger py-2 small mb-3" role="alert">
+                  <i className="bi bi-exclamation-triangle-fill me-2"></i>
+                  {installmentModalError}
+                </div>
+              )}
+
+              <div className="pos-installment-order-summary mb-3">
+                <span>{t('Order Total')}</span>
+                <strong>{formatMoney(total)}</strong>
+                <span className="text-muted small ms-2">
+                  ({bill.length} {bill.length === 1 ? t('item') : t('items')})
+                </span>
+              </div>
+
+              <div className="row g-4">
+                <div className="col-md-6">
+                  <h6 className="pos-installment-section-title">{t('Customer Details')}</h6>
+                  <div className="mb-2">
+                    <label className="form-label">{t('Customer Name')} *</label>
+                    <input
+                      className={installmentControlClass('customer.name')}
+                      value={customer.name}
+                      onChange={(e) => setCustomer({ ...customer, name: e.target.value })}
+                    />
+                    {installmentFieldFeedback(
+                      'customer.name',
+                      t('Customer name is required'),
+                      t('Must differ from witness name')
+                    )}
+                  </div>
+                  <div className="mb-2">
+                    <label className="form-label">{t('Phone')} *</label>
+                    <input
+                      className={installmentControlClass('customer.phone')}
+                      value={customer.phone}
+                      onChange={(e) => setCustomer({ ...customer, phone: e.target.value })}
+                    />
+                    {installmentFieldFeedback(
+                      'customer.phone',
+                      t('Phone is required'),
+                      t('Must differ from witness phone')
+                    )}
+                  </div>
+                  <div className="mb-2">
+                    <label className="form-label">{t('ID Card No')} *</label>
+                    <input
+                      className={installmentControlClass('customer.idCardNo')}
+                      value={customer.idCardNo}
+                      placeholder="901234567V or 199012345678"
+                      maxLength={12}
+                      autoComplete="off"
+                      onChange={(e) =>
+                        setCustomer({ ...customer, idCardNo: sanitizeNicInput(e.target.value) })
+                      }
+                    />
+                    {installmentFieldFeedback(
+                      'customer.idCardNo',
+                      t('ID card number is required'),
+                      t('Must differ from witness ID'),
+                      t(NIC_FORMAT_MESSAGE)
+                    )}
+                  </div>
+                  <div className="mb-2">
+                    <label className="form-label">{t('Address')} *</label>
+                    <input
+                      className={installmentControlClass('customer.address')}
+                      value={customer.address}
+                      onChange={(e) => setCustomer({ ...customer, address: e.target.value })}
+                    />
+                    {installmentFieldFeedback('customer.address', t('Address is required'))}
+                  </div>
+                  <div className="mb-2">
+                    <label className="form-label">{t('Email')}</label>
+                    <input
+                      type="email"
+                      className="form-control"
+                      value={customer.email}
+                      onChange={(e) => setCustomer({ ...customer, email: e.target.value })}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-outline-secondary btn-sm w-100"
+                    onClick={() => handleImageCapture('idImage', 'customer')}
+                  >
+                    <i className="bi bi-camera me-1"></i>
+                    {customer.idImage ? t('ID Captured') : t('Capture Customer ID')}
+                  </button>
+                </div>
+
+                <div className="col-md-6">
+                  <div className="d-flex align-items-center justify-content-between gap-2 mb-2">
+                    <h6 className="pos-installment-section-title mb-0">{t('Witness Details')}</h6>
+                    <div className="form-check mb-0">
+                      <input
+                        className="form-check-input"
+                        type="checkbox"
+                        id="includeWitness"
+                        checked={includeWitness}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          setIncludeWitness(checked);
+                          if (!checked) {
+                            setWitness({
+                              name: '',
+                              phone: '',
+                              idCardNo: '',
+                              address: '',
+                              idImage: null,
+                            });
+                          }
+                        }}
+                      />
+                      <label className="form-check-label" htmlFor="includeWitness">
+                        {t('addWitness')}
+                      </label>
+                    </div>
+                  </div>
+                  {includeWitness ? (
+                    <>
+                  <div className="mb-2">
+                    <label className="form-label">{t('Witness Name')} *</label>
+                    <input
+                      className={installmentControlClass('witness.name')}
+                      value={witness.name}
+                      onChange={(e) => setWitness({ ...witness, name: e.target.value })}
+                    />
+                    {installmentFieldFeedback(
+                      'witness.name',
+                      t('Witness name is required'),
+                      t('Must differ from customer name')
+                    )}
+                  </div>
+                  <div className="mb-2">
+                    <label className="form-label">{t('Witness Phone')} *</label>
+                    <input
+                      className={installmentControlClass('witness.phone')}
+                      value={witness.phone}
+                      onChange={(e) => setWitness({ ...witness, phone: e.target.value })}
+                    />
+                    {installmentFieldFeedback(
+                      'witness.phone',
+                      t('Witness phone is required'),
+                      t('Must differ from customer phone')
+                    )}
+                  </div>
+                  <div className="mb-2">
+                    <label className="form-label">{t('Witness ID')} *</label>
+                    <input
+                      className={installmentControlClass('witness.idCardNo')}
+                      value={witness.idCardNo}
+                      placeholder="901234567V or 199012345678"
+                      maxLength={12}
+                      autoComplete="off"
+                      onChange={(e) =>
+                        setWitness({ ...witness, idCardNo: sanitizeNicInput(e.target.value) })
+                      }
+                    />
+                    {installmentFieldFeedback(
+                      'witness.idCardNo',
+                      t('Witness ID is required'),
+                      t('Must differ from customer ID'),
+                      t(NIC_FORMAT_MESSAGE)
+                    )}
+                  </div>
+                  <div className="mb-2">
+                    <label className="form-label">{t('Witness Address')} *</label>
+                    <input
+                      className={installmentControlClass('witness.address')}
+                      value={witness.address}
+                      onChange={(e) => setWitness({ ...witness, address: e.target.value })}
+                    />
+                    {installmentFieldFeedback('witness.address', t('Witness address is required'))}
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-outline-secondary btn-sm w-100"
+                    onClick={() => handleImageCapture('idImage', 'witness')}
+                  >
+                    <i className="bi bi-camera me-1"></i>
+                    {witness.idImage ? t('ID Captured') : t('Capture Witness ID')}
+                  </button>
+                    </>
+                  ) : (
+                    <p className="text-muted small mb-0">
+                      {t('witnessNotRequired')}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {witnessDuplicateError && !installmentTouched && (
+                <div className="alert alert-warning py-2 small mb-0 mt-3" role="alert">
+                  {witnessDuplicateError}
+                </div>
+              )}
+
+              <hr className="my-4" />
+
+              <h6 className="pos-installment-section-title">{t('Payment Terms')}</h6>
+              <div className="row g-3">
+                <div className="col-sm-6">
+                  <label className="form-label">{t('Down Payment')} *</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    className={installmentControlClass('downPayment')}
+                    value={downPayment}
+                    onChange={(e) => setDownPayment(e.target.value)}
+                  />
+                  {installmentFieldFeedback(
+                    'downPayment',
+                    t('Enter a valid down payment'),
+                    t('Down payment must be less than order total')
+                  )}
+                </div>
+                <div className="col-sm-6">
+                  <label className="form-label">{t('Installment Period')} *</label>
+                  <select
+                    className="form-select"
+                    value={installmentMonths}
+                    onChange={(e) => setInstallmentMonths(e.target.value)}
+                    disabled={installmentPeriodOptions.length === 0}
+                  >
+                    {installmentPeriodOptions.map((opt) => (
+                      <option key={opt.months} value={opt.months}>
+                        {opt.months} {t('months')} ({opt.interest_rate}% {t('interest')})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {installmentPreview && (
+                <div className="pos-installment-preview mt-3">
+                  <div className="preview-row">
+                    <span>{t('Total')}</span>
+                    <span>{formatMoney(installmentPreview.total)}</span>
+                  </div>
+                  <div className="preview-row">
+                    <span>{t('Down Payment')}</span>
+                    <span>{formatMoney(installmentPreview.downPayment)}</span>
+                  </div>
+                  <div className="preview-row">
+                    <span>{t('Remaining')}</span>
+                    <span>{formatMoney(installmentPreview.remaining)}</span>
+                  </div>
+                  <div className="preview-row">
+                    <span>{t('Interest')} ({installmentPreview.interestRate}%)</span>
+                    <span>{formatMoney(installmentPreview.interestAmount)}</span>
+                  </div>
+                  <div className="preview-row highlight">
+                    <span>{t('Total with Interest')}</span>
+                    <span>{formatMoney(installmentPreview.totalWithInterest)}</span>
+                  </div>
+                  <div className="preview-row highlight">
+                    <span>{t('Monthly Payment')}</span>
+                    <span>{formatMoney(installmentPreview.monthlyPayment)}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button
+                type="button"
+                className="btn btn-light"
+                onClick={closeInstallmentModal}
+                disabled={processing}
+              >
+                {t('Cancel')}
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                disabled={processing || Boolean(witnessDuplicateError)}
+                onClick={handleInstallmentSaleCheckout}
+              >
+                {processing ? t('Processing...') : `📋 ${t('Create Installment')}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   const renderOrderPanel = () => (
     <aside className="pos-order-panel">
-      <button type="button" className="pos-settings-tab" title="Settings" onClick={() => navigate('/settings')}>
-        <i className="bi bi-gear"></i>
-      </button>
-
       <div className="pos-order-header">
         <h6>{mode === 'payment' ? t('Record Payment') : t('Order List')}</h6>
         <div className="d-flex align-items-center gap-2">
           {mode !== 'payment' && <span className="pos-order-id">{orderRef}</span>}
+          <span className="pos-timer">
+            <i className="bi bi-clock"></i>
+            {formatTimer(elapsed)}
+          </span>
           {mode !== 'payment' && bill.length > 0 && (
             <button type="button" className="pos-order-clear" onClick={clearBill} title="Clear order">
               <i className="bi bi-trash"></i>
@@ -507,8 +1460,6 @@ function SellItems() {
           )}
         </div>
       </div>
-
-      {mode === 'installment' && renderInstallmentForm()}
 
       {mode !== 'payment' && (
         <>
@@ -522,12 +1473,19 @@ function SellItems() {
               <option>Regular Customer</option>
               <option>Member Customer</option>
             </select>
-            <button type="button" className="pos-icon-action green" title="Add customer" onClick={handleRestoreHold}>
+            <button type="button" className="pos-icon-action green" title="Add customer">
               <i className="bi bi-person-plus"></i>
             </button>
-            <button type="button" className="pos-icon-action blue" title="Restore held order" onClick={handleRestoreHold}>
-              <i className="bi bi-arrow-repeat"></i>
-            </button>
+            {hasHeldBill && (
+              <button
+                type="button"
+                className="pos-icon-action blue"
+                title={t('openHoldBill')}
+                onClick={handleOpenHold}
+              >
+                <i className="bi bi-bag-check"></i>
+              </button>
+            )}
           </div>
 
           <div className="pos-order-items">
@@ -540,27 +1498,99 @@ function SellItems() {
               bill.map((item) => (
                 <div key={item.id} className="pos-order-item">
                   <div className="pos-order-item-info">
-                    <span className="pos-order-item-thumb">{item.emoji || '🛍️'}</span>
+                    <span className="pos-order-item-thumb">
+                      <ProductThumbnail item={item} categories={categories} size={22} />
+                    </span>
                     <span className="pos-order-item-name">{item.name}</span>
+                    <button
+                      type="button"
+                      className="pos-order-item-remove"
+                      onClick={() => removeFromBill(item.id)}
+                      title={t('Remove item')}
+                      aria-label={t('Remove item')}
+                    >
+                      <i className="bi bi-x-lg"></i>
+                    </button>
                   </div>
                   <div className="pos-order-item-qty">
                     <button type="button" className="pos-qty-btn" onClick={() => decrementQuantity(item.id)}>−</button>
                     <span className="pos-qty-value">{item.quantity}</span>
                     <button type="button" className="pos-qty-btn" onClick={() => incrementQuantity(item.id)}>+</button>
                   </div>
-                  <div className="pos-order-item-cost">${item.total.toFixed(2)}</div>
+                  <div className="pos-order-item-cost">{formatMoney(item.total)}</div>
                 </div>
               ))
             )}
           </div>
 
           <div className="pos-summary">
-            <div className="pos-summary-row"><span>Shipping</span><span>$0.00</span></div>
-            <div className="pos-summary-row"><span>Tax</span><span>$0.00</span></div>
-            <div className="pos-summary-row discount"><span>Discount</span><span>$0.00</span></div>
+            <div className="pos-summary-row">
+              <span>{t('Shipping')}</span>
+              <div className="pos-summary-fields">
+                <div className="pos-summary-input-wrap">
+                  <span className="pos-summary-currency">{currency?.symbol}</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    className="pos-summary-input"
+                    value={shipping}
+                    placeholder="0.00"
+                    aria-label={t('Shipping')}
+                    onChange={(e) => setShipping(e.target.value)}
+                  />
+                </div>
+                <div className="pos-summary-input-wrap">
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    className="pos-summary-input pos-summary-input-pct"
+                    value={shippingPercent}
+                    placeholder="0"
+                    aria-label={`${t('Shipping')} %`}
+                    onChange={(e) => setShippingPercent(e.target.value)}
+                  />
+                  <span className="pos-summary-currency">%</span>
+                </div>
+              </div>
+            </div>
+            <div className="pos-summary-row discount">
+              <span>{t('Discount')}</span>
+              <div className="pos-summary-fields">
+                <div className="pos-summary-input-wrap">
+                  <span className="pos-summary-currency">{currency?.symbol}</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    className="pos-summary-input pos-summary-input-discount"
+                    value={discount}
+                    placeholder="0.00"
+                    aria-label={t('Discount')}
+                    onChange={(e) => setDiscount(e.target.value)}
+                  />
+                </div>
+                <div className="pos-summary-input-wrap">
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    className="pos-summary-input pos-summary-input-pct pos-summary-input-discount"
+                    value={discountPercent}
+                    placeholder="0"
+                    aria-label={`${t('Discount')} %`}
+                    onChange={(e) => setDiscountPercent(e.target.value)}
+                  />
+                  <span className="pos-summary-currency">%</span>
+                </div>
+              </div>
+            </div>
             <div className="pos-summary-total">
-              <span>{t('Sub Total')}</span>
-              <span>${total.toFixed(2)}</span>
+              <span>{t('Total')}</span>
+              <span>{formatMoney(total)}</span>
             </div>
           </div>
 
@@ -585,7 +1615,10 @@ function SellItems() {
         <div className="p-3">
           <div className="bg-light rounded p-3 mb-3 small">
             <strong>{selectedPlan.customer_name}</strong>
-            <div>{t('Remaining')}: ${(selectedPlan.total_with_interest - selectedPlan.paid_amount).toFixed(2)}</div>
+            <div className="mt-1">
+              <span className="order-id-badge">{formatOrderId(selectedPlan.order_number, selectedPlan.sale_id, selectedPlan.id)}</span>
+            </div>
+            <div>{t('Remaining')}: {formatMoney(selectedPlan.total_with_interest - selectedPlan.paid_amount)}</div>
           </div>
           <label className="form-label">{t('Payment Amount')}</label>
           <input type="number" className="form-control mb-2" value={paymentAmount} onChange={(e) => setPaymentAmount(e.target.value)} />
@@ -618,20 +1651,225 @@ function SellItems() {
         <button type="button" className={`pos-mode-btn${mode === 'cash' ? ' active' : ''}`} onClick={() => setMode('cash')}>
           💰 {t('Cash Sale')}
         </button>
-        <button type="button" className={`pos-mode-btn${mode === 'installment' ? ' active' : ''}`} onClick={() => setMode('installment')}>
+        <button
+          type="button"
+          className={`pos-mode-btn${mode === 'installment' ? ' active' : ''}`}
+          onClick={() => {
+            setMode('installment');
+            setShowInstallmentModal(false);
+          }}
+        >
           📋 {t('Installment Sale')}
         </button>
         <button type="button" className={`pos-mode-btn${mode === 'payment' ? ' active' : ''}`} onClick={() => setMode('payment')}>
           💳 {t('Installment Payment')}
         </button>
+        <button type="button" className={`pos-mode-btn${mode === 'return' ? ' active' : ''}`} onClick={() => setMode('return')}>
+          ↩️ {t('Return')}
+        </button>
+        <div className="pos-mode-bar-actions">
+          {mode !== 'return' && (
+            <>
+              {hasHeldBill ? (
+                <div className="pos-hold-group">
+                  <button type="button" className="pos-action-btn pos-action-hold" onClick={handleOpenHold}>
+                    {t('openHoldBill')}
+                  </button>
+                  <button
+                    type="button"
+                    className="pos-action-btn pos-action-void"
+                    onClick={handleDeleteHold}
+                  >
+                    {t('deleteHold')}
+                  </button>
+                </div>
+              ) : (
+                <button type="button" className="pos-action-btn pos-action-hold" onClick={handleHold}>
+                  {t('holdSale')}
+                </button>
+              )}
+              <button type="button" className="pos-action-btn pos-action-void" onClick={clearBill}>
+                Void
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       <div className="pos-alerts">
-        {error && <div className="pos-alert pos-alert-error">{error}</div>}
+        {error && !showInstallmentModal && <div className="pos-alert pos-alert-error">{error}</div>}
         {success && <div className="pos-alert pos-alert-success">{success}</div>}
       </div>
 
-      {mode === 'payment' ? (
+      {mode === 'return' ? (
+        <div className="pos-payment-layout pos-return-layout">
+          <div className="pos-plans-area">
+            <div className="pos-products-header">
+              <div className="pos-welcome">
+                <h5>{t('Return bill')}</h5>
+                <p>{t('Find a sale by order number and return remaining items.')}</p>
+              </div>
+              <div className="pos-products-toolbar">
+                <form
+                  className="pos-search-wrap pos-return-search"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleLookupReturn();
+                  }}
+                >
+                  <i className="bi bi-search"></i>
+                  <input
+                    type="text"
+                    placeholder={t('Order number e.g. ORD123456')}
+                    value={returnSearch}
+                    onChange={(e) => setReturnSearch(e.target.value)}
+                  />
+                  <button type="submit" className="pos-return-lookup-btn" disabled={processing}>
+                    {t('Find')}
+                  </button>
+                </form>
+              </div>
+            </div>
+            {!returnOrder ? (
+              <div className="pos-order-empty">
+                <i className="bi bi-receipt d-block fs-2 mb-2"></i>
+                {t('Enter the order number from the receipt')}
+              </div>
+            ) : (
+              <div className="pos-return-lines">
+                <div className="pos-return-meta">
+                  <span className="order-id-badge">{formatOrderId(returnOrder.order_number)}</span>
+                  <span className="small text-muted">
+                    {returnOrder.payment_type === 'installment' ? t('Installment') : t('Cash')}
+                    {returnOrder.sale_date ? ` · ${new Date(returnOrder.sale_date).toLocaleString()}` : ''}
+                  </span>
+                </div>
+                <p className="pos-return-note small text-muted">
+                  {returnType === 'warranty'
+                    ? t('Warranty replaces 1 for 1 from sellable stock. No cash is paid. The returned item goes to return stock.')
+                    : returnType === 'defect'
+                      ? t('Defect returns go to return stock. No cash is paid.')
+                      : t('Cash refunds update the till. Returned items go to return stock, not the shop floor.')}
+                </p>
+                {returnType === 'cash' && (
+                  <p className="pos-return-note small text-muted">
+                    {t('Refund uses the stored item price. Shipping or promotions on the original receipt are not reversed.')}
+                  </p>
+                )}
+                {(returnOrder.lines || []).map((line) => (
+                  <div key={line.id} className="pos-return-line">
+                    <div className="pos-return-line-info">
+                      <strong>{line.item_name}</strong>
+                      <span className="small text-muted">
+                        {t('Sold')} {line.quantity} · {t('Returned')} {line.returned_qty || 0} · {formatMoney(line.unit_price)}
+                      </span>
+                    </div>
+                    <div className="pos-product-qty">
+                      <button
+                        type="button"
+                        className="pos-qty-btn"
+                        disabled={!line.returnable_qty}
+                        onClick={() => setReturnLineQty(line.id, (returnQtys[line.id] || 0) - 1, line.returnable_qty)}
+                      >
+                        −
+                      </button>
+                      <span className="pos-qty-value">{returnQtys[line.id] || 0}</span>
+                      <button
+                        type="button"
+                        className="pos-qty-btn"
+                        disabled={!line.returnable_qty || (returnQtys[line.id] || 0) >= line.returnable_qty}
+                        onClick={() => setReturnLineQty(line.id, (returnQtys[line.id] || 0) + 1, line.returnable_qty)}
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <aside className="pos-order-panel">
+            <div className="pos-order-header">
+              <h6>{t('Return summary')}</h6>
+            </div>
+            <div className="pos-order-items">
+              {selectedReturnLines.length === 0 ? (
+                <div className="pos-order-empty">{t('Select quantities to return')}</div>
+              ) : (
+                selectedReturnLines.map((line) => (
+                  <div key={line.id} className="pos-order-item">
+                    <div className="pos-order-item-info">
+                      <span>{line.item_name}</span>
+                      <small>
+                        {line.returnQty} × {formatMoney(line.unit_price)}
+                      </small>
+                    </div>
+                    <strong>{formatMoney(line.returnQty * Number(line.unit_price || 0))}</strong>
+                  </div>
+                ))
+              )}
+            </div>
+            <div className="pos-order-totals">
+              <fieldset className="pos-return-types">
+                <legend className="form-label">{t('Return type')}</legend>
+                {[
+                  { value: 'cash', label: t('Cash refund') },
+                  { value: 'defect', label: t('Defect') },
+                  { value: 'warranty', label: t('Warranty claim') },
+                ].map((option) => (
+                  <label key={option.value} className="pos-return-type-option">
+                    <input
+                      type="radio"
+                      name="returnType"
+                      value={option.value}
+                      checked={returnType === option.value}
+                      onChange={() => setReturnType(option.value)}
+                    />
+                    <span>{option.label}</span>
+                  </label>
+                ))}
+              </fieldset>
+              <div className="pos-total-row">
+                <span>{t('Returned value')}</span>
+                <strong>{formatMoney(returnPreview.refundValue)}</strong>
+              </div>
+              {returnType === 'warranty' && (
+                <div className="pos-total-row">
+                  <span>{t('Replacement from stock')}</span>
+                  <strong>{returnPreview.replacementQty || 0}</strong>
+                </div>
+              )}
+              {returnType === 'cash' && (
+                <div className="pos-total-row">
+                  <span>{t('Cash refund')}</span>
+                  <strong>{formatMoney(returnPreview.refundCash)}</strong>
+                </div>
+              )}
+              {returnType === 'cash' && returnPreview.unpaidAfter != null && (
+                <div className="pos-total-row">
+                  <span>{t('Plan remaining')}</span>
+                  <strong>{formatMoney(returnPreview.unpaidAfter)}</strong>
+                </div>
+              )}
+              <label className="form-label mt-3">{t('Reason (optional)')}</label>
+              <textarea
+                className="form-control"
+                rows={2}
+                value={returnReason}
+                onChange={(e) => setReturnReason(e.target.value)}
+              />
+            </div>
+            <button
+              type="button"
+              className="pos-checkout-btn"
+              disabled={processing || selectedReturnLines.length === 0}
+              onClick={handleProcessReturn}
+            >
+              {processing ? t('Processing...') : t('Process return')}
+            </button>
+          </aside>
+        </div>
+      ) : mode === 'payment' ? (
         <div className="pos-payment-layout">
           <div className="pos-plans-area">
             <div className="pos-products-header">
@@ -663,9 +1901,12 @@ function SellItems() {
                     onClick={() => setSelectedPlan(plan)}
                   >
                     <div className="fw-bold">{plan.customer_name}</div>
+                    <div className="small mt-1">
+                      <span className="order-id-badge">{formatOrderId(plan.order_number, plan.sale_id, plan.id)}</span>
+                    </div>
                     {plan.customer_id_card && <div className="small text-muted">NIC: {plan.customer_id_card}</div>}
                     <div className="small mt-2">
-                      {t('Remaining')}: ${(plan.total_with_interest - plan.paid_amount).toFixed(2)}
+                      {t('Remaining')}: {formatMoney(plan.total_with_interest - plan.paid_amount)}
                     </div>
                   </button>
                 ))
@@ -692,7 +1933,7 @@ function SellItems() {
                 className={`pos-cat-item${selectedCategory?.id === cat.id ? ' active' : ''}`}
                 onClick={() => handleCategorySelect(cat)}
               >
-                <i className={`bi ${getCategoryIcon(cat.name)}`}></i>
+                <CategoryIcon name={cat.icon} size={22} className="pos-cat-icon" />
                 {cat.name}
               </button>
             ))}
@@ -700,17 +1941,6 @@ function SellItems() {
 
           <section className="pos-products">
             <div className="pos-products-header">
-              <div className="pos-welcome">
-                <h5>Welcome, {user?.name || 'Cashier'}</h5>
-                <p>
-                  {new Date().toLocaleDateString(undefined, {
-                    weekday: 'long',
-                    day: 'numeric',
-                    month: 'short',
-                    year: 'numeric',
-                  })}
-                </p>
-              </div>
               <div className="pos-products-toolbar">
                 <div className="pos-search-wrap">
                   <i className="bi bi-search"></i>
@@ -721,13 +1951,6 @@ function SellItems() {
                     onChange={(e) => setItemSearch(e.target.value)}
                   />
                 </div>
-                <button type="button" className="pos-btn-brands" onClick={() => handleCategorySelect(null)}>
-                  {t('View All Brands')}
-                </button>
-                <button type="button" className="pos-btn-featured" onClick={() => setItemSearch('')}>
-                  <i className="bi bi-star-fill me-1"></i>
-                  Featured
-                </button>
               </div>
             </div>
 
@@ -743,7 +1966,11 @@ function SellItems() {
                   displayItems.map((item) => {
                     const inBill = bill.find((b) => b.id === item.id);
                     const qty = inBill?.quantity || 0;
+                    const remaining = Math.max(0, Number(item.quantity || 0) - qty);
+                    const threshold = Number(settings?.lowStockThreshold ?? 15);
+                    const stockLevel = remaining <= 0 ? 'out' : remaining <= threshold ? 'low' : 'ok';
                     const cat = categories.find((c) => c.id === item.category_id);
+                    const { listPrice, price, promotion } = applyPromotionPrice(item, activePromotions);
                     return (
                       <button
                         key={item.id}
@@ -752,21 +1979,40 @@ function SellItems() {
                         onClick={() => addToBill(item)}
                       >
                         <span className="pos-product-check"><i className="bi bi-check-lg"></i></span>
-                        <div className="pos-product-image">{getProductEmoji(item, categories)}</div>
+                        <div className="pos-product-image">
+                          {promotion ? (
+                            <span className="pos-promo-badge">{Number(promotion.percent)}% off</span>
+                          ) : null}
+                          <ProductThumbnail item={item} categories={categories} size={36} />
+                        </div>
                         <div className="pos-product-cat">{cat?.name || 'General'}</div>
                         <div className="pos-product-name">{item.name}</div>
-                        <div className="pos-product-price">${(item.selling_price || item.price).toFixed(2)}</div>
-                        <div className="pos-product-qty" onClick={(e) => e.stopPropagation()}>
-                          <button type="button" className="pos-qty-btn" onClick={(e) => handleProductQty(item, -1, e)} disabled={qty === 0}>−</button>
-                          <span className="pos-qty-value">{qty}</span>
-                          <button
-                            type="button"
-                            className="pos-qty-btn"
-                            onClick={(e) => handleProductQty(item, 1, e)}
-                            disabled={qty >= item.quantity}
-                          >
-                            +
-                          </button>
+                        <div className="pos-product-price">
+                          {promotion ? (
+                            <>
+                              <span className="pos-product-price-original">{formatMoney(listPrice)}</span>
+                              <span>{formatMoney(price)}</span>
+                            </>
+                          ) : (
+                            formatMoney(listPrice)
+                          )}
+                        </div>
+                        <div className="pos-product-footer">
+                          <span className={`pos-stock-badge pos-stock-badge--${stockLevel}`}>
+                            {remaining <= 0 ? t('outOfStock') : `${remaining} ${t('left')}`}
+                          </span>
+                          <div className="pos-product-qty" onClick={(e) => e.stopPropagation()}>
+                            <button type="button" className="pos-qty-btn" onClick={(e) => handleProductQty(item, -1, e)} disabled={qty === 0}>−</button>
+                            <span className="pos-qty-value">{qty}</span>
+                            <button
+                              type="button"
+                              className="pos-qty-btn"
+                              onClick={(e) => handleProductQty(item, 1, e)}
+                              disabled={qty >= item.quantity}
+                            >
+                              +
+                            </button>
+                          </div>
                         </div>
                       </button>
                     );
@@ -774,46 +2020,14 @@ function SellItems() {
                 )}
               </div>
             </div>
-
-            <div className="pos-actions">
-              <button type="button" className="pos-action-btn pos-action-hold" onClick={handleHold}>Hold</button>
-              <button type="button" className="pos-action-btn pos-action-void" onClick={clearBill}>Void</button>
-              <button
-                type="button"
-                className="pos-action-btn pos-action-payment"
-                disabled={processing || bill.length === 0}
-                onClick={handlePaymentAction}
-              >
-                Payment
-              </button>
-              <button
-                type="button"
-                className="pos-action-btn pos-action-orders"
-                onClick={() => (isAdmin ? navigate('/sales-report') : navigate('/'))}
-              >
-                View Orders
-              </button>
-              <button
-                type="button"
-                className="pos-action-btn pos-action-reset"
-                onClick={() => {
-                  setItemSearch('');
-                  setSelectedCategory(null);
-                  setItems(allItems);
-                  newOrderRef();
-                }}
-              >
-                Reset
-              </button>
-              <button type="button" className="pos-action-btn pos-action-transaction" onClick={() => setMode('payment')}>
-                Transaction
-              </button>
-            </div>
           </section>
 
           {renderOrderPanel()}
         </div>
       )}
+
+      {renderInstallmentModal()}
+      <ReceiptPrintLayer job={printJob} onDone={() => setPrintJob(null)} />
     </div>
   );
 }

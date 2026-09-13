@@ -2,7 +2,7 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import Sidebar from './Sidebar';
 import Header from './Header';
-import { LayoutProvider, useLayout } from '../contexts/LayoutContext';
+import { useLayout } from '../contexts/LayoutContext';
 
 const LayoutContent = ({ children }) => {
   const { sidebarCollapsed, mobileMenuOpen, closeMobileMenu } = useLayout();
@@ -23,13 +23,7 @@ const LayoutContent = ({ children }) => {
   );
 };
 
-const Layout = ({ children }) => {
-  return (
-    <LayoutProvider>
-      <LayoutContent>{children}</LayoutContent>
-    </LayoutProvider>
-  );
-};
+const Layout = ({ children }) => <LayoutContent>{children}</LayoutContent>;
 
 Layout.propTypes = {
   children: PropTypes.node.isRequired,

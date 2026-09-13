@@ -1,37 +1,30 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { categoryService } from '../services';
 import PageHeader from '../components/PageHeader';
 import AdminAlerts from '../components/AdminAlerts';
 import AdminLoading from '../components/AdminLoading';
-
-// Font Awesome icon library - popular modern icons
-const ICON_LIBRARY = [
-  '📱', '💻', '🖥️', '⌚', '📷', '📹', '🎮', '🎧', '🎹', '🎸',
-  '🎨', '✏️', '📚', '📖', '📝', '📌', '📍', '🔍', '🔎', '🔐',
-  '🔑', '🔨', '🔧', '🔩', '⚙️', '⚡', '🔥', '💡', '🕯️', '💊',
-  '💉', '🩺', '🏥', '🏪', '🏬', '🛒', '🛍️', '👕', '👔', '👗',
-  '👠', '👟', '👞', '🎩', '👑', '💍', '💎', '🍔', '🍕', '🍗',
-  '🍟', '🌭', '🥪', '🌮', '🌯', '🥙', '🍱', '🍜', '🍝', '🍛',
-  '🍚', '🍙', '🍣', '🍰', '🎂', '🧁', '🍪', '🍩', '🍺', '🍻',
-  '☕', '🍵', '🥤', '🧃', '🍷', '🥂', '⚽', '🏀', '🏈', '⚾',
-  '🥎', '🎾', '🏐', '🏉', '🥏', '🎱', '🏓', '🏸', '🥊', '🥋',
-  '🎯', '🥅', '⛳', '🏹', '🎣', '🤿', '🥾', '⛷️', '🏂', '🏄',
-  '🚴', '🏊', '🏋️', '🤸', '⛹️', '🤾', '🏌️', '🧘', '💐', '🌸',
-  '🌺', '🌻', '🌷', '🌹', '🏵️', '🌲', '🌳', '🌴', '🌱', '🍀'
-];
+import CategoryIcon from '../components/CategoryIcon';
+import {
+  DEFAULT_CATEGORY_ICON,
+  filterCategoryIcons,
+  isBsIconName,
+} from '../config/categoryIcons';
+import { useConfirm } from '../contexts/ConfirmContext';
 
 function Categories() {
   const { t } = useTranslation();
+  const { confirm } = useConfirm();
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [showIconPicker, setShowIconPicker] = useState(false);
+  const [iconSearch, setIconSearch] = useState('');
   const [editingCategory, setEditingCategory] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    icon: '📦'
+    icon: DEFAULT_CATEGORY_ICON,
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -45,13 +38,15 @@ function Categories() {
       setLoading(true);
       const data = await categoryService.getAll();
       setCategories(data);
-    } catch (error) {
+    } catch (err) {
       setError(t('Failed to load categories'));
-      console.error('Error fetching categories:', error);
+      console.error('Error fetching categories:', err);
     } finally {
       setLoading(false);
     }
   };
+
+  const normalizeIcon = (icon) => (isBsIconName(icon) ? icon : DEFAULT_CATEGORY_ICON);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -59,34 +54,40 @@ function Categories() {
     setSuccess('');
 
     try {
+      const payload = { ...formData, icon: normalizeIcon(formData.icon) };
       if (editingCategory) {
-        await categoryService.update(editingCategory.id, formData);
+        await categoryService.update(editingCategory.id, payload);
         setSuccess(t('Category updated successfully'));
       } else {
-        await categoryService.create(formData);
+        await categoryService.create(payload);
         setSuccess(t('Category created successfully'));
       }
 
       await fetchCategories();
       handleCloseModal();
-    } catch (error) {
-      setError(error.response?.data?.message || t('Failed to save category'));
-      console.error('Error saving category:', error);
+    } catch (err) {
+      setError(err.response?.data?.message || t('Failed to save category'));
+      console.error('Error saving category:', err);
     }
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm(t('Are you sure you want to delete this category?'))) {
-      return;
-    }
+    const ok = await confirm({
+      title: t('Delete category'),
+      message: t('Are you sure you want to delete this category?'),
+      confirmLabel: t('Delete'),
+      cancelLabel: t('Cancel'),
+      variant: 'danger',
+    });
+    if (!ok) return;
 
     try {
       await categoryService.delete(id);
       setSuccess(t('Category deleted successfully'));
       await fetchCategories();
-    } catch (error) {
-      setError(error.response?.data?.message || t('Failed to delete category'));
-      console.error('Error deleting category:', error);
+    } catch (err) {
+      setError(err.response?.data?.message || t('Failed to delete category'));
+      console.error('Error deleting category:', err);
     }
   };
 
@@ -95,7 +96,7 @@ function Categories() {
     setFormData({
       name: category.name,
       description: category.description || '',
-      icon: category.icon || '📦'
+      icon: normalizeIcon(category.icon),
     });
     setShowModal(true);
   };
@@ -105,19 +106,22 @@ function Categories() {
     setFormData({
       name: '',
       description: '',
-      icon: '📦'
+      icon: DEFAULT_CATEGORY_ICON,
     });
     setShowModal(true);
   };
 
+  const filteredIcons = useMemo(() => filterCategoryIcons(iconSearch), [iconSearch]);
+
   const handleCloseModal = () => {
     setShowModal(false);
     setShowIconPicker(false);
+    setIconSearch('');
     setEditingCategory(null);
     setFormData({
       name: '',
       description: '',
-      icon: '📦'
+      icon: DEFAULT_CATEGORY_ICON,
     });
   };
 
@@ -131,7 +135,7 @@ function Categories() {
   }
 
   return (
-    <div className="container-fluid py-4 matte-page admin-page">
+    <div className="container-fluid matte-page admin-page">
       <PageHeader
         title={t('Category Management')}
         subtitle={t('Manage categories in one place.')}
@@ -154,7 +158,7 @@ function Categories() {
         <div className="card-body p-0">
           {categories.length === 0 ? (
             <div className="text-center py-5">
-              <i className="bi bi-tags text-muted fs-1 mb-3 d-block"></i>
+              <CategoryIcon name={DEFAULT_CATEGORY_ICON} size={48} className="text-muted mb-3" />
               <h5 className="text-muted">{t('No categories found')}</h5>
               <p className="text-muted mb-0">{t('Add your first category to get started!')}</p>
             </div>
@@ -163,7 +167,9 @@ function Categories() {
               <table className="table table-hover admin-table mb-0">
                 <thead className="table-light">
                   <tr>
-                    <th className="border-0 fw-semibold" style={{ width: 72 }}>{t('Icon')}</th>
+                    <th className="border-0 fw-semibold" style={{ width: 72 }}>
+                      {t('Icon')}
+                    </th>
                     <th className="border-0 fw-semibold">{t('Category')}</th>
                     <th className="border-0 fw-semibold">{t('Description')}</th>
                     <th className="border-0 fw-semibold">{t('Actions')}</th>
@@ -172,7 +178,13 @@ function Categories() {
                 <tbody>
                   {categories.map((category) => (
                     <tr key={category.id}>
-                      <td className="text-center fs-5">{category.icon || '📦'}</td>
+                      <td className="text-center">
+                        <CategoryIcon
+                          name={normalizeIcon(category.icon)}
+                          size={24}
+                          className="category-icon-cell"
+                        />
+                      </td>
                       <td className="fw-semibold">{category.name}</td>
                       <td className="text-muted">{category.description || '—'}</td>
                       <td>
@@ -222,31 +234,46 @@ function Categories() {
                     <button
                       type="button"
                       onClick={() => setShowIconPicker(!showIconPicker)}
-                      className="btn btn-outline-secondary w-100 py-3 d-flex flex-column align-items-center"
+                      className="btn btn-outline-secondary w-100 py-3 d-flex flex-column align-items-center category-icon-preview-btn"
                     >
-                      <span className="fs-2">{formData.icon}</span>
+                      <CategoryIcon name={formData.icon} size={32} className="category-icon-preview" />
                       <span className="small text-muted">{t('Change Icon')}</span>
                     </button>
                     {showIconPicker && (
-                      <div className="border rounded p-3 mt-2" style={{ maxHeight: 220, overflowY: 'auto' }}>
-                        <div className="d-flex flex-wrap gap-1">
-                          {ICON_LIBRARY.map((icon) => (
+                      <div className="category-icon-picker border rounded p-3 mt-2">
+                        <input
+                          type="search"
+                          className="form-control form-control-sm mb-2"
+                          placeholder={t('Search icons...')}
+                          value={iconSearch}
+                          onChange={(e) => setIconSearch(e.target.value)}
+                          aria-label={t('Search icons')}
+                        />
+                        <div className="category-icon-picker-grid">
+                          {filteredIcons.map((icon) => (
                             <button
                               key={icon}
                               type="button"
                               onClick={() => selectIcon(icon)}
-                              className={`btn btn-sm ${formData.icon === icon ? 'btn-primary' : 'btn-light'}`}
-                              style={{ width: 40, height: 40, fontSize: '1.1rem' }}
+                              className={`btn btn-sm category-icon-picker-btn ${
+                                formData.icon === icon ? 'btn-primary' : 'btn-light'
+                              }`}
+                              title={icon}
                             >
-                              {icon}
+                              <CategoryIcon name={icon} size={20} />
                             </button>
                           ))}
                         </div>
+                        {filteredIcons.length === 0 && (
+                          <p className="text-muted small text-center mb-0 mt-2">{t('No icons match your search')}</p>
+                        )}
                       </div>
                     )}
                   </div>
                   <div className="mb-3">
-                    <label htmlFor="cat-name" className="form-label fw-semibold">{t('Category Name')} *</label>
+                    <label htmlFor="cat-name" className="form-label fw-semibold">
+                      {t('Category Name')} *
+                    </label>
                     <input
                       id="cat-name"
                       type="text"
@@ -258,7 +285,9 @@ function Categories() {
                     />
                   </div>
                   <div className="mb-0">
-                    <label htmlFor="cat-desc" className="form-label fw-semibold">{t('Description')}</label>
+                    <label htmlFor="cat-desc" className="form-label fw-semibold">
+                      {t('Description')}
+                    </label>
                     <textarea
                       id="cat-desc"
                       className="form-control"
@@ -285,8 +314,6 @@ function Categories() {
       )}
     </div>
   );
-
 }
-
 
 export default Categories;

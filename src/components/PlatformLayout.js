@@ -2,7 +2,7 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import { Link, useLocation } from 'react-router-dom';
 import Header from './Header';
-import { LayoutProvider, useLayout } from '../contexts/LayoutContext';
+import { useLayout } from '../contexts/LayoutContext';
 
 const NAV = [
   { to: '/platform', icon: 'bi-speedometer2', label: 'Dashboard', exact: true },
@@ -14,9 +14,9 @@ const NAV = [
   { to: '/platform/reports', icon: 'bi-bar-chart', label: 'Reports' },
 ];
 
-const PlatformLayoutContent = ({ children }) => {
+const PlatformLayout = ({ children }) => {
   const location = useLocation();
-  const { mobileMenuOpen, closeMobileMenu } = useLayout();
+  const { sidebarCollapsed, mobileMenuOpen, closeMobileMenu } = useLayout();
 
   const isActive = (to, exact) =>
     exact ? location.pathname === to : location.pathname.startsWith(to);
@@ -33,7 +33,11 @@ const PlatformLayoutContent = ({ children }) => {
             aria-label="Close menu"
           />
         )}
-        <aside className="sidebar platform-sidebar">
+        <aside
+          className={`sidebar platform-sidebar${sidebarCollapsed ? ' collapsed' : ''}${
+            mobileMenuOpen ? ' mobile-open' : ''
+          }`}
+        >
           <div className="sidebar-section-label">PosBright Platform</div>
           <nav className="sidebar-nav">
             {NAV.map((item) => (
@@ -41,6 +45,8 @@ const PlatformLayoutContent = ({ children }) => {
                 key={item.to}
                 to={item.to}
                 className={`nav-link ${isActive(item.to, item.exact) ? 'active' : ''}`}
+                title={item.label}
+                aria-label={item.label}
                 onClick={closeMobileMenu}
               >
                 <i className={`bi ${item.icon}`} />
@@ -49,23 +55,13 @@ const PlatformLayoutContent = ({ children }) => {
             ))}
           </nav>
         </aside>
-        <div className="content-wrapper">
+        <div className={`content-wrapper${sidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
           <main className="content">{children}</main>
         </div>
       </div>
     </div>
   );
 };
-
-PlatformLayoutContent.propTypes = {
-  children: PropTypes.node.isRequired,
-};
-
-const PlatformLayout = ({ children }) => (
-  <LayoutProvider>
-    <PlatformLayoutContent>{children}</PlatformLayoutContent>
-  </LayoutProvider>
-);
 
 PlatformLayout.propTypes = {
   children: PropTypes.node.isRequired,

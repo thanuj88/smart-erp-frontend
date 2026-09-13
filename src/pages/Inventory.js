@@ -1,7 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { itemService, categoryService } from '../services';
+import ProductThumbnail from '../components/ProductThumbnail';
+import ProductImageField from '../components/ProductImageField';
+import CategoryFormModal from '../components/CategoryFormModal';
+import '../components/ProductThumbnail.css';
+import { resolveProductImageUrl } from '../utils/productImage';
+import { useCurrency } from '../contexts/TenantSettingsContext';
+import { useConfirm } from '../contexts/ConfirmContext';
 
 const Inventory = () => {
+  const { formatMoney, symbol, settings } = useCurrency();
+  const { confirm } = useConfirm();
   const [items, setItems] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -13,14 +22,18 @@ const Inventory = () => {
     description: '',
     buyingPrice: '',
     sellingPrice: '',
-    price: '',
     quantity: '',
+    returnQuantity: '',
     category: '',
     categoryId: '',
+    image: null,
   });
+  const [imagePreview, setImagePreview] = useState(null);
+  const [removeImage, setRemoveImage] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
 
   useEffect(() => {
     loadItems();
@@ -65,7 +78,7 @@ const Inventory = () => {
     const { name, value } = e.target;
 
     if (name === 'categoryId') {
-      const selectedCategory = categories.find(cat => cat.id === parseInt(value));
+      const selectedCategory = categories.find((cat) => String(cat.id) === String(value));
       setFormData({
         ...formData,
         categoryId: value,
@@ -79,6 +92,22 @@ const Inventory = () => {
     }
   };
 
+  const handleCategoryCreated = async (created) => {
+    const updated = await categoryService.getAll();
+    setCategories(updated);
+    setFormData((prev) => ({
+      ...prev,
+      categoryId: String(created.id),
+      category: created.name,
+    }));
+    setShowCategoryModal(false);
+  };
+
+  const resetImageState = () => {
+    setImagePreview(null);
+    setRemoveImage(false);
+  };
+
   const openAddModal = () => {
     setEditingItem(null);
     setFormData({
@@ -86,11 +115,14 @@ const Inventory = () => {
       description: '',
       buyingPrice: '',
       sellingPrice: '',
-      price: '',
       quantity: '',
+      returnQuantity: '0',
       category: '',
       categoryId: '',
+      image: null,
     });
+    resetImageState();
+    setShowCategoryModal(false);
     setShowModal(true);
     setError('');
     setSuccess('');
@@ -103,14 +135,61 @@ const Inventory = () => {
       description: item.description,
       buyingPrice: item.buying_price || '',
       sellingPrice: item.selling_price || '',
-      price: item.price,
       quantity: item.quantity,
+      returnQuantity: item.return_quantity ?? 0,
       category: item.category,
       categoryId: item.category_id || '',
+      image: null,
     });
+    setImagePreview(resolveProductImageUrl(item.image_path) || null);
+    setRemoveImage(false);
+    setShowCategoryModal(false);
     setShowModal(true);
     setError('');
     setSuccess('');
+  };
+
+  const handleImageSelect = (imageData, imageError) => {
+    if (imageError) {
+      setError(imageError);
+      return;
+    }
+    setFormData((prev) => ({ ...prev, image: imageData }));
+    setImagePreview(imageData);
+    setRemoveImage(false);
+    setError('');
+  };
+
+  const handleImageRemove = () => {
+    setFormData((prev) => ({ ...prev, image: null }));
+    setImagePreview(null);
+    setRemoveImage(true);
+  };
+
+  const buildPayload = () => {
+    const payload = {
+      name: formData.name.trim(),
+      description: formData.description?.trim() || '',
+      buyingPrice: formData.buyingPrice === '' ? 0 : Number(formData.buyingPrice),
+      sellingPrice: Number(formData.sellingPrice),
+      quantity: parseInt(formData.quantity, 10),
+      returnQuantity: parseInt(formData.returnQuantity, 10) || 0,
+      category: formData.category || '',
+      categoryId: formData.categoryId || null,
+    };
+    if (formData.image) {
+      payload.image = formData.image;
+    } else if (removeImage) {
+      payload.removeImage = true;
+    }
+    return payload;
+  };
+
+  const formatSaveError = (err) => {
+    const data = err.response?.data;
+    if (!data) return 'Failed to save item';
+    const detail = data.details?.map((d) => d.msg).join(', ');
+    return detail ? `${data.error}: ${detail}` : data.error || 'Failed to save item';
   };
 
   const handleSubmit = async (e) => {
@@ -118,31 +197,38 @@ const Inventory = () => {
     setError('');
 
     try {
+      const payload = buildPayload();
       if (editingItem) {
-        await itemService.update(editingItem.id, formData);
+        await itemService.update(editingItem.id, payload);
         setSuccess('Item updated successfully');
       } else {
-        await itemService.create(formData);
+        await itemService.create(payload);
         setSuccess('Item added successfully');
       }
       setShowModal(false);
       loadItems();
       setTimeout(() => setSuccess(''), 3000);
-    } catch (error) {
-      setError(error.response?.data?.error || 'Failed to save item');
+    } catch (err) {
+      setError(formatSaveError(err));
     }
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this item?')) {
-      try {
-        await itemService.delete(id);
-        setSuccess('Item deleted successfully');
-        loadItems();
-        setTimeout(() => setSuccess(''), 3000);
-      } catch (error) {
-        setError('Failed to delete item');
-      }
+    const ok = await confirm({
+      title: 'Delete item',
+      message: 'Are you sure you want to delete this item?',
+      confirmLabel: 'Delete',
+      cancelLabel: 'Cancel',
+      variant: 'danger',
+    });
+    if (!ok) return;
+    try {
+      await itemService.delete(id);
+      setSuccess('Item deleted successfully');
+      loadItems();
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (error) {
+      setError('Failed to delete item');
     }
   };
 
@@ -160,9 +246,9 @@ const Inventory = () => {
   }
 
   return (
-    <div className="container-fluid py-4 matte-page admin-page inventory-page">
+    <div className="container-fluid matte-page admin-page inventory-page">
       {/* Header */}
-      <div className="row mb-4">
+      <div className="row mb-3">
         <div className="col-12">
           <div className="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between">
             <div className="d-flex align-items-center mb-3 mb-lg-0">
@@ -183,7 +269,7 @@ const Inventory = () => {
                   <option value="all">All Categories</option>
                   {categories.map((category) => (
                     <option key={category.id} value={category.id}>
-                      {category.icon} {category.name}
+                      {category.name}
                     </option>
                   ))}
                 </select>
@@ -230,14 +316,15 @@ const Inventory = () => {
             </div>
           ) : (
             <div className="table-responsive">
-              <table className="table table-hover mb-0">
+              <table className="table table-hover admin-table mb-0">
                 <thead className="table-light">
                   <tr>
                     <th className="border-0 fw-semibold">Product</th>
                     <th className="border-0 fw-semibold">Category</th>
                     <th className="border-0 fw-semibold">Barcode</th>
-                    <th className="border-0 fw-semibold">Price</th>
+                    <th className="border-0 fw-semibold">Selling Price</th>
                     <th className="border-0 fw-semibold">Stock</th>
+                    <th className="border-0 fw-semibold">Returns</th>
                     <th className="border-0 fw-semibold">Actions</th>
                   </tr>
                 </thead>
@@ -245,22 +332,36 @@ const Inventory = () => {
                   {visibleItems.map((item) => (
                     <tr key={item.id}>
                       <td>
-                        <div className="fw-semibold">{item.name}</div>
-                        <small className="text-muted">{item.description || 'No description'}</small>
+                        <div className="d-flex align-items-center gap-2">
+                          <span className="product-thumbnail-wrap" style={{ width: 40, height: 40 }}>
+                            <ProductThumbnail item={item} categories={categories} size={40} />
+                          </span>
+                          <div>
+                            <div className="fw-semibold">{item.name}</div>
+                            <small className="text-muted">{item.description || 'No description'}</small>
+                          </div>
+                        </div>
                       </td>
-                      <td>
-                        {item.category_icon && <span className="me-1">{item.category_icon}</span>}
-                        {item.category_name || item.category || '—'}
-                      </td>
+                      <td>{item.category_name || item.category || '—'}</td>
                       <td className="text-muted">{item.barcode || '—'}</td>
-                      <td className="fw-semibold">${item.price?.toFixed(2) || '0.00'}</td>
+                      <td className="fw-semibold">
+                        {formatMoney(item.selling_price ?? item.price ?? 0)}
+                      </td>
                       <td>
                         {(() => {
-                          const quantity = item.quantity;
-                          if (quantity < 10) return <span className="badge bg-danger">{quantity}</span>;
-                          if (quantity < 50) return <span className="badge bg-warning text-dark">{quantity}</span>;
+                          const quantity = Number(item.quantity);
+                          const threshold = Number(settings?.lowStockThreshold ?? 15);
+                          if (quantity <= 0) return <span className="badge bg-danger">{quantity}</span>;
+                          if (quantity <= threshold) return <span className="badge bg-warning text-dark">{quantity}</span>;
                           return <span className="badge bg-success">{quantity}</span>;
                         })()}
+                      </td>
+                      <td>
+                        {Number(item.return_quantity) > 0 ? (
+                          <span className="badge bg-secondary">{item.return_quantity}</span>
+                        ) : (
+                          <span className="text-muted">0</span>
+                        )}
                       </td>
                       <td>
                         <div className="btn-group">
@@ -290,7 +391,7 @@ const Inventory = () => {
       {/* Modal */}
       {showModal && (
         <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <div className="modal-dialog modal-lg">
+          <div className="modal-dialog modal-lg inventory-product-modal">
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="modal-title">
@@ -312,7 +413,7 @@ const Inventory = () => {
                     </div>
                   )}
 
-                  <div className="row g-3">
+                  <div className="row g-2">
                     <div className="col-md-6">
                       <label className="form-label fw-semibold">Product Name *</label>
                       <input
@@ -326,7 +427,18 @@ const Inventory = () => {
                     </div>
 
                     <div className="col-md-6">
-                      <label className="form-label fw-semibold">Category</label>
+                      <label className="form-label fw-semibold inventory-field-label">
+                        Category
+                        <button
+                          type="button"
+                          className="btn btn-link inventory-add-category-btn"
+                          onClick={() => setShowCategoryModal(true)}
+                          title="Add category"
+                          aria-label="Add category"
+                        >
+                          <i className="bi bi-plus-circle"></i>
+                        </button>
+                      </label>
                       <select
                         name="categoryId"
                         className="form-select"
@@ -336,11 +448,11 @@ const Inventory = () => {
                         <option value="">Select a category...</option>
                         {categories.map((category) => (
                           <option key={category.id} value={category.id}>
-                            {category.icon} {category.name}
+                            {category.name}
                           </option>
                         ))}
                       </select>
-                      <div className="form-text">Manage categories from the Categories menu</div>
+
                     </div>
 
                     <div className="col-12">
@@ -355,10 +467,10 @@ const Inventory = () => {
                       />
                     </div>
 
-                    <div className="col-md-4">
+                    <div className="col-md-6">
                       <label className="form-label fw-semibold">Buying Price *</label>
                       <div className="input-group">
-                        <span className="input-group-text">$</span>
+                        <span className="input-group-text">{symbol}</span>
                         <input
                           type="number"
                           name="buyingPrice"
@@ -372,10 +484,10 @@ const Inventory = () => {
                       </div>
                     </div>
 
-                    <div className="col-md-4">
+                    <div className="col-md-6">
                       <label className="form-label fw-semibold">Selling Price *</label>
                       <div className="input-group">
-                        <span className="input-group-text">$</span>
+                        <span className="input-group-text">{symbol}</span>
                         <input
                           type="number"
                           name="sellingPrice"
@@ -389,25 +501,7 @@ const Inventory = () => {
                       </div>
                     </div>
 
-                    <div className="col-md-4">
-                      <label className="form-label fw-semibold">Display Price *</label>
-                      <div className="input-group">
-                        <span className="input-group-text">$</span>
-                        <input
-                          type="number"
-                          name="price"
-                          className="form-control"
-                          value={formData.price}
-                          onChange={handleInputChange}
-                          step="0.01"
-                          min="0"
-                          required
-                        />
-                      </div>
-                      <div className="form-text">Price shown to customers</div>
-                    </div>
-
-                    <div className="col-md-6">
+                    <div className={editingItem ? 'col-md-6' : 'col-12'}>
                       <label className="form-label fw-semibold">Stock Quantity *</label>
                       <input
                         type="number"
@@ -417,6 +511,33 @@ const Inventory = () => {
                         onChange={handleInputChange}
                         min="0"
                         required
+                      />
+                    </div>
+
+                    {editingItem && (
+                      <div className="col-md-6">
+                        <label className="form-label fw-semibold">Returns</label>
+                        <input
+                          type="number"
+                          name="returnQuantity"
+                          className="form-control"
+                          value={formData.returnQuantity}
+                          onChange={handleInputChange}
+                          min="0"
+                        />
+                        <small className="text-muted">
+                          Returned units stay out of sellable stock until you change both counts.
+                        </small>
+                      </div>
+                    )}
+
+                    <div className="col-12">
+                      <ProductImageField
+                        imagePreview={imagePreview}
+                        categoryId={formData.categoryId}
+                        categories={categories}
+                        onSelect={handleImageSelect}
+                        onRemove={handleImageRemove}
                       />
                     </div>
                   </div>
@@ -440,6 +561,12 @@ const Inventory = () => {
           </div>
         </div>
       )}
+
+      <CategoryFormModal
+        open={showCategoryModal}
+        onClose={() => setShowCategoryModal(false)}
+        onCreated={handleCategoryCreated}
+      />
     </div>
   );
 };

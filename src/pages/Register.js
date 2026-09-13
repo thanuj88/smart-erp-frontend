@@ -1,9 +1,17 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import AuthLayout from '../components/AuthLayout';
 import { APP_CONFIG } from '../config/app';
 import { authService } from '../services';
 import useAuthBodyClass from '../hooks/useAuthBodyClass';
+import {
+  COUNTRIES,
+  DEFAULT_COUNTRY_CODE,
+  getCountry,
+  phoneValidationMessage,
+  sanitizePhoneInput,
+  toE164,
+} from '../utils/phone';
 
 const Register = () => {
   useAuthBodyClass('register');
@@ -13,23 +21,48 @@ const Register = () => {
     fullName: '',
     email: '',
     businessName: '',
-    username: '',
     password: '',
     confirmPassword: '',
+    country: DEFAULT_COUNTRY_CODE,
+    phone: '',
   });
   const [success, setSuccess] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [phoneError, setPhoneError] = useState('');
+  const [phoneTouched, setPhoneTouched] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  const selectedCountry = useMemo(() => getCountry(form.country), [form.country]);
+
+  const updatePhoneError = (phone, country) => {
+    setPhoneError(phoneValidationMessage(phone, country) || '');
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    if (name === 'country') {
+      setForm((prev) => ({ ...prev, country: value }));
+      if (phoneTouched || form.phone.trim()) {
+        updatePhoneError(form.phone, value);
+      }
+      return;
+    }
+    if (name === 'phone') {
+      const next = sanitizePhoneInput(value, getCountry(form.country));
+      setForm((prev) => ({ ...prev, phone: next }));
+      if (phoneTouched || next.trim()) {
+        updatePhoneError(next, form.country);
+      }
+      return;
+    }
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setPhoneTouched(true);
     if (form.password !== form.confirmPassword) {
       setError('Passwords do not match.');
       return;
@@ -42,14 +75,21 @@ const Register = () => {
       setError('Business name is required.');
       return;
     }
+    const nextPhoneError = phoneValidationMessage(form.phone, form.country);
+    if (nextPhoneError) {
+      setPhoneError(nextPhoneError);
+      setError(nextPhoneError);
+      return;
+    }
     setLoading(true);
     try {
       const result = await authService.register({
         fullName: form.fullName,
         email: form.email,
         businessName: form.businessName,
-        username: form.username || undefined,
         password: form.password,
+        country: form.country,
+        phone: toE164(form.phone, form.country),
       });
       setSuccess(result.message);
       setTimeout(() => navigate('/login', { state: { registered: true } }), 2000);
@@ -137,66 +177,106 @@ const Register = () => {
               className="form-control auth-input"
               value={form.email}
               onChange={handleChange}
+              autoComplete="email"
               required
             />
             <i className="bi bi-envelope auth-input-icon"></i>
           </div>
         )}
-        {field(
-          'username',
-          'Username',
-          true,
-          <input
-            id="username"
-            name="username"
-            type="text"
-            className="form-control auth-input"
-            value={form.username}
-            onChange={handleChange}
-            required
-          />
-        )}
-        {field(
-          'password',
-          'Password',
-          true,
-          <div className="auth-input-wrap">
+        <div className="auth-register-row">
+          {field(
+            'country',
+            'Country',
+            true,
+            <select
+              id="country"
+              name="country"
+              className="form-select auth-input"
+              value={form.country}
+              onChange={handleChange}
+              required
+            >
+              {COUNTRIES.map((country) => (
+                <option key={country.code} value={country.code}>
+                  {country.flag} {country.name} (+{country.dialCode})
+                </option>
+              ))}
+            </select>
+          )}
+          {field(
+            'phone',
+            'Phone number',
+            true,
+            <>
+              <div className={`auth-phone-input${phoneError ? ' is-invalid' : ''}`}>
+                <span className="auth-phone-prefix">+{selectedCountry.dialCode}</span>
+                <input
+                  id="phone"
+                  name="phone"
+                  type="tel"
+                  inputMode="tel"
+                  className={`form-control auth-input${phoneError ? ' is-invalid' : ''}`}
+                  value={form.phone}
+                  onChange={handleChange}
+                  onBlur={() => {
+                    setPhoneTouched(true);
+                    updatePhoneError(form.phone, form.country);
+                  }}
+                  placeholder={selectedCountry.example}
+                  required
+                />
+              </div>
+              {phoneError ? (
+                <div className="invalid-feedback d-block">{phoneError}</div>
+              ) : (
+                <div className="form-text">Use a {selectedCountry.name} number, e.g. {selectedCountry.example}</div>
+              )}
+            </>
+          )}
+        </div>
+        <div className="auth-register-row">
+          {field(
+            'password',
+            'Password',
+            true,
+            <div className="auth-input-wrap">
+              <input
+                id="password"
+                name="password"
+                type={showPassword ? 'text' : 'password'}
+                className="form-control auth-input"
+                value={form.password}
+                onChange={handleChange}
+                minLength={8}
+                required
+              />
+              <button
+                type="button"
+                className="auth-input-icon-btn"
+                onClick={() => setShowPassword(!showPassword)}
+                tabIndex={-1}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                <i className={`bi ${showPassword ? 'bi-eye-slash' : 'bi-eye'}`}></i>
+              </button>
+            </div>
+          )}
+          {field(
+            'confirmPassword',
+            'Confirm password',
+            true,
             <input
-              id="password"
-              name="password"
-              type={showPassword ? 'text' : 'password'}
+              id="confirmPassword"
+              name="confirmPassword"
+              type="password"
               className="form-control auth-input"
-              value={form.password}
+              value={form.confirmPassword}
               onChange={handleChange}
               minLength={8}
               required
             />
-            <button
-              type="button"
-              className="auth-input-icon-btn"
-              onClick={() => setShowPassword(!showPassword)}
-              tabIndex={-1}
-              aria-label={showPassword ? 'Hide password' : 'Show password'}
-            >
-              <i className={`bi ${showPassword ? 'bi-eye-slash' : 'bi-eye'}`}></i>
-            </button>
-          </div>
-        )}
-        {field(
-          'confirmPassword',
-          'Confirm password',
-          true,
-          <input
-            id="confirmPassword"
-            name="confirmPassword"
-            type="password"
-            className="form-control auth-input"
-            value={form.confirmPassword}
-            onChange={handleChange}
-            minLength={8}
-            required
-          />
-        )}
+          )}
+        </div>
 
         <div className="auth-register-actions">
           <button type="submit" className="btn auth-btn-primary w-100" disabled={loading}>

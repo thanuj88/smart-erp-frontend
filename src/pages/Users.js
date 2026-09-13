@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { userService } from '../services';
+import { useAuth } from '../contexts/AuthContext';
+import { useConfirm } from '../contexts/ConfirmContext';
 
 const Users = () => {
+  const { user: currentUser } = useAuth();
+  const { confirm } = useConfirm();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({
-    username: '',
     password: '',
     role: 'TELLER',
     email: '',
@@ -40,7 +43,6 @@ const Users = () => {
 
   const openAddModal = () => {
     setFormData({
-      username: '',
       password: '',
       role: 'TELLER',
       email: '',
@@ -68,15 +70,21 @@ const Users = () => {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this user?')) {
-      try {
-        await userService.delete(id);
-        setSuccess('User deleted successfully');
-        loadUsers();
-        setTimeout(() => setSuccess(''), 3000);
-      } catch (err) {
-        setError(err.response?.data?.error || 'Failed to delete user');
-      }
+    const ok = await confirm({
+      title: 'Delete user',
+      message: 'Are you sure you want to delete this user?',
+      confirmLabel: 'Delete',
+      cancelLabel: 'Cancel',
+      variant: 'danger',
+    });
+    if (!ok) return;
+    try {
+      await userService.delete(id);
+      setSuccess('User deleted successfully');
+      loadUsers();
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to delete user');
     }
   };
 
@@ -94,9 +102,9 @@ const Users = () => {
   }
 
   return (
-    <div className="container-fluid py-4 matte-page admin-page users-page">
+    <div className="container-fluid matte-page admin-page users-page">
       {/* Header */}
-      <div className="row mb-4">
+      <div className="row mb-3">
         <div className="col-12">
           <div className="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between">
             <div className="d-flex align-items-center mb-3 mb-lg-0">
@@ -144,19 +152,30 @@ const Users = () => {
             </div>
           ) : (
             <div className="table-responsive">
-              <table className="table table-hover mb-0">
+              <table className="table table-hover admin-table mb-0">
                 <thead className="table-light">
                   <tr>
-                    <th className="border-0 fw-semibold">Username</th>
+                    <th className="border-0 fw-semibold">Email</th>
+                    <th className="border-0 fw-semibold">Name</th>
                     <th className="border-0 fw-semibold">Role</th>
                     <th className="border-0 fw-semibold">Created At</th>
                     <th className="border-0 fw-semibold">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {users.map((user) => (
+                  {users.map((user) => {
+                    const isOwnAccount =
+                      currentUser && String(user.id) === String(currentUser.id);
+
+                    return (
                     <tr key={user.id}>
-                      <td className="fw-semibold">{user.username}</td>
+                      <td className="fw-semibold">
+                        {user.email || '—'}
+                        {isOwnAccount && (
+                          <span className="badge bg-light text-muted border ms-2">You</span>
+                        )}
+                      </td>
+                      <td className="text-muted">{user.full_name || user.fullName || '—'}</td>
                       <td>
                         <span
                           className={`badge ${
@@ -177,14 +196,17 @@ const Users = () => {
                             type="button"
                             onClick={() => handleDelete(user.id)}
                             className="btn btn-outline-danger btn-sm"
-                            title="Delete user"
+                            title={isOwnAccount ? 'You cannot delete your own account' : 'Delete user'}
+                            disabled={isOwnAccount}
+                            aria-disabled={isOwnAccount}
                           >
                             <i className="bi bi-trash"></i>
                           </button>
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -194,116 +216,109 @@ const Users = () => {
 
       {/* Add User Modal */}
       {showModal && (
-        <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <div className="modal-dialog">
+        <div className="modal show d-block users-add-modal-backdrop" tabIndex={-1}>
+          <div className="modal-dialog users-add-modal-dialog">
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="modal-title">
                   <i className="bi bi-person-plus me-2"></i>
                   Add New User
                 </h5>
-                <button type="button" className="btn-close" onClick={() => setShowModal(false)}></button>
+                <button type="button" className="btn-close" onClick={() => setShowModal(false)} aria-label="Close"></button>
               </div>
               <form onSubmit={handleSubmit}>
                 <div className="modal-body">
                   {error && (
-                    <div className="alert alert-danger">
+                    <div className="alert alert-danger py-2 mb-3">
                       <i className="bi bi-exclamation-triangle-fill me-2"></i>
                       {error}
                     </div>
                   )}
-                  <div className="mb-3">
-                    <label htmlFor="username" className="form-label fw-semibold">
-                      Username
-                    </label>
-                    <input
-                      id="username"
-                      name="username"
-                      type="text"
-                      className="form-control"
-                      value={formData.username}
-                      onChange={handleInputChange}
-                      required
-                      autoFocus
-                    />
-                  </div>
-                  <div className="mb-3">
-                    <label htmlFor="fullName" className="form-label fw-semibold">
-                      Full name
-                    </label>
-                    <input
-                      id="fullName"
-                      name="fullName"
-                      type="text"
-                      className="form-control"
-                      value={formData.fullName}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                  <div className="mb-3">
-                    <label htmlFor="email" className="form-label fw-semibold">
-                      Email
-                    </label>
-                    <input
-                      id="email"
-                      name="email"
-                      type="email"
-                      className="form-control"
-                      value={formData.email}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                  <div className="mb-3">
-                    <label htmlFor="password" className="form-label fw-semibold">
-                      Password
-                    </label>
-                    <input
-                      id="password"
-                      name="password"
-                      type="password"
-                      className="form-control"
-                      value={formData.password}
-                      onChange={handleInputChange}
-                      required
-                      minLength={8}
-                    />
-                    <div className="form-text">Minimum 8 characters</div>
-                  </div>
-                  <div className="mb-3">
-                    <label htmlFor="pin" className="form-label fw-semibold">
-                      POS PIN (optional)
-                    </label>
-                    <input
-                      id="pin"
-                      name="pin"
-                      type="password"
-                      inputMode="numeric"
-                      maxLength={8}
-                      className="form-control"
-                      value={formData.pin}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                  <div className="mb-0">
-                    <label htmlFor="role" className="form-label fw-semibold">
-                      Role
-                    </label>
-                    <select
-                      id="role"
-                      name="role"
-                      className="form-select"
-                      value={formData.role}
-                      onChange={handleInputChange}
-                      required
-                    >
-                      <option value="TELLER">Teller / Cashier</option>
-                      <option value="MANAGER">Manager</option>
-                      <option value="INVENTORY">Inventory</option>
-                      <option value="ACCOUNTANT">Accountant</option>
-                    </select>
+                  <div className="row g-3">
+                    <div className="col-sm-6">
+                      <label htmlFor="email" className="form-label fw-semibold">
+                        Email
+                      </label>
+                      <input
+                        id="email"
+                        name="email"
+                        type="email"
+                        className="form-control form-control-sm"
+                        value={formData.email}
+                        onChange={handleInputChange}
+                        placeholder="staff@store.com"
+                        required
+                        autoFocus
+                      />
+                      <div className="form-text">
+                        Email is unique and used to sign in.
+                      </div>
+                    </div>
+                    <div className="col-sm-6">
+                      <label htmlFor="fullName" className="form-label fw-semibold">
+                        Full name
+                      </label>
+                      <input
+                        id="fullName"
+                        name="fullName"
+                        type="text"
+                        className="form-control form-control-sm"
+                        value={formData.fullName}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                    <div className="col-sm-6">
+                      <label htmlFor="password" className="form-label fw-semibold">
+                        Password
+                      </label>
+                      <input
+                        id="password"
+                        name="password"
+                        type="password"
+                        className="form-control form-control-sm"
+                        value={formData.password}
+                        onChange={handleInputChange}
+                        required
+                        minLength={8}
+                      />
+                      <div className="form-text">Min. 8 characters</div>
+                    </div>
+                    <div className="col-sm-6">
+                      <label htmlFor="pin" className="form-label fw-semibold">
+                        POS PIN <span className="text-muted fw-normal">(optional)</span>
+                      </label>
+                      <input
+                        id="pin"
+                        name="pin"
+                        type="password"
+                        inputMode="numeric"
+                        maxLength={8}
+                        className="form-control form-control-sm"
+                        value={formData.pin}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                    <div className="col-sm-6">
+                      <label htmlFor="role" className="form-label fw-semibold">
+                        Role
+                      </label>
+                      <select
+                        id="role"
+                        name="role"
+                        className="form-select form-select-sm"
+                        value={formData.role}
+                        onChange={handleInputChange}
+                        required
+                      >
+                        <option value="TELLER">Teller / Cashier</option>
+                        <option value="MANAGER">Manager</option>
+                        <option value="INVENTORY">Inventory</option>
+                        <option value="ACCOUNTANT">Accountant</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
-                <div className="modal-footer">
+                <div className="modal-footer justify-content-end">
                   <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>
                     Cancel
                   </button>

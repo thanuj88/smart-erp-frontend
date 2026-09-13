@@ -8,14 +8,14 @@ function persistAuth(data) {
 }
 
 export const authService = {
-  login: async (username, password) => {
-    const response = await api.post('/auth/login', { username, password });
+  login: async (email, password) => {
+    const response = await api.post('/auth/login', { email, password });
     persistAuth(response.data);
     return response.data;
   },
 
-  loginPin: async (username, pin, tenantId, branchId) => {
-    const response = await api.post('/auth/login/pin', { username, pin, tenantId, branchId });
+  loginPin: async (email, pin, tenantId, branchId) => {
+    const response = await api.post('/auth/login/pin', { email, pin, tenantId, branchId });
     persistAuth(response.data);
     return response.data;
   },
@@ -79,6 +79,17 @@ export const authService = {
   },
 };
 
+export const settingsService = {
+  get: async () => {
+    const response = await api.get('/settings');
+    return response.data;
+  },
+  update: async (payload) => {
+    const response = await api.put('/settings', payload);
+    return response.data;
+  },
+};
+
 export const platformService = {
   getReports: async () => {
     const response = await api.get('/platform/reports');
@@ -102,6 +113,10 @@ export const platformService = {
   },
   createPlan: async (payload) => {
     const response = await api.post('/platform/plans', payload);
+    return response.data;
+  },
+  updatePlan: async (code, payload) => {
+    const response = await api.put(`/platform/plans/${code}`, payload);
     return response.data;
   },
   listUsers: async () => {
@@ -233,14 +248,61 @@ export const categoryService = {
   },
 };
 
+export const promotionService = {
+  getAll: async () => {
+    const response = await api.get('/promotions');
+    return response.data;
+  },
+
+  getActive: async () => {
+    const response = await api.get('/promotions/active');
+    return response.data;
+  },
+
+  getById: async (id) => {
+    const response = await api.get(`/promotions/${id}`);
+    return response.data;
+  },
+
+  create: async (data) => {
+    const response = await api.post('/promotions', data);
+    return response.data;
+  },
+
+  update: async (id, data) => {
+    const response = await api.put(`/promotions/${id}`, data);
+    return response.data;
+  },
+
+  delete: async (id) => {
+    const response = await api.delete(`/promotions/${id}`);
+    return response.data;
+  },
+};
+
 export const saleService = {
-  processCashSale: async (itemId, quantity) => {
-    const response = await api.post('/sales/cash', { itemId, quantity });
+  processCashSale: async (itemId, quantity, extra = {}) => {
+    const response = await api.post('/sales/cash', { itemId, quantity, ...extra });
     return response.data;
   },
 
   processInstallmentSale: async (saleData) => {
     const response = await api.post('/sales/installment', saleData);
+    return response.data;
+  },
+
+  getOrder: async (orderNumber) => {
+    const response = await api.get(`/sales/orders/${encodeURIComponent(orderNumber)}`);
+    return response.data;
+  },
+
+  createReturn: async (payload) => {
+    const response = await api.post('/sales/returns', payload);
+    return response.data;
+  },
+
+  getReturns: async () => {
+    const response = await api.get('/sales/returns');
     return response.data;
   },
 
@@ -251,6 +313,11 @@ export const saleService = {
 
   getToday: async () => {
     const response = await api.get('/sales/today');
+    return response.data;
+  },
+
+  getRecent: async (days = 7) => {
+    const response = await api.get(`/sales/recent?days=${days}`);
     return response.data;
   },
 
