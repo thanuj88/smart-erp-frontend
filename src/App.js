@@ -8,6 +8,7 @@ import { LayoutProvider } from './contexts/LayoutContext';
 
 import { TenantSettingsProvider } from './contexts/TenantSettingsContext';
 import { ConfirmProvider } from './contexts/ConfirmContext';
+import { PosSaleGuardProvider } from './contexts/PosSaleGuardContext';
 
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -200,7 +201,9 @@ function App() {
 
           <LayoutProvider>
             <ConfirmProvider>
-              <AppRoutes />
+              <PosSaleGuardProvider>
+                <AppRoutes />
+              </PosSaleGuardProvider>
             </ConfirmProvider>
           </LayoutProvider>
 

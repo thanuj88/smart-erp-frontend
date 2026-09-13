@@ -2,7 +2,7 @@ import React from 'react';
 import PropTypes from 'prop-types';
 
 const PageHeader = ({ title, subtitle, actions }) => (
-  <div className="row mb-4">
+  <div className="row mb-3">
     <div className="col-12">
       <div className="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
         <div>

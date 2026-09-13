@@ -23,6 +23,7 @@ const Inventory = () => {
     buyingPrice: '',
     sellingPrice: '',
     quantity: '',
+    returnQuantity: '',
     category: '',
     categoryId: '',
     image: null,
@@ -115,6 +116,7 @@ const Inventory = () => {
       buyingPrice: '',
       sellingPrice: '',
       quantity: '',
+      returnQuantity: '0',
       category: '',
       categoryId: '',
       image: null,
@@ -134,6 +136,7 @@ const Inventory = () => {
       buyingPrice: item.buying_price || '',
       sellingPrice: item.selling_price || '',
       quantity: item.quantity,
+      returnQuantity: item.return_quantity ?? 0,
       category: item.category,
       categoryId: item.category_id || '',
       image: null,
@@ -170,6 +173,7 @@ const Inventory = () => {
       buyingPrice: formData.buyingPrice === '' ? 0 : Number(formData.buyingPrice),
       sellingPrice: Number(formData.sellingPrice),
       quantity: parseInt(formData.quantity, 10),
+      returnQuantity: parseInt(formData.returnQuantity, 10) || 0,
       category: formData.category || '',
       categoryId: formData.categoryId || null,
     };
@@ -242,9 +246,9 @@ const Inventory = () => {
   }
 
   return (
-    <div className="container-fluid py-4 matte-page admin-page inventory-page">
+    <div className="container-fluid matte-page admin-page inventory-page">
       {/* Header */}
-      <div className="row mb-4">
+      <div className="row mb-3">
         <div className="col-12">
           <div className="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between">
             <div className="d-flex align-items-center mb-3 mb-lg-0">
@@ -312,7 +316,7 @@ const Inventory = () => {
             </div>
           ) : (
             <div className="table-responsive">
-              <table className="table table-hover mb-0">
+              <table className="table table-hover admin-table mb-0">
                 <thead className="table-light">
                   <tr>
                     <th className="border-0 fw-semibold">Product</th>
@@ -320,6 +324,7 @@ const Inventory = () => {
                     <th className="border-0 fw-semibold">Barcode</th>
                     <th className="border-0 fw-semibold">Selling Price</th>
                     <th className="border-0 fw-semibold">Stock</th>
+                    <th className="border-0 fw-semibold">Returns</th>
                     <th className="border-0 fw-semibold">Actions</th>
                   </tr>
                 </thead>
@@ -350,6 +355,13 @@ const Inventory = () => {
                           if (quantity <= threshold) return <span className="badge bg-warning text-dark">{quantity}</span>;
                           return <span className="badge bg-success">{quantity}</span>;
                         })()}
+                      </td>
+                      <td>
+                        {Number(item.return_quantity) > 0 ? (
+                          <span className="badge bg-secondary">{item.return_quantity}</span>
+                        ) : (
+                          <span className="text-muted">0</span>
+                        )}
                       </td>
                       <td>
                         <div className="btn-group">
@@ -489,7 +501,7 @@ const Inventory = () => {
                       </div>
                     </div>
 
-                    <div className="col-md-6">
+                    <div className={editingItem ? 'col-md-6' : 'col-12'}>
                       <label className="form-label fw-semibold">Stock Quantity *</label>
                       <input
                         type="number"
@@ -501,6 +513,23 @@ const Inventory = () => {
                         required
                       />
                     </div>
+
+                    {editingItem && (
+                      <div className="col-md-6">
+                        <label className="form-label fw-semibold">Returns</label>
+                        <input
+                          type="number"
+                          name="returnQuantity"
+                          className="form-control"
+                          value={formData.returnQuantity}
+                          onChange={handleInputChange}
+                          min="0"
+                        />
+                        <small className="text-muted">
+                          Returned units stay out of sellable stock until you change both counts.
+                        </small>
+                      </div>
+                    )}
 
                     <div className="col-12">
                       <ProductImageField

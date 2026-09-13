@@ -2,11 +2,12 @@ import React from 'react';
 import { formatMoney } from '../utils/currency';
 import { resolveProductImageUrl } from '../utils/productImage';
 import { SAMPLE_RECEIPT_ITEMS, getReceiptPaperSize, formatVoucherOfferValue } from '../utils/receipt';
+import { APP_NAME } from '../config/app';
 import ReceiptQr from './ReceiptQr';
 import './ReceiptPreview.css';
 
 const ReceiptPreview = ({
-  businessName = 'Your Store',
+  businessName = APP_NAME,
   currency,
   taxRate = 0,
   receipt,
@@ -28,7 +29,7 @@ const ReceiptPreview = ({
   subtotalLabel = 'Sub Total',
 }) => {
   const logoSrc = resolveProductImageUrl(receipt?.logo);
-  const store = (businessName || 'Your Store').trim() || 'Your Store';
+  const store = (businessName || APP_NAME).trim() || APP_NAME;
   const computedSubtotal = items.reduce((sum, item) => sum + Number(item.price || 0), 0);
   const subtotal = subtotalProp != null ? Number(subtotalProp) : computedSubtotal;
   const tax = taxProp != null ? Number(taxProp) : subtotal * (Number(taxRate) || 0) / 100;

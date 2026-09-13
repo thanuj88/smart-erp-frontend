@@ -45,14 +45,14 @@ export const AuthProvider = ({ children }) => {
     };
   }, []);
 
-  const login = async (username, password) => {
-    const data = await authService.login(username, password);
+  const login = async (email, password) => {
+    const data = await authService.login(email, password);
     setUser(data.user);
     return data;
   };
 
-  const loginPin = async (username, pin, tenantId, branchId) => {
-    const data = await authService.loginPin(username, pin, tenantId, branchId);
+  const loginPin = async (email, pin, tenantId, branchId) => {
+    const data = await authService.loginPin(email, pin, tenantId, branchId);
     setUser(data.user);
     return data;
   };

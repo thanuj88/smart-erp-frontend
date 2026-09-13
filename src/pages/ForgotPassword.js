@@ -62,6 +62,7 @@ const ForgotPassword = () => {
                 placeholder="Enter your email"
                 required
                 autoFocus
+                autoComplete="email"
               />
               <i className="bi bi-envelope auth-input-icon"></i>
             </div>

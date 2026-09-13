@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { usePosSaleGuard } from '../contexts/PosSaleGuardContext';
 import { useTranslation } from 'react-i18next';
 import clsx from 'clsx';
 
@@ -8,6 +9,7 @@ const UserMenu = ({ className = '' }) => {
   const { user, logout } = useAuth();
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { requestLogout } = usePosSaleGuard();
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
   if (!user) return null;
@@ -17,8 +19,11 @@ const UserMenu = ({ className = '' }) => {
 
   const handleLogout = async () => {
     setDropdownOpen(false);
-    await logout();
-    navigate('/login', { replace: true });
+    const proceed = async () => {
+      await logout();
+      navigate('/login', { replace: true });
+    };
+    if (requestLogout(proceed)) await proceed();
   };
 
   return (

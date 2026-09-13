@@ -1,4 +1,4 @@
-/* Dreams POS inspired theme for Bright Mart */
+/* Dreams POS inspired theme for POSBright */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
@@ -239,6 +239,10 @@ body {
   font-weight: 700;
   font-size: 1.05rem;
   color: var(--dreams-text);
+  max-width: 14rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .top-navbar-icon-btn {
@@ -537,6 +541,64 @@ body {
 }
 
 /* POS register inside shared app shell (teller / manager / etc.) */
+.pos-app-shell {
+  --dreams-topbar-height: 44px;
+}
+
+.pos-app-shell .top-navbar {
+  padding-right: 0.75rem;
+  box-shadow: none;
+}
+
+.pos-app-shell .top-navbar-left,
+.pos-app-shell .top-navbar-right {
+  gap: 0.45rem;
+}
+
+.pos-app-shell .top-navbar-sidebar-zone {
+  padding: 0 0.6rem 0 0.85rem;
+}
+
+.pos-app-shell .top-navbar-logo,
+.pos-app-shell .top-navbar-icon-btn {
+  width: 1.7rem;
+  height: 1.7rem;
+  font-size: 0.88rem;
+  border-radius: 0.4rem;
+}
+
+.pos-app-shell .top-navbar-collapse-btn {
+  width: 1.7rem;
+  height: 1.7rem;
+  font-size: 1.2rem;
+}
+
+.pos-app-shell .top-navbar-brand {
+  gap: 0.45rem;
+}
+
+.pos-app-shell .top-navbar-brand-text {
+  font-size: 0.9rem;
+}
+
+.pos-app-shell .lang-toggle-btn {
+  padding: 0.18rem 0.5rem;
+}
+
+.pos-app-shell .user-menu-trigger {
+  padding: 0.12rem 0.45rem 0.12rem 0.12rem;
+}
+
+.pos-app-shell .user-avatar {
+  width: 1.5rem;
+  height: 1.5rem;
+  font-size: 0.72rem;
+}
+
+.pos-app-shell .user-menu-name {
+  font-size: 0.78rem;
+}
+
 .pos-app-shell .content-wrapper.pos-content-wrapper {
   padding: 0;
   display: flex;
@@ -555,7 +617,7 @@ body {
 }
 
 .content {
-  padding: 1.5rem;
+  padding: 0.65rem 1.25rem 1.25rem;
 }
 
 /* Bootstrap overrides */
@@ -588,7 +650,7 @@ body {
 }
 
 .page-welcome {
-  margin-bottom: 1.25rem;
+  margin-bottom: 0.85rem;
 }
 
 .page-welcome h4 {
@@ -614,45 +676,49 @@ body {
 .metric-card {
   --metric-accent: var(--dreams-orange);
   --metric-accent-soft: var(--dreams-orange-soft);
-  border-radius: 0.75rem;
-  padding: 1.25rem 1.35rem;
+  border-radius: 0.65rem;
+  padding: 0.7rem 0.9rem;
   color: var(--dreams-text);
   background: var(--dreams-surface);
   border: 1.5px solid var(--metric-accent);
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  min-height: 120px;
+  min-height: 78px;
   box-shadow: var(--shadow-card);
 }
 
 .metric-card small {
   color: var(--dreams-text-muted);
-  font-size: 0.82rem;
+  font-size: 0.75rem;
 }
 
 .metric-card h3 {
-  font-size: 1.65rem;
+  font-size: 1.28rem;
   font-weight: 700;
-  margin: 0.35rem 0;
+  margin: 0.12rem 0;
   color: var(--dreams-text);
 }
 
 .metric-sub {
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   color: var(--dreams-text-muted);
 }
 
 .metric-icon {
-  width: 2.75rem;
-  height: 2.75rem;
-  border-radius: 0.65rem;
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 0.5rem;
   background: var(--metric-accent-soft);
   color: var(--metric-accent);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+}
+
+.metric-icon .fs-4 {
+  font-size: 1.1rem;
 }
 
 .metric-orange {
@@ -677,10 +743,25 @@ body {
 
 .table thead th {
   background: #f8f9fb;
-  font-size: 0.82rem;
+  font-size: 0.72rem;
   font-weight: 600;
   color: var(--dreams-text-muted);
   border-bottom: 1px solid var(--dreams-border);
+  white-space: nowrap;
+  padding: 0.45rem 0.55rem;
+  vertical-align: middle;
+}
+
+.table tbody td {
+  font-size: 0.78rem;
+  white-space: nowrap;
+  vertical-align: middle;
+  padding: 0.4rem 0.55rem;
+}
+
+.table .badge {
+  font-size: 0.65rem;
+  font-weight: 600;
 }
 
 .badge.bg-primary {
@@ -989,6 +1070,11 @@ body {
   padding-top: 0;
 }
 
+.admin-page.container-fluid {
+  padding-top: 0;
+  padding-bottom: 0.25rem;
+}
+
 .admin-page-title {
   font-weight: 700;
   color: var(--dreams-text);
@@ -1005,11 +1091,11 @@ body {
 .settings-page {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - var(--dreams-topbar-height) - 3rem);
-  height: calc(100dvh - var(--dreams-topbar-height) - 3rem);
+  height: calc(100vh - var(--dreams-topbar-height) - 2rem);
+  height: calc(100dvh - var(--dreams-topbar-height) - 2rem);
   min-height: 0;
-  padding-top: 0.75rem;
-  padding-bottom: 0.75rem;
+  padding-top: 0;
+  padding-bottom: 0.5rem;
 }
 
 .settings-page > .row {
@@ -1252,17 +1338,19 @@ body {
   background: #f8f9fb;
   border-bottom: 1px solid var(--dreams-border);
   color: var(--dreams-text-muted);
-  font-size: 0.82rem;
+  font-size: 0.72rem;
   font-weight: 600;
-  padding: 0.85rem 1rem;
+  padding: 0.45rem 0.55rem;
   white-space: nowrap;
+  vertical-align: middle;
 }
 
 .admin-table tbody td {
-  padding: 0.85rem 1rem;
+  padding: 0.4rem 0.55rem;
   vertical-align: middle;
   border-bottom: 1px solid #f0f2f5;
-  font-size: 0.9rem;
+  font-size: 0.78rem;
+  white-space: nowrap;
 }
 
 .admin-table tbody tr:last-child td {
@@ -1289,6 +1377,7 @@ body {
   background: #f6f8fb;
   padding: 0;
   border-bottom: 1px solid #e6ebf2;
+  white-space: normal;
 }
 
 .admin-table tbody tr.plan-installments-row:hover {
@@ -1308,13 +1397,13 @@ body {
 }
 
 .plan-installments-wrap .table thead th {
-  font-size: 0.75rem;
-  padding: 0.55rem 0.85rem;
+  font-size: 0.72rem;
+  padding: 0.4rem 0.55rem;
 }
 
 .plan-installments-wrap .table tbody td {
-  padding: 0.6rem 0.85rem;
-  font-size: 0.85rem;
+  padding: 0.35rem 0.55rem;
+  font-size: 0.78rem;
 }
 
 .plan-expand-icon {
@@ -1330,10 +1419,10 @@ body {
   align-items: center;
   background: #e8f4fd;
   color: #4b7bff;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 700;
   line-height: 1.2;
-  padding: 0.25rem 0.55rem;
+  padding: 0.18rem 0.45rem;
   border-radius: 0.35rem;
   white-space: nowrap;
   letter-spacing: 0.02em;
@@ -1540,8 +1629,60 @@ body {
   color: var(--dreams-orange-dark);
 }
 
-.report-page .report-filters .form-label {
-  margin-bottom: 0.35rem;
+.report-page .report-filter-row th {
+  padding-top: 0.3rem;
+  padding-bottom: 0.5rem;
+  vertical-align: middle;
+  font-weight: 400;
+  background: #f8f9fb;
+}
+
+.report-page .report-filter-row .form-control,
+.report-page .report-filter-row .form-select {
+  min-width: 0;
+  width: 100%;
+  font-size: 0.72rem;
+  padding: 0.2rem 0.4rem;
+  min-height: 1.7rem;
+}
+
+.report-page .report-date-range {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.3rem;
+  min-width: 16.5rem;
+}
+
+.report-page .report-date-range .form-control {
+  flex: 1 1 0;
+  width: auto;
+  min-width: 7.5rem;
+}
+
+.report-page .report-date-range-sep {
+  color: var(--dreams-text-muted);
+  font-size: 0.72rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.report-page .report-teller-filter {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 9.5rem;
+}
+
+.report-page .report-teller-filter .form-select {
+  flex: 1 1 auto;
+}
+
+.report-page .report-teller-filter .btn {
+  padding: 0.2rem 0.45rem;
+  font-size: 0.72rem;
+  line-height: 1.2;
+  min-height: 1.7rem;
 }
 
 .report-page .pagination .page-link {
@@ -2100,6 +2241,13 @@ body {
   margin-bottom: 0.5rem;
 }
 
+.auth-register-row {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 1.75rem;
+}
+
 .auth-phone-input {
   display: flex;
   align-items: stretch;
@@ -2236,7 +2384,8 @@ body {
     right: 0.85rem;
   }
 
-  .auth-register-form {
+  .auth-register-form,
+  .auth-register-row {
     grid-template-columns: 1fr;
   }
 
@@ -2350,7 +2499,7 @@ body {
 /* ========== App shell responsive ========== */
 @media (max-width: 991px) {
   .content {
-    padding: 1rem;
+    padding: 0.55rem 1rem 1rem;
   }
 
   .top-navbar {
@@ -2389,7 +2538,7 @@ body {
 
 @media (max-width: 576px) {
   .content {
-    padding: 0.75rem;
+    padding: 0.45rem 0.75rem 0.75rem;
   }
 
   .admin-page-title {

@@ -1,5 +1,6 @@
 import { formatMoney } from './currency';
 import { formatOrderId } from './orderId';
+import { resolveBusinessName } from '../config/app';
 
 export const RECEIPT_PAPER_SIZES = [
   {
@@ -213,7 +214,7 @@ export function createInstallmentReceiptPrintJob({
   return {
     pageSize: receiptPrintPageSize(paper),
     preview: {
-      businessName: settings?.businessName,
+      businessName: resolveBusinessName(settings),
       currency,
       taxRate: 0,
       receipt: { ...template, invoiceTitle: built.invoiceTitle },
@@ -231,6 +232,61 @@ export function createInstallmentReceiptPrintJob({
       showChange: false,
       infoLines: built.infoLines,
       subtotalLabel: built.subtotalLabel,
+    },
+  };
+}
+
+const RETURN_TYPE_LABELS = {
+  cash: 'Cash refund',
+  defect: 'Defect',
+  warranty: 'Warranty claim',
+};
+
+export function createReturnReceiptPrintJob({ settings, currency, cashierName, result }) {
+  const template = mergeReceipt(settings?.receipt, settings?.receiptFooter);
+  const paper = getReceiptPaperSize(template.paperSize);
+  const lines = result?.lines || [];
+  const extra = [];
+  if (result?.installment_adjustment) {
+    extra.push({
+      label: 'Plan remaining',
+      value: Number(result.installment_adjustment.unpaid_after) || 0,
+    });
+  }
+  const refundCash = Number(result?.refund_cash) || 0;
+  return {
+    pageSize: receiptPrintPageSize(paper),
+    preview: {
+      businessName: resolveBusinessName(settings),
+      currency,
+      taxRate: 0,
+      receipt: { ...template, invoiceTitle: 'Return Receipt' },
+      items: lines.map((line) => ({
+        name: line.item_name,
+        qty: line.qty,
+        price: line.line_total,
+      })),
+      cashierName: cashierName || 'CASHIER',
+      saleNumber: result?.return_number || `RET${Date.now()}`,
+      soldAt: result?.created_at || new Date().toISOString(),
+      subtotal: Number(result?.refund_value) || 0,
+      tax: 0,
+      total: refundCash,
+      totalLabel: result?.return_type === 'cash' ? 'Cash refund' : 'Amount paid',
+      tendered: refundCash,
+      tenderedLabel: refundCash > 0 ? 'Refunded' : 'No cash paid',
+      extraTotalLines: extra,
+      showChange: false,
+      infoLines: [
+        { label: 'Original order', value: formatOrderId(result?.order_number) },
+        { label: 'Return ID', value: result?.return_number || '—' },
+        { label: 'Return type', value: RETURN_TYPE_LABELS[result?.return_type] || 'Cash refund' },
+        result?.replacement_qty
+          ? { label: 'Replacement qty', value: String(result.replacement_qty) }
+          : null,
+        result?.reason ? { label: 'Reason', value: result.reason } : null,
+      ].filter(Boolean),
+      subtotalLabel: 'Returned value',
     },
   };
 }

@@ -7,6 +7,7 @@ import {
   DEFAULT_CURRENCY,
   formatMoney as formatMoneyUtil,
 } from '../utils/currency';
+import { APP_NAME, getPageTitle, resolveBusinessName } from '../config/app';
 
 const TenantSettingsContext = createContext(null);
 
@@ -39,8 +40,16 @@ export const useCurrency = () => {
   };
 };
 
+/** Store display name from Settings, with product name as fallback */
+export const useBusinessName = () => {
+  const ctx = useContext(TenantSettingsContext);
+  const { user, isSuperAdmin } = useAuth();
+  if (isSuperAdmin) return APP_NAME;
+  return resolveBusinessName(ctx?.settings || user?.tenantSettings);
+};
+
 export const TenantSettingsProvider = ({ children }) => {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isSuperAdmin } = useAuth();
   const [settings, setSettings] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -63,6 +72,11 @@ export const TenantSettingsProvider = ({ children }) => {
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    const storeName = isSuperAdmin ? APP_NAME : resolveBusinessName(settings || user?.tenantSettings);
+    document.title = getPageTitle(undefined, storeName);
+  }, [isSuperAdmin, settings, user?.tenantSettings]);
 
   useEffect(() => {
     const onVisible = () => {

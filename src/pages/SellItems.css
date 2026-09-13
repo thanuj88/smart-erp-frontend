@@ -176,6 +176,12 @@
   gap: 0.5rem;
 }
 
+.pos-hold-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .pos-mode-bar .pos-action-btn {
   flex: none;
   min-width: 5.5rem;
@@ -1047,6 +1053,106 @@ body.pos-installment-modal-open .pos-plans-area::-webkit-scrollbar {
   flex: 1;
   overflow-y: auto;
   padding: 1rem 1.25rem;
+}
+
+.pos-return-search {
+  flex: 1;
+  max-width: 28rem;
+}
+
+.pos-return-search input {
+  padding-right: 4.75rem;
+}
+
+.pos-return-lookup-btn {
+  position: absolute;
+  right: 0.35rem;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: #ff9f43;
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.8rem;
+  border-radius: 0.45rem;
+  padding: 0.35rem 0.75rem;
+}
+
+.pos-return-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.pos-return-note {
+  margin-bottom: 1rem;
+}
+
+.pos-return-lines {
+  background: #fff;
+  border: 1px solid #e8ecef;
+  border-radius: 0.75rem;
+  padding: 1rem;
+}
+
+.pos-return-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #f0f2f5;
+}
+
+.pos-return-line:last-child {
+  border-bottom: none;
+}
+
+.pos-return-line-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.pos-return-layout .pos-order-totals {
+  padding: 0.85rem 1.15rem 0.25rem;
+}
+
+.pos-return-types {
+  border: 0;
+  margin: 0 0 0.85rem;
+  padding: 0;
+}
+
+.pos-return-types legend {
+  margin-bottom: 0.4rem;
+}
+
+.pos-return-type-option {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 0.35rem;
+  margin-left: 0.15rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.pos-return-type-option input {
+  accent-color: #ff9f43;
+}
+
+.pos-return-layout .pos-total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.pos-return-layout .pos-total-row strong {
+  white-space: nowrap;
 }
 
 .pos-plans-grid {

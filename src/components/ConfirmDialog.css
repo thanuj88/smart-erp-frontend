@@ -54,6 +54,14 @@
   margin-top: 0.85rem;
 }
 
+.app-confirm-actions--leave {
+  flex-wrap: wrap;
+}
+
+.app-confirm-actions--leave .app-confirm-btn {
+  min-width: 6rem;
+}
+
 .app-confirm-btn {
   border: none;
   border-radius: 0.55rem;
@@ -114,6 +122,10 @@
 @media (max-width: 480px) {
   .app-confirm-actions {
     flex-direction: column-reverse;
+  }
+
+  .app-confirm-actions--leave {
+    flex-direction: column;
   }
 
   .app-confirm-btn {

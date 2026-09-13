@@ -2,6 +2,7 @@ import React from 'react';
 import { Link as RouterLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useLayout } from '../contexts/LayoutContext';
+import { usePosSaleGuard } from '../contexts/PosSaleGuardContext';
 import { useTranslation } from 'react-i18next';
 import { PERMISSIONS } from '../services';
 
@@ -10,6 +11,7 @@ const Sidebar = () => {
   const location = useLocation();
   const { t } = useTranslation();
   const { sidebarCollapsed, mobileMenuOpen, closeMobileMenu } = useLayout();
+  const { requestNavigation } = usePosSaleGuard();
 
   const isActive = (path) => location.pathname === path;
 
@@ -19,7 +21,10 @@ const Sidebar = () => {
       className={`nav-link ${isActive(to) ? 'active' : ''}`}
       title={label}
       aria-label={label}
-      onClick={closeMobileMenu}
+      onClick={(e) => {
+        closeMobileMenu();
+        if (!requestNavigation(to)) e.preventDefault();
+      }}
     >
       <i className={`bi ${icon}`}></i>
       <span>{label}</span>

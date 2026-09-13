@@ -11,7 +11,7 @@ const Login = () => {
   useAuthBodyClass('login');
 
   const [mode, setMode] = useState('password');
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [pin, setPin] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -30,7 +30,7 @@ const Login = () => {
     setError('');
     setLoading(true);
     try {
-      const data = await login(username, password);
+      const data = await login(email, password);
       navigate(resolveHomePath(data.user), { replace: true });
     } catch (err) {
       setError(err.response?.data?.error || 'Login failed. Please try again.');
@@ -44,7 +44,7 @@ const Login = () => {
     setError('');
     setLoading(true);
     try {
-      const data = await loginPin(username, pin);
+      const data = await loginPin(email, pin);
       navigate(resolveHomePath(data.user), { replace: true });
     } catch (err) {
       setError(err.response?.data?.error || 'PIN login failed.');
@@ -122,20 +122,20 @@ const Login = () => {
       {mode === 'password' ? (
         <form onSubmit={handlePasswordSubmit} className="auth-form">
           <div className="mb-3">
-            <label htmlFor="username" className="form-label auth-label">
-              Username or email <span className="text-danger">*</span>
+            <label htmlFor="email" className="form-label auth-label">
+              {t('email')} <span className="text-danger">*</span>
             </label>
             <div className="auth-input-wrap">
               <input
-                id="username"
-                type="text"
+                id="email"
+                type="email"
                 className="form-control auth-input"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder={t('enterUsername')}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder={t('enterEmail')}
                 required
                 autoFocus
-                autoComplete="username"
+                autoComplete="email"
                 disabled={loading}
               />
               <i className="bi bi-envelope auth-input-icon"></i>
@@ -191,22 +191,23 @@ const Login = () => {
       ) : (
         <form onSubmit={handlePinSubmit} className="auth-form">
           <div className="mb-3">
-            <label htmlFor="pinUsername" className="form-label auth-label">
-              Teller username <span className="text-danger">*</span>
+            <label htmlFor="pinEmail" className="form-label auth-label">
+              {t('email')} <span className="text-danger">*</span>
             </label>
             <input
-              id="pinUsername"
-              type="text"
+              id="pinEmail"
+              type="email"
               className="form-control auth-input auth-input-pin"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="storecode-teller"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder={t('enterEmail')}
               required
               autoFocus
+              autoComplete="email"
               disabled={loading}
             />
             <div className="form-text text-muted small">
-              Use your full username (store prefix + name), e.g. brightmart-john
+              Use the teller account email, e.g. teller@brightmart.local
             </div>
           </div>
           <div className="mb-3">

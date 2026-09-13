@@ -17,7 +17,7 @@ const PlatformReports = () => {
         <div className="col-md-6">
           <div className="card">
             <div className="card-header">Subscriptions by plan</div>
-            <table className="table mb-0">
+            <table className="table admin-table mb-0">
               <tbody>
                 {(data.byPlan || []).map((r) => (
                   <tr key={r.plan_code}><td>{r.plan_code}</td><td>{r.count}</td></tr>
@@ -29,7 +29,7 @@ const PlatformReports = () => {
         <div className="col-md-6">
           <div className="card">
             <div className="card-header">Users by role</div>
-            <table className="table mb-0">
+            <table className="table admin-table mb-0">
               <tbody>
                 {(data.byRole || []).map((r) => (
                   <tr key={r.role}><td>{r.role}</td><td>{r.count}</td></tr>

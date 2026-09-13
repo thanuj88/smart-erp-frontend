@@ -212,7 +212,7 @@ const InstallmentPayments = () => {
   };
 
   const renderInstallmentsTable = (installments, customerName, customerPhone) => (
-    <table className="table table-sm table-hover mb-0">
+    <table className="table table-hover admin-table mb-0">
       <thead className="table-light">
         <tr>
           <th>Payment #</th>
@@ -281,7 +281,7 @@ const InstallmentPayments = () => {
   }
 
   return (
-    <div className="container-fluid py-4 matte-page admin-page">
+    <div className="container-fluid matte-page admin-page">
       <PageHeader
         title="Installment Payments"
         subtitle="View installment plans and record pending or overdue payments."
@@ -352,17 +352,10 @@ const InstallmentPayments = () => {
 
           <div className="card">
             <div className="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
-              <div>
-                <h5 className="admin-section-title mb-1">Installment Plans</h5>
-                <p className="admin-section-subtitle">
-                  {plansTab === 'active'
-                    ? 'Active installment plans'
-                    : plansTab === 'completed'
-                      ? 'Completed installment plans'
-                      : 'All installment plans'}
-                </p>
+              <div className="d-flex align-items-baseline gap-2">
+                <h5 className="admin-section-title mb-0">Installment Plans</h5>
+                <span className="text-muted small">{plans.length}</span>
               </div>
-              <span className="badge rounded-pill text-bg-primary">{plans.length} total</span>
             </div>
             <div className="card-body p-0">
               {loading && plans.length === 0 ? (

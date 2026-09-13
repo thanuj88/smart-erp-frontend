@@ -3,8 +3,9 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { useLayout } from '../contexts/LayoutContext';
+import { useBusinessName } from '../contexts/TenantSettingsContext';
+import { usePosSaleGuard } from '../contexts/PosSaleGuardContext';
 import clsx from 'clsx';
-import { APP_NAME } from '../config/app';
 import UserMenu from './UserMenu';
 
 const Header = () => {
@@ -13,7 +14,14 @@ const Header = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { sidebarCollapsed, toggleSidebar } = useLayout();
+  const businessName = useBusinessName();
+  const { requestNavigation } = usePosSaleGuard();
   const isPos = location.pathname === '/sell';
+
+  const goHome = () => {
+    const home = getHomePath();
+    if (requestNavigation(home)) navigate(home);
+  };
   const [isFullscreen, setIsFullscreen] = useState(Boolean(document.fullscreenElement));
 
   useEffect(() => {
@@ -48,15 +56,15 @@ const Header = () => {
         <div className={`top-navbar-sidebar-zone d-none d-lg-flex${sidebarCollapsed ? ' is-collapsed' : ''}`}>
           <div
             className="top-navbar-brand"
-            onClick={() => navigate(getHomePath())}
+            onClick={goHome}
             role="button"
             tabIndex={0}
-            onKeyDown={(e) => e.key === 'Enter' && navigate(getHomePath())}
+            onKeyDown={(e) => e.key === 'Enter' && goHome()}
           >
             <span className="top-navbar-logo">
               <i className="bi bi-bag-check-fill"></i>
             </span>
-            <span className="top-navbar-brand-text">{APP_NAME}</span>
+            <span className="top-navbar-brand-text" title={businessName}>{businessName}</span>
           </div>
           <button
             type="button"
@@ -70,15 +78,15 @@ const Header = () => {
         </div>
         <div
           className="top-navbar-brand d-lg-none"
-          onClick={() => navigate(getHomePath())}
+          onClick={goHome}
           role="button"
           tabIndex={0}
-          onKeyDown={(e) => e.key === 'Enter' && navigate(getHomePath())}
+          onKeyDown={(e) => e.key === 'Enter' && goHome()}
         >
           <span className="top-navbar-logo">
             <i className="bi bi-bag-check-fill"></i>
           </span>
-          <span className="top-navbar-brand-text">{APP_NAME}</span>
+            <span className="top-navbar-brand-text" title={businessName}>{businessName}</span>
         </div>
       </div>
 

@@ -11,7 +11,6 @@ const Dashboard = () => {
   const { formatMoney, settings } = useCurrency();
   const { t } = useTranslation();
   const [dailySummary, setDailySummary] = useState(null);
-  const [todaySales, setTodaySales] = useState([]);
   const [recentSales, setRecentSales] = useState([]);
   const [lowStock, setLowStock] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -59,14 +58,12 @@ const Dashboard = () => {
 
   const loadData = useCallback(async () => {
     try {
-      const [daily, salesData, recentData] = await Promise.all([
+      const [daily, recentData] = await Promise.all([
         saleService.getDailySummary(),
-        saleService.getToday(),
         saleService.getRecent(7),
       ]);
 
       setDailySummary(daily);
-      setTodaySales(salesData);
       setRecentSales(recentData || []);
 
       if (isAdmin) {
@@ -109,10 +106,12 @@ const Dashboard = () => {
     );
   }
 
-  const totalRevenue = dailySummary?.total_actual_income || 0;
   const todayRevenue = dailySummary?.total_revenue || 0;
-  const todaySalesCount = dailySummary?.total_sales || 0;
-  const totalItemsSold = dailySummary?.total_items_sold || 0;
+  const todayActualIncome = dailySummary?.total_actual_income || 0;
+  const todayProfit = dailySummary?.total_profit || 0;
+  const todayCollections =
+    (Number(dailySummary?.down_payment_income) || 0) +
+    (Number(dailySummary?.installment_income) || 0);
   
 
   return (
@@ -137,13 +136,13 @@ const Dashboard = () => {
         </div>
       )}
 
-      <div className="row g-4 mb-4">
+      <div className="row g-3 mb-3">
         <div className="col-12 col-sm-6 col-xl-3">
           <div className="metric-card metric-orange">
             <div className="metric-info">
-              <small>Today's Revenue</small>
+              <small>Today's Cash Revenue</small>
               <h3>{formatMoney(todayRevenue)}</h3>
-              <div className="metric-sub">{totalItemsSold} items sold</div>
+              <div className="metric-sub">Cash sales only</div>
             </div>
             <div className="metric-icon">
               <i className="bi bi-currency-dollar fs-4"></i>
@@ -152,24 +151,24 @@ const Dashboard = () => {
         </div>
 
         <div className="col-12 col-sm-6 col-xl-3">
-          <div className="metric-card metric-dark">
+          <div className="metric-card metric-blue">
             <div className="metric-info">
-              <small>Today's Sales</small>
-              <h3>{todaySalesCount}</h3>
-              <div className="metric-sub">{todaySales.length} transactions</div>
+              <small>Installment In</small>
+              <h3>{formatMoney(todayCollections)}</h3>
+              <div className="metric-sub">Down payments + collections</div>
             </div>
             <div className="metric-icon">
-              <i className="bi bi-basket3 fs-4"></i>
+              <i className="bi bi-calendar-check fs-4"></i>
             </div>
           </div>
         </div>
 
         <div className="col-12 col-sm-6 col-xl-3">
-          <div className="metric-card metric-teal">
+          <div className="metric-card metric-dark">
             <div className="metric-info">
-              <small>Total Revenue</small>
-              <h3>{formatMoney(totalRevenue)}</h3>
-              <div className="metric-sub">Total income</div>
+              <small>Today's Actual Income</small>
+              <h3>{formatMoney(todayActualIncome)}</h3>
+              <div className="metric-sub">Cash + installment money</div>
             </div>
             <div className="metric-icon">
               <i className="bi bi-graph-up fs-4"></i>
@@ -178,14 +177,14 @@ const Dashboard = () => {
         </div>
 
         <div className="col-12 col-sm-6 col-xl-3">
-          <div className="metric-card metric-blue">
+          <div className="metric-card metric-teal">
             <div className="metric-info">
-              <small>Items Sold</small>
-              <h3>{totalItemsSold}</h3>
-              <div className="metric-sub">Total items</div>
+              <small>Cash Sales Profit</small>
+              <h3>{formatMoney(todayProfit)}</h3>
+              <div className="metric-sub">On cash sales only</div>
             </div>
             <div className="metric-icon">
-              <i className="bi bi-box-seam fs-4"></i>
+              <i className="bi bi-piggy-bank fs-4"></i>
             </div>
           </div>
         </div>
@@ -263,15 +262,12 @@ const Dashboard = () => {
         <div className="col-12">
           <div className="card shadow-sm rounded-4">
             <div className="card-body">
-              <div className="d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between mb-4 gap-3">
-                <div>
-                  <h5 className="card-title">Recent Sales</h5>
-                  <p className="text-muted mb-0">Latest sales activity from the last 7 days.</p>
-                </div>
-                <span className="badge bg-info text-dark rounded-pill py-2 px-3">{recentSales.length} total</span>
+              <div className="d-flex align-items-baseline gap-2 mb-2">
+                <h5 className="card-title mb-0">Recent Sales</h5>
+                <span className="text-muted small">{recentSales.length}</span>
               </div>
               <div className="table-responsive">
-                <table className="table table-borderless align-middle mb-0">
+                <table className="table table-hover admin-table mb-0">
                   <thead className="table-light">
                     <tr>
                       <th>Order ID</th>
@@ -292,14 +288,28 @@ const Dashboard = () => {
                           <td className="order-id-cell">
                             <span className="order-id-badge">{formatOrderId(sale.order_number, sale.id)}</span>
                           </td>
-                          <td>{new Date(sale.sale_date).toLocaleString()}</td>
+                          <td className="text-muted text-nowrap">
+                            {new Date(sale.sale_date).toLocaleString(undefined, {
+                              month: 'numeric',
+                              day: 'numeric',
+                              year: 'numeric',
+                              hour: 'numeric',
+                              minute: '2-digit',
+                            })}
+                          </td>
                           <td>{sale.quantity}</td>
                           <td>
-                            <span className={`badge rounded-pill ${sale.payment_type === 'cash' ? 'bg-success' : 'bg-primary'}`}>
-                              {sale.payment_type || 'Cash'}
-                            </span>
+                            {sale.is_return || sale.return_flag ? (
+                              <span className="badge rounded-pill bg-danger">Return</span>
+                            ) : (
+                              <span className={`badge rounded-pill ${sale.payment_type === 'cash' ? 'bg-success' : 'bg-primary'}`}>
+                                {sale.payment_type || 'Cash'}
+                              </span>
+                            )}
                           </td>
-                          <td className="fw-semibold">{formatMoney(sale.total)}</td>
+                          <td className={`fw-semibold${sale.is_return || sale.return_flag ? ' text-danger' : ''}`}>
+                            {formatMoney(sale.total)}
+                          </td>
                         </tr>
                       ))
                     )}

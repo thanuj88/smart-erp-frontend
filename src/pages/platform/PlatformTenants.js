@@ -5,7 +5,6 @@ const emptyForm = () => ({
   name: '',
   slug: '',
   planCode: 'trial',
-  adminUsername: '',
   adminEmail: '',
   adminPassword: '',
   adminFullName: '',
@@ -99,7 +98,7 @@ const PlatformTenants = () => {
 
       <div className="card">
         <div className="table-responsive">
-          <table className="table table-hover mb-0">
+          <table className="table table-hover admin-table mb-0">
             <thead className="table-light">
               <tr>
                 <th>Name</th>
@@ -188,13 +187,14 @@ const PlatformTenants = () => {
                       </select>
                     </div>
                     <div className="col-md-6">
-                      <label htmlFor="adminUsername" className="form-label fw-semibold">Admin username</label>
+                      <label htmlFor="adminEmail" className="form-label fw-semibold">Admin email</label>
                       <input
-                        id="adminUsername"
+                        id="adminEmail"
                         className="form-control"
-                        placeholder="Tenant admin login"
-                        value={form.adminUsername}
-                        onChange={(e) => setForm({ ...form, adminUsername: e.target.value })}
+                        type="email"
+                        placeholder="admin@store.com"
+                        value={form.adminEmail}
+                        onChange={(e) => setForm({ ...form, adminEmail: e.target.value })}
                         required
                       />
                     </div>
@@ -209,17 +209,6 @@ const PlatformTenants = () => {
                         onChange={(e) => setForm({ ...form, adminPassword: e.target.value })}
                         required
                         minLength={8}
-                      />
-                    </div>
-                    <div className="col-md-6">
-                      <label htmlFor="adminEmail" className="form-label fw-semibold">Admin email</label>
-                      <input
-                        id="adminEmail"
-                        className="form-control"
-                        type="email"
-                        placeholder="Optional"
-                        value={form.adminEmail}
-                        onChange={(e) => setForm({ ...form, adminEmail: e.target.value })}
                       />
                     </div>
                     <div className="col-12">

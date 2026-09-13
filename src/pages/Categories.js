@@ -135,7 +135,7 @@ function Categories() {
   }
 
   return (
-    <div className="container-fluid py-4 matte-page admin-page">
+    <div className="container-fluid matte-page admin-page">
       <PageHeader
         title={t('Category Management')}
         subtitle={t('Manage categories in one place.')}

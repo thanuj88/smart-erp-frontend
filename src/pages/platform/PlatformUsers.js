@@ -1,13 +1,11 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { platformService } from '../../services';
-import { needsTenantUsernamePrefix, usernamePrefixFromSlug } from '../../utils/staffUsername';
 
 const STAFF_ROLES = ['TENANT_ADMIN', 'MANAGER', 'TELLER', 'INVENTORY', 'ACCOUNTANT'];
 const PLATFORM_ROLES = ['SUPER_ADMIN', ...STAFF_ROLES];
 
 const emptyForm = () => ({
   tenantId: '',
-  username: '',
   email: '',
   password: '',
   role: 'MANAGER',
@@ -32,16 +30,6 @@ const PlatformUsers = () => {
   useEffect(() => {
     load().catch(() => setError('Load failed'));
   }, []);
-
-  const selectedTenant = useMemo(
-    () => tenants.find((t) => String(t.id) === String(form.tenantId)),
-    [tenants, form.tenantId]
-  );
-
-  const usernamePrefix = useMemo(() => {
-    if (!needsTenantUsernamePrefix(form.role) || !selectedTenant) return '';
-    return usernamePrefixFromSlug(selectedTenant.slug);
-  }, [form.role, selectedTenant]);
 
   const openCreate = () => {
     setForm(emptyForm());
@@ -112,10 +100,10 @@ const PlatformUsers = () => {
 
       <div className="card">
         <div className="table-responsive">
-          <table className="table table-hover mb-0">
+          <table className="table table-hover admin-table mb-0">
             <thead className="table-light">
               <tr>
-                <th>Username</th>
+                <th>Email</th>
                 <th>Tenant</th>
                 <th>Role</th>
                 <th>Active</th>
@@ -125,7 +113,7 @@ const PlatformUsers = () => {
             <tbody>
               {users.map((u) => (
                 <tr key={u.id}>
-                  <td className="fw-semibold">{u.username}</td>
+                  <td className="fw-semibold">{u.email || u.username}</td>
                   <td>{u.tenant_name || 'Platform'}</td>
                   <td>{u.role}</td>
                   <td>{u.is_active ? 'Yes' : 'No'}</td>
@@ -205,32 +193,17 @@ const PlatformUsers = () => {
                       </select>
                     </div>
                     <div className="col-md-6">
-                      <label className="form-label fw-semibold">Username</label>
-                      {usernamePrefix ? (
-                        <>
-                          <div className="input-group">
-                            <span className="input-group-text text-muted">{usernamePrefix}</span>
-                            <input
-                              className="form-control"
-                              placeholder="e.g. john"
-                              value={form.username}
-                              onChange={(e) => setForm({ ...form, username: e.target.value })}
-                              required
-                              autoFocus
-                            />
-                          </div>
-                          <div className="form-text">Saved as {usernamePrefix}your-name for this store.</div>
-                        </>
-                      ) : (
-                        <input
-                          className="form-control"
-                          placeholder="Username *"
-                          value={form.username}
-                          onChange={(e) => setForm({ ...form, username: e.target.value })}
-                          required
-                          autoFocus
-                        />
-                      )}
+                      <label className="form-label fw-semibold">Email</label>
+                      <input
+                        className="form-control"
+                        type="email"
+                        placeholder="user@store.com"
+                        value={form.email}
+                        onChange={(e) => setForm({ ...form, email: e.target.value })}
+                        required
+                        autoFocus
+                      />
+                      <div className="form-text">Email is unique and used to sign in.</div>
                     </div>
                     <div className="col-md-6">
                       <label className="form-label fw-semibold">Password</label>
@@ -251,16 +224,6 @@ const PlatformUsers = () => {
                         placeholder="Optional"
                         value={form.fullName}
                         onChange={(e) => setForm({ ...form, fullName: e.target.value })}
-                      />
-                    </div>
-                    <div className="col-md-6">
-                      <label className="form-label fw-semibold">Email</label>
-                      <input
-                        className="form-control"
-                        type="email"
-                        placeholder="Optional"
-                        value={form.email}
-                        onChange={(e) => setForm({ ...form, email: e.target.value })}
                       />
                     </div>
                     {form.role === 'TELLER' && (

@@ -15,6 +15,7 @@ import { resolveCategoryIconKey } from '../config/categoryIcons';
 import { useCurrency } from '../contexts/TenantSettingsContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useConfirm } from '../contexts/ConfirmContext';
+import { usePosSaleGuard } from '../contexts/PosSaleGuardContext';
 import {
   validateDistinctCustomerAndWitness,
   getInstallmentFieldErrors,
@@ -26,12 +27,42 @@ import {
   NIC_FORMAT_MESSAGE,
 } from '../utils/installmentValidation';
 import { generateOrderId, formatOrderId } from '../utils/orderId';
-import { billToReceiptItems, mergeReceipt, getReceiptPaperSize, receiptPrintPageSize, createInstallmentReceiptPrintJob } from '../utils/receipt';
+import { billToReceiptItems, mergeReceipt, getReceiptPaperSize, receiptPrintPageSize, createInstallmentReceiptPrintJob, createReturnReceiptPrintJob } from '../utils/receipt';
 import { applyPromotionPrice } from '../utils/promotions';
+import { resolveBusinessName } from '../config/app';
 import ReceiptPrintLayer from '../components/ReceiptPrintLayer';
 import './SellItems.css';
 
-const HOLD_KEY = 'pos-held-order';
+const HOLD_KEY_PREFIX = 'pos-held-order';
+const LEGACY_HOLD_KEY = 'pos-held-order';
+
+function holdStorageKey(userId) {
+  return `${HOLD_KEY_PREFIX}:${userId}`;
+}
+
+function readHeldOrder(userId) {
+  if (userId == null || userId === '') return null;
+  try {
+    const raw = localStorage.getItem(holdStorageKey(userId));
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    if (!data?.bill?.length) return null;
+    if (data.userId != null && String(data.userId) !== String(userId)) return null;
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+function writeHeldOrder(userId, data) {
+  if (userId == null || userId === '') return;
+  localStorage.setItem(holdStorageKey(userId), JSON.stringify({ ...data, userId }));
+}
+
+function clearHeldOrder(userId) {
+  if (userId == null || userId === '') return;
+  localStorage.removeItem(holdStorageKey(userId));
+}
 
 /** Fallback when tenant has no installment settings configured yet */
 const DEFAULT_INSTALLMENT_PERIODS = [
@@ -55,6 +86,7 @@ function SellItems() {
   const { formatMoney, currency, settings } = useCurrency();
   const { user } = useAuth();
   const { confirm } = useConfirm();
+  const { setSaleGuard } = usePosSaleGuard();
 
   const [mode, setMode] = useState('cash');
   const [categories, setCategories] = useState([]);
@@ -72,6 +104,7 @@ function SellItems() {
   const [planSearch, setPlanSearch] = useState('');
   const [orderRef, setOrderRef] = useState(() => generateOrderId());
   const [elapsed, setElapsed] = useState(0);
+  const [orderStartedAt, setOrderStartedAt] = useState(null);
   const [walkInCustomer, setWalkInCustomer] = useState('Walk in Customer');
 
   const [interestRates, setInterestRates] = useState({});
@@ -106,6 +139,15 @@ function SellItems() {
   const [paymentNotes, setPaymentNotes] = useState('');
   const [showInstallmentModal, setShowInstallmentModal] = useState(false);
   const [printJob, setPrintJob] = useState(null);
+  const [hasHeldBill, setHasHeldBill] = useState(false);
+  const [openedHold, setOpenedHold] = useState(false);
+  const [returnSearch, setReturnSearch] = useState('');
+  const [returnOrder, setReturnOrder] = useState(null);
+  const [returnQtys, setReturnQtys] = useState({});
+  const [returnReason, setReturnReason] = useState('');
+  const [returnType, setReturnType] = useState('cash');
+  const openedHoldRef = React.useRef(false);
+  openedHoldRef.current = openedHold;
 
   useEffect(() => {
     if (!showInstallmentModal) return undefined;
@@ -118,14 +160,144 @@ function SellItems() {
   }, [showInstallmentModal]);
 
   useEffect(() => {
-    const started = Date.now();
-    const timer = setInterval(() => {
-      setElapsed(Math.floor((Date.now() - started) / 1000));
-    }, 1000);
+    if (bill.length === 0) {
+      setOrderStartedAt(null);
+      setElapsed(0);
+      return undefined;
+    }
+    if (!orderStartedAt) {
+      setOrderStartedAt(Date.now());
+      setElapsed(0);
+      return undefined;
+    }
+    const tick = () => setElapsed(Math.floor((Date.now() - orderStartedAt) / 1000));
+    tick();
+    const timer = setInterval(tick, 1000);
     return () => clearInterval(timer);
-  }, []);
+  }, [bill.length, orderStartedAt]);
 
   const newOrderRef = () => setOrderRef(generateOrderId());
+
+  const saleStateRef = React.useRef({});
+  saleStateRef.current = {
+    bill,
+    mode,
+    customer,
+    witness,
+    includeWitness,
+    downPayment,
+    installmentMonths,
+    walkInCustomer,
+    shipping,
+    shippingPercent,
+    discount,
+    discountPercent,
+    orderRef,
+    orderStartedAt,
+    userId: user?.id,
+  };
+
+  useEffect(() => {
+    localStorage.removeItem(LEGACY_HOLD_KEY);
+  }, []);
+
+  useEffect(() => {
+    setHasHeldBill(Boolean(readHeldOrder(user?.id)));
+    setOpenedHold(false);
+  }, [user?.id]);
+
+  const resetBillCharges = useCallback(() => {
+    setShipping('');
+    setShippingPercent('');
+    setDiscount('');
+    setDiscountPercent('');
+  }, []);
+
+  const voidBillNow = useCallback(() => {
+    setBill([]);
+    setCustomer({ name: '', phone: '', idCardNo: '', email: '', address: '', idImage: null });
+    setWitness({ name: '', phone: '', idCardNo: '', address: '', idImage: null });
+    setIncludeWitness(false);
+    setDownPayment('');
+    resetBillCharges();
+    setShowInstallmentModal(false);
+    setOpenedHold(false);
+    newOrderRef();
+  }, [resetBillCharges]);
+
+  const holdBillNow = useCallback(() => {
+    const sale = saleStateRef.current;
+    if (!sale.bill?.length) return false;
+    writeHeldOrder(sale.userId, {
+      bill: sale.bill,
+      mode: sale.mode,
+      customer: sale.customer,
+      witness: sale.witness,
+      includeWitness: sale.includeWitness,
+      downPayment: sale.downPayment,
+      installmentMonths: sale.installmentMonths,
+      walkInCustomer: sale.walkInCustomer,
+      shipping: sale.shipping,
+      shippingPercent: sale.shippingPercent,
+      discount: sale.discount,
+      discountPercent: sale.discountPercent,
+      orderRef: sale.orderRef,
+      orderStartedAt: sale.orderStartedAt,
+    });
+    setHasHeldBill(true);
+    setOpenedHold(false);
+    setBill([]);
+    resetBillCharges();
+    setShowInstallmentModal(false);
+    newOrderRef();
+    return true;
+  }, [resetBillCharges]);
+
+  const applyHeldOrder = useCallback((data) => {
+    setBill(data.bill || []);
+    if (data.mode) setMode(data.mode);
+    if (data.customer) setCustomer(data.customer);
+    if (data.witness) setWitness(data.witness);
+    if (typeof data.includeWitness === 'boolean') setIncludeWitness(data.includeWitness);
+    if (data.downPayment != null) setDownPayment(data.downPayment);
+    if (data.installmentMonths) setInstallmentMonths(data.installmentMonths);
+    if (data.walkInCustomer) setWalkInCustomer(data.walkInCustomer);
+    setShipping(data.shipping != null ? String(data.shipping) : '');
+    setShippingPercent(data.shippingPercent != null ? String(data.shippingPercent) : '');
+    setDiscount(data.discount != null ? String(data.discount) : '');
+    setDiscountPercent(data.discountPercent != null ? String(data.discountPercent) : '');
+    if (data.orderRef) setOrderRef(data.orderRef);
+    if (data.orderStartedAt) {
+      setOrderStartedAt(data.orderStartedAt);
+      setElapsed(Math.max(0, Math.floor((Date.now() - data.orderStartedAt) / 1000)));
+    }
+    setOpenedHold(true);
+  }, []);
+
+  const releaseOpenedHoldIfNeeded = useCallback(() => {
+    if (!openedHoldRef.current) return;
+    clearHeldOrder(saleStateRef.current.userId);
+    setHasHeldBill(false);
+    setOpenedHold(false);
+  }, []);
+
+  useEffect(() => {
+    return setSaleGuard({
+      hasOpenSale: () => saleStateRef.current.bill.length > 0,
+      hold: holdBillNow,
+      voidSale: voidBillNow,
+    });
+  }, [holdBillNow, setSaleGuard, voidBillNow]);
+
+  useEffect(() => {
+    if (bill.length === 0) return undefined;
+    const onBeforeUnload = (event) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [bill.length]);
 
   const printSaleReceipt = useCallback(
     (billItems, extras = {}) => {
@@ -135,7 +307,7 @@ function SellItems() {
       setPrintJob({
         pageSize: receiptPrintPageSize(paper),
         preview: {
-          businessName: settings?.businessName,
+          businessName: resolveBusinessName(settings),
           currency,
           taxRate: 0,
           receipt: template,
@@ -349,13 +521,7 @@ function SellItems() {
       icon: 'bi-trash3',
     });
     if (!ok) return;
-    setBill([]);
-    setCustomer({ name: '', phone: '', idCardNo: '', email: '', address: '', idImage: null });
-    setWitness({ name: '', phone: '', idCardNo: '', address: '', idImage: null });
-    setIncludeWitness(false);
-    setDownPayment('');
-    resetBillCharges();
-    newOrderRef();
+    voidBillNow();
   };
 
   const parseBillAmount = (value) => {
@@ -369,12 +535,6 @@ function SellItems() {
     return Math.min(n, 100);
   };
 
-  const resetBillCharges = () => {
-    setShipping('');
-    setShippingPercent('');
-    setDiscount('');
-    setDiscountPercent('');
-  };
 
   const calculateItemsTotal = () => bill.reduce((sum, item) => sum + Number(item.total || 0), 0);
 
@@ -511,6 +671,7 @@ function SellItems() {
       setSuccess(t('Sale completed successfully!'));
       setBill([]);
       resetBillCharges();
+      releaseOpenedHoldIfNeeded();
       newOrderRef();
       await loadData();
       setTimeout(() => setSuccess(''), 5000);
@@ -604,6 +765,7 @@ function SellItems() {
       setShowInstallmentModal(false);
       setInstallmentModalError('');
       setInstallmentTouched(false);
+      releaseOpenedHoldIfNeeded();
       newOrderRef();
       await loadData();
       setTimeout(() => setSuccess(''), 5000);
@@ -672,66 +834,210 @@ function SellItems() {
   };
 
   const handleHold = () => {
-    if (bill.length === 0) {
-      setError('No items to hold');
+    if (!holdBillNow()) {
+      setError(t('No items to hold'));
       setTimeout(() => setError(''), 2000);
       return;
     }
-    localStorage.setItem(
-      HOLD_KEY,
-      JSON.stringify({
-        bill,
-        mode,
-        customer,
-        witness,
-        includeWitness,
-        downPayment,
-        installmentMonths,
-        walkInCustomer,
-        shipping,
-        shippingPercent,
-        discount,
-        discountPercent,
-      })
-    );
-    setSuccess('Order held successfully');
-    setBill([]);
-    resetBillCharges();
-    newOrderRef();
+    setSuccess(t('orderHeldNewBill'));
     setTimeout(() => setSuccess(''), 3000);
   };
 
-  const handleRestoreHold = () => {
-    const raw = localStorage.getItem(HOLD_KEY);
-    if (!raw) {
-      setError('No held order found');
+  const handleOpenHold = async () => {
+    const data = readHeldOrder(user?.id);
+    if (!data) {
+      setHasHeldBill(false);
+      setError(t('noHeldBill'));
       setTimeout(() => setError(''), 2000);
       return;
     }
+    if (openedHold && bill.length > 0) {
+      setSuccess(t('heldBillAlreadyOpen'));
+      setTimeout(() => setSuccess(''), 2000);
+      return;
+    }
+    if (bill.length > 0) {
+      const ok = await confirm({
+        title: t('openHoldBill'),
+        message: t('openHoldBillReplaceCurrent'),
+        confirmLabel: t('openHoldBill'),
+        cancelLabel: t('Cancel'),
+        variant: 'warning',
+        icon: 'bi-bag-check',
+      });
+      if (!ok) return;
+    }
+    applyHeldOrder(data);
+    setSuccess(t('heldBillOpened'));
+    setTimeout(() => setSuccess(''), 3000);
+  };
+
+  const handleDeleteHold = async () => {
+    if (!readHeldOrder(user?.id) && !hasHeldBill) return;
+    const ok = await confirm({
+      title: t('deleteHoldBill'),
+      message: t('deleteHoldBillConfirm'),
+      confirmLabel: t('Delete'),
+      cancelLabel: t('Cancel'),
+      variant: 'danger',
+      icon: 'bi-trash3',
+    });
+    if (!ok) return;
+    const clearOpenOrder = openedHold || openedHoldRef.current;
+    clearHeldOrder(user?.id);
+    setHasHeldBill(false);
+    if (clearOpenOrder) {
+      voidBillNow();
+    } else {
+      setOpenedHold(false);
+    }
+    setSuccess(t('heldBillDeleted'));
+    setTimeout(() => setSuccess(''), 3000);
+  };
+
+  const handleLookupReturn = async () => {
+    const query = returnSearch.trim();
+    if (!query) {
+      setError(t('Enter an order number'));
+      setTimeout(() => setError(''), 2500);
+      return;
+    }
     try {
-      const data = JSON.parse(raw);
-      setBill(data.bill || []);
-      if (data.mode) setMode(data.mode);
-      if (data.customer) setCustomer(data.customer);
-      if (data.witness) setWitness(data.witness);
-      if (typeof data.includeWitness === 'boolean') setIncludeWitness(data.includeWitness);
-      if (data.downPayment) setDownPayment(data.downPayment);
-      if (data.installmentMonths) setInstallmentMonths(data.installmentMonths);
-      if (data.walkInCustomer) setWalkInCustomer(data.walkInCustomer);
-      setShipping(data.shipping != null ? String(data.shipping) : '');
-      setShippingPercent(data.shippingPercent != null ? String(data.shippingPercent) : '');
-      setDiscount(data.discount != null ? String(data.discount) : '');
-      setDiscountPercent(data.discountPercent != null ? String(data.discountPercent) : '');
-      setSuccess('Held order restored');
-      setTimeout(() => setSuccess(''), 3000);
-    } catch {
-      setError('Could not restore held order');
+      setProcessing(true);
+      setError('');
+      const order = await saleService.getOrder(query);
+      setReturnOrder(order);
+      const nextQty = {};
+      (order.lines || []).forEach((line) => {
+        nextQty[line.id] = 0;
+      });
+      setReturnQtys(nextQty);
+    } catch (err) {
+      setReturnOrder(null);
+      setReturnQtys({});
+      setError(err.response?.data?.error || t('Order not found'));
+      setTimeout(() => setError(''), 3000);
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const setReturnLineQty = (saleId, nextQty, maxQty) => {
+    const qty = Math.max(0, Math.min(maxQty, Number(nextQty) || 0));
+    setReturnQtys((prev) => ({ ...prev, [saleId]: qty }));
+  };
+
+  const selectedReturnLines = useMemo(() => {
+    if (!returnOrder?.lines) return [];
+    return returnOrder.lines
+      .map((line) => ({
+        ...line,
+        returnQty: Number(returnQtys[line.id]) || 0,
+      }))
+      .filter((line) => line.returnQty > 0);
+  }, [returnOrder, returnQtys]);
+
+  const returnPreview = useMemo(() => {
+    const refundValue = selectedReturnLines.reduce(
+      (sum, line) => sum + line.returnQty * Number(line.unit_price || 0),
+      0
+    );
+    if (!returnOrder || selectedReturnLines.length === 0) {
+      return { refundValue: 0, refundCash: 0, unpaidAfter: null, fullReturn: false, replacementQty: 0 };
+    }
+    const remainingAfter = (returnOrder.lines || []).map((line) => {
+      const qty = Number(returnQtys[line.id]) || 0;
+      return (line.returnable_qty || 0) - qty;
+    });
+    const fullReturn = remainingAfter.every((qty) => qty <= 0);
+    const replacementQty = returnType === 'warranty'
+      ? selectedReturnLines.reduce((sum, line) => sum + line.returnQty, 0)
+      : 0;
+    if (returnType !== 'cash') {
+      return { refundValue, refundCash: 0, unpaidAfter: null, fullReturn, replacementQty };
+    }
+    if (returnOrder.payment_type !== 'installment' || !returnOrder.plan) {
+      return { refundValue, refundCash: refundValue, unpaidAfter: null, fullReturn, replacementQty };
+    }
+    const plan = returnOrder.plan;
+    const unpaid = Math.max(0, Number(plan.total_with_interest || 0) - Number(plan.paid_amount || 0));
+    if (fullReturn) {
+      return {
+        refundValue,
+        refundCash: Number(plan.down_payment || 0) + Number(plan.paid_amount || 0),
+        unpaidAfter: 0,
+        fullReturn,
+        replacementQty,
+      };
+    }
+    if (refundValue <= unpaid) {
+      return { refundValue, refundCash: 0, unpaidAfter: unpaid - refundValue, fullReturn, replacementQty };
+    }
+    return { refundValue, refundCash: refundValue - unpaid, unpaidAfter: 0, fullReturn, replacementQty };
+  }, [returnOrder, returnQtys, returnType, selectedReturnLines]);
+
+  const handleProcessReturn = async () => {
+    if (!returnOrder || selectedReturnLines.length === 0) {
+      setError(t('Select items to return'));
+      setTimeout(() => setError(''), 2500);
+      return;
+    }
+    const confirmMessage =
+      returnType === 'warranty'
+        ? t('Process this warranty claim? A replacement will come from sellable stock. The returned item stays in return stock.')
+        : returnType === 'defect'
+          ? t('Process this defect return? The item goes to return stock and is not sold again until released.')
+          : t('Process this cash return? The till will be updated and the item goes to return stock.');
+    const ok = await confirm({
+      title: t('Confirm return'),
+      message: confirmMessage,
+      confirmLabel: t('Process return'),
+      cancelLabel: t('Cancel'),
+      variant: 'warning',
+      icon: 'bi-arrow-counterclockwise',
+    });
+    if (!ok) return;
+    try {
+      setProcessing(true);
+      setError('');
+      const result = await saleService.createReturn({
+        orderNumber: returnOrder.order_number,
+        returnType,
+        reason: returnReason,
+        lines: selectedReturnLines.map((line) => ({
+          saleId: line.id,
+          quantity: line.returnQty,
+        })),
+      });
+      setPrintJob(
+        createReturnReceiptPrintJob({
+          settings,
+          currency,
+          cashierName: user?.full_name || user?.fullName || user?.username || 'CASHIER',
+          result,
+        })
+      );
+      setSuccess(t('Return processed'));
+      setReturnOrder(result.order || null);
+      const nextQty = {};
+      (result.order?.lines || []).forEach((line) => {
+        nextQty[line.id] = 0;
+      });
+      setReturnQtys(nextQty);
+      setReturnReason('');
+      setReturnType('cash');
+      setTimeout(() => setSuccess(''), 4000);
+    } catch (err) {
+      setError(err.response?.data?.error || t('Failed to process return'));
+    } finally {
+      setProcessing(false);
     }
   };
 
   const handlePaymentAction = () => {
     if (mode === 'cash') handleCashSaleCheckout();
     else if (mode === 'installment') openInstallmentModal();
+    else if (mode === 'return') handleProcessReturn();
     else handleInstallmentPayment();
   };
 
@@ -1167,12 +1473,19 @@ function SellItems() {
               <option>Regular Customer</option>
               <option>Member Customer</option>
             </select>
-            <button type="button" className="pos-icon-action green" title="Add customer" onClick={handleRestoreHold}>
+            <button type="button" className="pos-icon-action green" title="Add customer">
               <i className="bi bi-person-plus"></i>
             </button>
-            <button type="button" className="pos-icon-action blue" title="Restore held order" onClick={handleRestoreHold}>
-              <i className="bi bi-arrow-repeat"></i>
-            </button>
+            {hasHeldBill && (
+              <button
+                type="button"
+                className="pos-icon-action blue"
+                title={t('openHoldBill')}
+                onClick={handleOpenHold}
+              >
+                <i className="bi bi-bag-check"></i>
+              </button>
+            )}
           </div>
 
           <div className="pos-order-items">
@@ -1351,13 +1664,35 @@ function SellItems() {
         <button type="button" className={`pos-mode-btn${mode === 'payment' ? ' active' : ''}`} onClick={() => setMode('payment')}>
           💳 {t('Installment Payment')}
         </button>
+        <button type="button" className={`pos-mode-btn${mode === 'return' ? ' active' : ''}`} onClick={() => setMode('return')}>
+          ↩️ {t('Return')}
+        </button>
         <div className="pos-mode-bar-actions">
-          <button type="button" className="pos-action-btn pos-action-hold" onClick={handleHold}>
-            Hold
-          </button>
-          <button type="button" className="pos-action-btn pos-action-void" onClick={clearBill}>
-            Void
-          </button>
+          {mode !== 'return' && (
+            <>
+              {hasHeldBill ? (
+                <div className="pos-hold-group">
+                  <button type="button" className="pos-action-btn pos-action-hold" onClick={handleOpenHold}>
+                    {t('openHoldBill')}
+                  </button>
+                  <button
+                    type="button"
+                    className="pos-action-btn pos-action-void"
+                    onClick={handleDeleteHold}
+                  >
+                    {t('deleteHold')}
+                  </button>
+                </div>
+              ) : (
+                <button type="button" className="pos-action-btn pos-action-hold" onClick={handleHold}>
+                  {t('holdSale')}
+                </button>
+              )}
+              <button type="button" className="pos-action-btn pos-action-void" onClick={clearBill}>
+                Void
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -1366,7 +1701,175 @@ function SellItems() {
         {success && <div className="pos-alert pos-alert-success">{success}</div>}
       </div>
 
-      {mode === 'payment' ? (
+      {mode === 'return' ? (
+        <div className="pos-payment-layout pos-return-layout">
+          <div className="pos-plans-area">
+            <div className="pos-products-header">
+              <div className="pos-welcome">
+                <h5>{t('Return bill')}</h5>
+                <p>{t('Find a sale by order number and return remaining items.')}</p>
+              </div>
+              <div className="pos-products-toolbar">
+                <form
+                  className="pos-search-wrap pos-return-search"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleLookupReturn();
+                  }}
+                >
+                  <i className="bi bi-search"></i>
+                  <input
+                    type="text"
+                    placeholder={t('Order number e.g. ORD123456')}
+                    value={returnSearch}
+                    onChange={(e) => setReturnSearch(e.target.value)}
+                  />
+                  <button type="submit" className="pos-return-lookup-btn" disabled={processing}>
+                    {t('Find')}
+                  </button>
+                </form>
+              </div>
+            </div>
+            {!returnOrder ? (
+              <div className="pos-order-empty">
+                <i className="bi bi-receipt d-block fs-2 mb-2"></i>
+                {t('Enter the order number from the receipt')}
+              </div>
+            ) : (
+              <div className="pos-return-lines">
+                <div className="pos-return-meta">
+                  <span className="order-id-badge">{formatOrderId(returnOrder.order_number)}</span>
+                  <span className="small text-muted">
+                    {returnOrder.payment_type === 'installment' ? t('Installment') : t('Cash')}
+                    {returnOrder.sale_date ? ` · ${new Date(returnOrder.sale_date).toLocaleString()}` : ''}
+                  </span>
+                </div>
+                <p className="pos-return-note small text-muted">
+                  {returnType === 'warranty'
+                    ? t('Warranty replaces 1 for 1 from sellable stock. No cash is paid. The returned item goes to return stock.')
+                    : returnType === 'defect'
+                      ? t('Defect returns go to return stock. No cash is paid.')
+                      : t('Cash refunds update the till. Returned items go to return stock, not the shop floor.')}
+                </p>
+                {returnType === 'cash' && (
+                  <p className="pos-return-note small text-muted">
+                    {t('Refund uses the stored item price. Shipping or promotions on the original receipt are not reversed.')}
+                  </p>
+                )}
+                {(returnOrder.lines || []).map((line) => (
+                  <div key={line.id} className="pos-return-line">
+                    <div className="pos-return-line-info">
+                      <strong>{line.item_name}</strong>
+                      <span className="small text-muted">
+                        {t('Sold')} {line.quantity} · {t('Returned')} {line.returned_qty || 0} · {formatMoney(line.unit_price)}
+                      </span>
+                    </div>
+                    <div className="pos-product-qty">
+                      <button
+                        type="button"
+                        className="pos-qty-btn"
+                        disabled={!line.returnable_qty}
+                        onClick={() => setReturnLineQty(line.id, (returnQtys[line.id] || 0) - 1, line.returnable_qty)}
+                      >
+                        −
+                      </button>
+                      <span className="pos-qty-value">{returnQtys[line.id] || 0}</span>
+                      <button
+                        type="button"
+                        className="pos-qty-btn"
+                        disabled={!line.returnable_qty || (returnQtys[line.id] || 0) >= line.returnable_qty}
+                        onClick={() => setReturnLineQty(line.id, (returnQtys[line.id] || 0) + 1, line.returnable_qty)}
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <aside className="pos-order-panel">
+            <div className="pos-order-header">
+              <h6>{t('Return summary')}</h6>
+            </div>
+            <div className="pos-order-items">
+              {selectedReturnLines.length === 0 ? (
+                <div className="pos-order-empty">{t('Select quantities to return')}</div>
+              ) : (
+                selectedReturnLines.map((line) => (
+                  <div key={line.id} className="pos-order-item">
+                    <div className="pos-order-item-info">
+                      <span>{line.item_name}</span>
+                      <small>
+                        {line.returnQty} × {formatMoney(line.unit_price)}
+                      </small>
+                    </div>
+                    <strong>{formatMoney(line.returnQty * Number(line.unit_price || 0))}</strong>
+                  </div>
+                ))
+              )}
+            </div>
+            <div className="pos-order-totals">
+              <fieldset className="pos-return-types">
+                <legend className="form-label">{t('Return type')}</legend>
+                {[
+                  { value: 'cash', label: t('Cash refund') },
+                  { value: 'defect', label: t('Defect') },
+                  { value: 'warranty', label: t('Warranty claim') },
+                ].map((option) => (
+                  <label key={option.value} className="pos-return-type-option">
+                    <input
+                      type="radio"
+                      name="returnType"
+                      value={option.value}
+                      checked={returnType === option.value}
+                      onChange={() => setReturnType(option.value)}
+                    />
+                    <span>{option.label}</span>
+                  </label>
+                ))}
+              </fieldset>
+              <div className="pos-total-row">
+                <span>{t('Returned value')}</span>
+                <strong>{formatMoney(returnPreview.refundValue)}</strong>
+              </div>
+              {returnType === 'warranty' && (
+                <div className="pos-total-row">
+                  <span>{t('Replacement from stock')}</span>
+                  <strong>{returnPreview.replacementQty || 0}</strong>
+                </div>
+              )}
+              {returnType === 'cash' && (
+                <div className="pos-total-row">
+                  <span>{t('Cash refund')}</span>
+                  <strong>{formatMoney(returnPreview.refundCash)}</strong>
+                </div>
+              )}
+              {returnType === 'cash' && returnPreview.unpaidAfter != null && (
+                <div className="pos-total-row">
+                  <span>{t('Plan remaining')}</span>
+                  <strong>{formatMoney(returnPreview.unpaidAfter)}</strong>
+                </div>
+              )}
+              <label className="form-label mt-3">{t('Reason (optional)')}</label>
+              <textarea
+                className="form-control"
+                rows={2}
+                value={returnReason}
+                onChange={(e) => setReturnReason(e.target.value)}
+              />
+            </div>
+            <button
+              type="button"
+              className="pos-checkout-btn"
+              disabled={processing || selectedReturnLines.length === 0}
+              onClick={handleProcessReturn}
+            >
+              {processing ? t('Processing...') : t('Process return')}
+            </button>
+          </aside>
+        </div>
+      ) : mode === 'payment' ? (
         <div className="pos-payment-layout">
           <div className="pos-plans-area">
             <div className="pos-products-header">

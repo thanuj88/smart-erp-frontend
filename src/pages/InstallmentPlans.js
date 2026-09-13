@@ -107,7 +107,7 @@ const InstallmentPlans = () => {
   }
 
   return (
-    <div className="container-fluid py-4 matte-page admin-page installment-page">
+    <div className="container-fluid matte-page admin-page installment-page">
       <PageHeader
         title="Interest Rate Settings"
         subtitle="Configure interest rates for different installment periods."
@@ -165,8 +165,7 @@ const InstallmentPlans = () => {
                           <td className="fw-semibold">{setting.months} months</td>
                           <td className="text-primary fw-semibold">{setting.interest_rate}%</td>
                           <td className="text-muted">
-                            <div>Total: {formatMoney(totalWithInterest)}</div>
-                            <div>Monthly: {formatMoney(monthlyPayment)}</div>
+                            Total: {formatMoney(totalWithInterest)} · Monthly: {formatMoney(monthlyPayment)}
                           </td>
                           <td className="text-muted">{new Date(setting.updated_at).toLocaleDateString()}</td>
                           <td>

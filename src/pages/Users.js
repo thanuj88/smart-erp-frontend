@@ -3,24 +3,13 @@ import { userService } from '../services';
 import { useAuth } from '../contexts/AuthContext';
 import { useConfirm } from '../contexts/ConfirmContext';
 
-const usernamePrefix = (tenantSlug) => {
-  if (!tenantSlug) return '';
-  const part = String(tenantSlug)
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9._-]+/g, '');
-  return part ? `${part}-` : '';
-};
-
 const Users = () => {
   const { user: currentUser } = useAuth();
   const { confirm } = useConfirm();
-  const storePrefix = usernamePrefix(currentUser?.tenantSlug);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({
-    username: '',
     password: '',
     role: 'TELLER',
     email: '',
@@ -54,7 +43,6 @@ const Users = () => {
 
   const openAddModal = () => {
     setFormData({
-      username: '',
       password: '',
       role: 'TELLER',
       email: '',
@@ -114,9 +102,9 @@ const Users = () => {
   }
 
   return (
-    <div className="container-fluid py-4 matte-page admin-page users-page">
+    <div className="container-fluid matte-page admin-page users-page">
       {/* Header */}
-      <div className="row mb-4">
+      <div className="row mb-3">
         <div className="col-12">
           <div className="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between">
             <div className="d-flex align-items-center mb-3 mb-lg-0">
@@ -164,10 +152,11 @@ const Users = () => {
             </div>
           ) : (
             <div className="table-responsive">
-              <table className="table table-hover mb-0">
+              <table className="table table-hover admin-table mb-0">
                 <thead className="table-light">
                   <tr>
-                    <th className="border-0 fw-semibold">Username</th>
+                    <th className="border-0 fw-semibold">Email</th>
+                    <th className="border-0 fw-semibold">Name</th>
                     <th className="border-0 fw-semibold">Role</th>
                     <th className="border-0 fw-semibold">Created At</th>
                     <th className="border-0 fw-semibold">Actions</th>
@@ -181,11 +170,12 @@ const Users = () => {
                     return (
                     <tr key={user.id}>
                       <td className="fw-semibold">
-                        {user.username}
+                        {user.email || '—'}
                         {isOwnAccount && (
                           <span className="badge bg-light text-muted border ms-2">You</span>
                         )}
                       </td>
+                      <td className="text-muted">{user.full_name || user.fullName || '—'}</td>
                       <td>
                         <span
                           className={`badge ${
@@ -246,29 +236,22 @@ const Users = () => {
                   )}
                   <div className="row g-3">
                     <div className="col-sm-6">
-                      <label htmlFor="username" className="form-label fw-semibold">
-                        Username
+                      <label htmlFor="email" className="form-label fw-semibold">
+                        Email
                       </label>
-                      <div className="input-group input-group-sm">
-                        {storePrefix ? (
-                          <span className="input-group-text text-muted">{storePrefix}</span>
-                        ) : null}
-                        <input
-                          id="username"
-                          name="username"
-                          type="text"
-                          className="form-control"
-                          value={formData.username}
-                          onChange={handleInputChange}
-                          placeholder={storePrefix ? 'e.g. john' : 'username'}
-                          required
-                          autoFocus
-                        />
-                      </div>
+                      <input
+                        id="email"
+                        name="email"
+                        type="email"
+                        className="form-control form-control-sm"
+                        value={formData.email}
+                        onChange={handleInputChange}
+                        placeholder="staff@store.com"
+                        required
+                        autoFocus
+                      />
                       <div className="form-text">
-                        {storePrefix
-                          ? `Saved as ${storePrefix}your-name — required for POS PIN sign-in.`
-                          : 'Staff usernames are prefixed with your store code for uniqueness.'}
+                        Email is unique and used to sign in.
                       </div>
                     </div>
                     <div className="col-sm-6">
@@ -281,19 +264,6 @@ const Users = () => {
                         type="text"
                         className="form-control form-control-sm"
                         value={formData.fullName}
-                        onChange={handleInputChange}
-                      />
-                    </div>
-                    <div className="col-sm-6">
-                      <label htmlFor="email" className="form-label fw-semibold">
-                        Email
-                      </label>
-                      <input
-                        id="email"
-                        name="email"
-                        type="email"
-                        className="form-control form-control-sm"
-                        value={formData.email}
                         onChange={handleInputChange}
                       />
                     </div>

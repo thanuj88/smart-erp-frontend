@@ -21,7 +21,6 @@ const Register = () => {
     fullName: '',
     email: '',
     businessName: '',
-    username: '',
     password: '',
     confirmPassword: '',
     country: DEFAULT_COUNTRY_CODE,
@@ -88,7 +87,6 @@ const Register = () => {
         fullName: form.fullName,
         email: form.email,
         businessName: form.businessName,
-        username: form.username || undefined,
         password: form.password,
         country: form.country,
         phone: toE164(form.phone, form.country),
@@ -179,115 +177,106 @@ const Register = () => {
               className="form-control auth-input"
               value={form.email}
               onChange={handleChange}
+              autoComplete="email"
               required
             />
             <i className="bi bi-envelope auth-input-icon"></i>
           </div>
         )}
-        {field(
-          'username',
-          'Username',
-          true,
-          <input
-            id="username"
-            name="username"
-            type="text"
-            className="form-control auth-input"
-            value={form.username}
-            onChange={handleChange}
-            required
-          />
-        )}
-        {field(
-          'country',
-          'Country',
-          true,
-          <select
-            id="country"
-            name="country"
-            className="form-select auth-input"
-            value={form.country}
-            onChange={handleChange}
-            required
-          >
-            {COUNTRIES.map((country) => (
-              <option key={country.code} value={country.code}>
-                {country.flag} {country.name} (+{country.dialCode})
-              </option>
-            ))}
-          </select>
-        )}
-        {field(
-          'phone',
-          'Phone number',
-          true,
-          <>
-            <div className={`auth-phone-input${phoneError ? ' is-invalid' : ''}`}>
-              <span className="auth-phone-prefix">+{selectedCountry.dialCode}</span>
+        <div className="auth-register-row">
+          {field(
+            'country',
+            'Country',
+            true,
+            <select
+              id="country"
+              name="country"
+              className="form-select auth-input"
+              value={form.country}
+              onChange={handleChange}
+              required
+            >
+              {COUNTRIES.map((country) => (
+                <option key={country.code} value={country.code}>
+                  {country.flag} {country.name} (+{country.dialCode})
+                </option>
+              ))}
+            </select>
+          )}
+          {field(
+            'phone',
+            'Phone number',
+            true,
+            <>
+              <div className={`auth-phone-input${phoneError ? ' is-invalid' : ''}`}>
+                <span className="auth-phone-prefix">+{selectedCountry.dialCode}</span>
+                <input
+                  id="phone"
+                  name="phone"
+                  type="tel"
+                  inputMode="tel"
+                  className={`form-control auth-input${phoneError ? ' is-invalid' : ''}`}
+                  value={form.phone}
+                  onChange={handleChange}
+                  onBlur={() => {
+                    setPhoneTouched(true);
+                    updatePhoneError(form.phone, form.country);
+                  }}
+                  placeholder={selectedCountry.example}
+                  required
+                />
+              </div>
+              {phoneError ? (
+                <div className="invalid-feedback d-block">{phoneError}</div>
+              ) : (
+                <div className="form-text">Use a {selectedCountry.name} number, e.g. {selectedCountry.example}</div>
+              )}
+            </>
+          )}
+        </div>
+        <div className="auth-register-row">
+          {field(
+            'password',
+            'Password',
+            true,
+            <div className="auth-input-wrap">
               <input
-                id="phone"
-                name="phone"
-                type="tel"
-                inputMode="tel"
-                className={`form-control auth-input${phoneError ? ' is-invalid' : ''}`}
-                value={form.phone}
+                id="password"
+                name="password"
+                type={showPassword ? 'text' : 'password'}
+                className="form-control auth-input"
+                value={form.password}
                 onChange={handleChange}
-                onBlur={() => {
-                  setPhoneTouched(true);
-                  updatePhoneError(form.phone, form.country);
-                }}
-                placeholder={selectedCountry.example}
+                minLength={8}
                 required
               />
+              <button
+                type="button"
+                className="auth-input-icon-btn"
+                onClick={() => setShowPassword(!showPassword)}
+                tabIndex={-1}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                <i className={`bi ${showPassword ? 'bi-eye-slash' : 'bi-eye'}`}></i>
+              </button>
             </div>
-            {phoneError ? (
-              <div className="invalid-feedback d-block">{phoneError}</div>
-            ) : (
-              <div className="form-text">Use a {selectedCountry.name} number, e.g. {selectedCountry.example}</div>
-            )}
-          </>
-        )}
-        {field(
-          'password',
-          'Password',
-          true,
-          <div className="auth-input-wrap">
+          )}
+          {field(
+            'confirmPassword',
+            'Confirm password',
+            true,
             <input
-              id="password"
-              name="password"
-              type={showPassword ? 'text' : 'password'}
+              id="confirmPassword"
+              name="confirmPassword"
+              type="password"
               className="form-control auth-input"
-              value={form.password}
+              value={form.confirmPassword}
               onChange={handleChange}
               minLength={8}
               required
             />
-            <button
-              type="button"
-              className="auth-input-icon-btn"
-              onClick={() => setShowPassword(!showPassword)}
-              tabIndex={-1}
-              aria-label={showPassword ? 'Hide password' : 'Show password'}
-            >
-              <i className={`bi ${showPassword ? 'bi-eye-slash' : 'bi-eye'}`}></i>
-            </button>
-          </div>
-        )}
-        {field(
-          'confirmPassword',
-          'Confirm password',
-          true,
-          <input
-            id="confirmPassword"
-            name="confirmPassword"
-            type="password"
-            className="form-control auth-input"
-            value={form.confirmPassword}
-            onChange={handleChange}
-            minLength={8}
-            required
-          />
-        )}
+          )}
+        </div>
 
         <div className="auth-register-actions">
           <button type="submit" className="btn auth-btn-primary w-100" disabled={loading}>

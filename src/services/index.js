@@ -8,14 +8,14 @@ function persistAuth(data) {
 }
 
 export const authService = {
-  login: async (username, password) => {
-    const response = await api.post('/auth/login', { username, password });
+  login: async (email, password) => {
+    const response = await api.post('/auth/login', { email, password });
     persistAuth(response.data);
     return response.data;
   },
 
-  loginPin: async (username, pin, tenantId, branchId) => {
-    const response = await api.post('/auth/login/pin', { username, pin, tenantId, branchId });
+  loginPin: async (email, pin, tenantId, branchId) => {
+    const response = await api.post('/auth/login/pin', { email, pin, tenantId, branchId });
     persistAuth(response.data);
     return response.data;
   },
@@ -288,6 +288,21 @@ export const saleService = {
 
   processInstallmentSale: async (saleData) => {
     const response = await api.post('/sales/installment', saleData);
+    return response.data;
+  },
+
+  getOrder: async (orderNumber) => {
+    const response = await api.get(`/sales/orders/${encodeURIComponent(orderNumber)}`);
+    return response.data;
+  },
+
+  createReturn: async (payload) => {
+    const response = await api.post('/sales/returns', payload);
+    return response.data;
+  },
+
+  getReturns: async () => {
+    const response = await api.get('/sales/returns');
     return response.data;
   },
 

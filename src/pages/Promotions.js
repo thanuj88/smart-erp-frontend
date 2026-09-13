@@ -195,7 +195,7 @@ function Promotions() {
   }
 
   return (
-    <div className="container-fluid py-4 matte-page admin-page">
+    <div className="container-fluid matte-page admin-page">
       <PageHeader
         title={t('Promotions')}
         subtitle={t('Create percentage promotions for categories or items.')}

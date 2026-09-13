@@ -20,7 +20,7 @@ const AuthLayout = ({ children, footerExtra, variant }) => {
         </div>
         <div className="auth-login-shell">
           <div className="auth-login-showcase-copy">
-            <p className="auth-login-showcase-kicker">Bright Mart POS</p>
+            <p className="auth-login-showcase-kicker">POSBright</p>
             <h2>Fast checkout. Clear inventory. Better daily sales.</h2>
             <p>
               Manage products, billing, and reports in one place with a smooth retail

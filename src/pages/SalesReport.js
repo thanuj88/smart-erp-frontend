@@ -28,52 +28,58 @@ const MetricCard = ({ label, value, sub, variant = 'metric-orange', icon }) => (
   </div>
 );
 
-const PeriodPanel = ({ title, icon, summary, formatMoney }) => {
-  if (!summary) return null;
-  return (
-    <div className="card shadow-sm rounded-4 h-100">
-      <div className="card-body">
-        <div className="d-flex align-items-center gap-2 mb-3">
-          <span className="report-period-icon">
-            <i className={`bi ${icon}`}></i>
-          </span>
-          <h5 className="card-title mb-0">{title}</h5>
-        </div>
-        <div className="row g-3">
-          <div className="col-6">
-            <div className="report-stat-pill">
-              <small>Cash sales</small>
-              <strong>{summary.total_sales || 0}</strong>
-              <span>{formatMoney(summary.total_revenue || 0)}</span>
-            </div>
-          </div>
-          <div className="col-6">
-            <div className="report-stat-pill">
-              <small>Down payments</small>
-              <strong>{formatMoney(summary.down_payment_income || 0)}</strong>
-            </div>
-          </div>
-          <div className="col-6">
-            <div className="report-stat-pill">
-              <small>Installments</small>
-              <strong>{formatMoney(summary.installment_income || 0)}</strong>
-            </div>
-          </div>
-          <div className="col-6">
-            <div className="report-stat-pill report-stat-pill-highlight">
-              <small>Total income</small>
-              <strong>{formatMoney(actualIncome(summary))}</strong>
-            </div>
-          </div>
-        </div>
-      </div>
+const STATS_TABS = [
+  { id: 'today', label: "Today's Statistics" },
+  { id: 'week', label: 'This Week' },
+  { id: 'month', label: 'This Month' },
+  { id: 'overall', label: 'Overall Statistics' },
+];
+
+const PeriodMetrics = ({ summary, formatMoney, collectionsSub }) => (
+  <div className="row g-3">
+    <div className="col-12 col-sm-6 col-xl-3">
+      <MetricCard
+        label="Down Payments"
+        value={formatMoney(summary?.down_payment_income || 0)}
+        sub="Installment down payments"
+        variant="metric-blue"
+        icon="bi-cash-stack"
+      />
     </div>
-  );
-};
+    <div className="col-12 col-sm-6 col-xl-3">
+      <MetricCard
+        label="Installment Collections"
+        value={formatMoney(summary?.installment_income || 0)}
+        sub={collectionsSub}
+        variant="metric-teal"
+        icon="bi-calendar-check"
+      />
+    </div>
+    <div className="col-12 col-sm-6 col-xl-3">
+      <MetricCard
+        label="Total Actual Income"
+        value={formatMoney(actualIncome(summary))}
+        sub={`${formatMoney(summary?.total_revenue || 0)} cash revenue`}
+        variant="metric-dark"
+        icon="bi-graph-up-arrow"
+      />
+    </div>
+    <div className="col-12 col-sm-6 col-xl-3">
+      <MetricCard
+        label="Cash Sales Profit"
+        value={formatMoney(summary?.total_profit || 0)}
+        sub="On cash sales only"
+        variant="metric-teal"
+        icon="bi-piggy-bank"
+      />
+    </div>
+  </div>
+);
 
 const SalesReport = () => {
   const { formatMoney } = useCurrency();
   const [allSales, setAllSales] = useState([]);
+  const [returns, setReturns] = useState([]);
   const [overallSummary, setOverallSummary] = useState(null);
   const [dailySummary, setDailySummary] = useState(null);
   const [weeklySummary, setWeeklySummary] = useState(null);
@@ -82,21 +88,27 @@ const SalesReport = () => {
   const [error, setError] = useState('');
 
   const [filterItem, setFilterItem] = useState('');
+  const [filterCategory, setFilterCategory] = useState('');
+  const [filterType, setFilterType] = useState('');
+  const [filterOrder, setFilterOrder] = useState('');
   const [filterTeller, setFilterTeller] = useState('');
   const [filterStartDate, setFilterStartDate] = useState('');
   const [filterEndDate, setFilterEndDate] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [statsTab, setStatsTab] = useState('today');
 
   const loadData = useCallback(async () => {
     try {
-      const [salesData, summaryData, daily, weekly, monthly] = await Promise.all([
+      const [salesData, summaryData, daily, weekly, monthly, returnsData] = await Promise.all([
         saleService.getAll(),
         saleService.getOverallSummary(),
         saleService.getDailySummary(),
         saleService.getWeeklySummary(),
         saleService.getMonthlySummary(),
+        saleService.getReturns().catch(() => []),
       ]);
       setAllSales(salesData || []);
+      setReturns(returnsData || []);
       setOverallSummary(summaryData);
       setDailySummary(daily);
       setWeeklySummary(weekly);
@@ -116,19 +128,87 @@ const SalesReport = () => {
     return () => clearInterval(interval);
   }, [loadData]);
 
+  const combinedSales = useMemo(() => {
+    const categoryByKey = new Map();
+    allSales.forEach((sale) => {
+      const name = sale.category_name || sale.category;
+      if (!name) return;
+      if (sale.item_id) categoryByKey.set(`id:${sale.item_id}`, name);
+      if (sale.item_name) categoryByKey.set(`name:${sale.item_name}`, name);
+    });
+
+    const recordedReturns = new Set(
+      allSales.filter((sale) => sale.return_number).map((sale) => String(sale.return_number))
+    );
+
+    const extras = [];
+    returns.forEach((ret) => {
+      if (recordedReturns.has(String(ret.return_number))) return;
+      (ret.lines || []).forEach((line, idx) => {
+        const categoryName =
+          categoryByKey.get(`id:${line.item_id}`) ||
+          categoryByKey.get(`name:${line.item_name}`) ||
+          '';
+        extras.push({
+          id: `legacy-return-${ret.id}-${line.sale_id || idx}`,
+          order_number: ret.order_number,
+          sale_date: ret.created_at || ret.createdAt,
+          item_name: line.item_name,
+          item_id: line.item_id,
+          quantity: line.qty,
+          returned_qty: line.qty,
+          price: line.unit_price,
+          total: (ret.return_type || 'cash') === 'cash' ? -(Number(line.line_total) || 0) : 0,
+          teller_name: ret.teller_name,
+          is_return: true,
+          return_flag: true,
+          return_type: ret.return_type || 'cash',
+          return_number: ret.return_number,
+          category_name: categoryName,
+        });
+      });
+    });
+
+    return [...allSales, ...extras].sort(
+      (a, b) => new Date(b.sale_date || 0) - new Date(a.sale_date || 0)
+    );
+  }, [allSales, returns]);
+
   const itemOptions = useMemo(() => {
-    const names = [...new Set(allSales.map((s) => s.item_name).filter(Boolean))];
+    const names = [...new Set(combinedSales.map((s) => s.item_name).filter(Boolean))];
     return names.sort((a, b) => a.localeCompare(b));
-  }, [allSales]);
+  }, [combinedSales]);
+
+  const categoryOptions = useMemo(() => {
+    const names = [
+      ...new Set(combinedSales.map((s) => s.category_name || s.category).filter(Boolean)),
+    ];
+    return names.sort((a, b) => a.localeCompare(b));
+  }, [combinedSales]);
 
   const tellerOptions = useMemo(() => {
-    const names = [...new Set(allSales.map((s) => s.teller_name).filter(Boolean))];
+    const names = [...new Set(combinedSales.map((s) => s.teller_name).filter(Boolean))];
     return names.sort((a, b) => a.localeCompare(b));
-  }, [allSales]);
+  }, [combinedSales]);
 
   const filteredSales = useMemo(() => {
-    return allSales.filter((sale) => {
+    return combinedSales.filter((sale) => {
+      const isReturn = Boolean(sale.is_return || sale.return_flag);
+      if (filterType === 'sale' && isReturn) return false;
+      if (filterType === 'return' && !isReturn) return false;
+
+      if (filterCategory) {
+        const category = sale.category_name || sale.category || '';
+        if (category !== filterCategory) return false;
+      }
+
       if (filterItem && sale.item_name !== filterItem) return false;
+
+      if (filterOrder) {
+        const needle = filterOrder.replace(/[#\s]/g, '').toLowerCase();
+        const hay = String(sale.order_number || sale.id || '').replace(/[#\s]/g, '').toLowerCase();
+        if (!hay.includes(needle)) return false;
+      }
 
       if (filterTeller && sale.teller_name !== filterTeller) return false;
 
@@ -144,7 +224,7 @@ const SalesReport = () => {
 
       return true;
     });
-  }, [allSales, filterItem, filterTeller, filterStartDate, filterEndDate]);
+  }, [combinedSales, filterType, filterCategory, filterItem, filterOrder, filterTeller, filterStartDate, filterEndDate]);
 
   const totalPages = Math.max(1, Math.ceil(filteredSales.length / PAGE_SIZE));
 
@@ -155,7 +235,7 @@ const SalesReport = () => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [filterItem, filterTeller, filterStartDate, filterEndDate]);
+  }, [filterType, filterCategory, filterItem, filterOrder, filterTeller, filterStartDate, filterEndDate]);
 
   useEffect(() => {
     if (currentPage > totalPages) {
@@ -165,13 +245,17 @@ const SalesReport = () => {
 
   const handleClearFilters = () => {
     setFilterItem('');
+    setFilterCategory('');
+    setFilterType('');
+    setFilterOrder('');
     setFilterTeller('');
     setFilterStartDate('');
     setFilterEndDate('');
     setCurrentPage(1);
   };
 
-  const hasActiveFilters = filterItem || filterTeller || filterStartDate || filterEndDate;
+  const hasActiveFilters =
+    filterItem || filterCategory || filterType || filterOrder || filterTeller || filterStartDate || filterEndDate;
 
   if (loading) {
     return (
@@ -187,8 +271,8 @@ const SalesReport = () => {
   }
 
   return (
-    <div className="container-fluid py-4 matte-page admin-page report-page">
-      <div className="row mb-4">
+    <div className="container-fluid matte-page admin-page report-page">
+      <div className="row mb-3">
         <div className="col-12">
           <div className="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between">
             <div className="mb-3 mb-lg-0">
@@ -218,246 +302,271 @@ const SalesReport = () => {
         </div>
       )}
 
-      <h5 className="report-section-title mb-3">Today&apos;s Statistics</h5>
-      <div className="row g-4 mb-4">
-        <div className="col-12 col-sm-6 col-xl-3">
-          <MetricCard
-            label="Cash Sales Today"
-            value={dailySummary?.total_sales || 0}
-            sub={`${formatMoney(dailySummary?.total_revenue || 0)} revenue`}
-            variant="metric-orange"
-            icon="bi-basket3"
-          />
-        </div>
-        <div className="col-12 col-sm-6 col-xl-3">
-          <MetricCard
-            label="Down Payments"
-            value={formatMoney(dailySummary?.down_payment_income || 0)}
-            sub="Installment down payments"
-            variant="metric-blue"
-            icon="bi-cash-stack"
-          />
-        </div>
-        <div className="col-12 col-sm-6 col-xl-3">
-          <MetricCard
-            label="Installment Collections"
-            value={formatMoney(dailySummary?.installment_income || 0)}
-            sub="Payments collected today"
-            variant="metric-teal"
-            icon="bi-calendar-check"
-          />
-        </div>
-        <div className="col-12 col-sm-6 col-xl-3">
-          <MetricCard
-            label="Total Actual Income"
-            value={formatMoney(actualIncome(dailySummary))}
-            sub={`${dailySummary?.total_items_sold || 0} items sold`}
-            variant="metric-dark"
-            icon="bi-graph-up-arrow"
-          />
-        </div>
-      </div>
+      <ul className="nav nav-tabs admin-tabs mb-3" role="tablist">
+        {STATS_TABS.map((tab) => (
+          <li className="nav-item" role="presentation" key={tab.id}>
+            <button
+              type="button"
+              role="tab"
+              id={`stats-tab-${tab.id}`}
+              aria-controls={`stats-panel-${tab.id}`}
+              aria-selected={statsTab === tab.id}
+              className={`nav-link ${statsTab === tab.id ? 'active' : ''}`}
+              onClick={() => setStatsTab(tab.id)}
+            >
+              {tab.label}
+            </button>
+          </li>
+        ))}
+      </ul>
 
-      <div className="row g-4 mb-4">
-        <div className="col-12 col-sm-6">
-          <MetricCard
-            label="Today's Profit"
-            value={formatMoney(dailySummary?.total_profit || 0)}
-            sub="Cash sales profit"
-            variant="metric-teal"
-            icon="bi-piggy-bank"
+      <div className="mb-3" id={`stats-panel-${statsTab}`} role="tabpanel" aria-labelledby={`stats-tab-${statsTab}`}>
+        {statsTab === 'today' && (
+          <PeriodMetrics
+            summary={dailySummary}
+            formatMoney={formatMoney}
+            collectionsSub="Payments collected today"
           />
-        </div>
-        <div className="col-12 col-sm-6">
-          <MetricCard
-            label="Items Sold Today"
-            value={dailySummary?.total_items_sold || 0}
-            sub="Units sold"
-            variant="metric-blue"
-            icon="bi-box-seam"
-          />
-        </div>
-      </div>
+        )}
 
-      <div className="row g-4 mb-4">
-        <div className="col-12 col-lg-6">
-          <PeriodPanel title="This Week" icon="bi-calendar-week" summary={weeklySummary} formatMoney={formatMoney} />
-        </div>
-        <div className="col-12 col-lg-6">
-          <PeriodPanel title="This Month" icon="bi-calendar-month" summary={monthlySummary} formatMoney={formatMoney} />
-        </div>
-      </div>
+        {statsTab === 'week' && (
+          <PeriodMetrics
+            summary={weeklySummary}
+            formatMoney={formatMoney}
+            collectionsSub="Payments collected this week"
+          />
+        )}
 
-      <h5 className="report-section-title mb-3">Overall Statistics</h5>
-      <div className="row g-4 mb-4">
-        <div className="col-12 col-sm-6 col-xl-3">
-          <MetricCard
-            label="Total Sales"
-            value={overallSummary?.total_sales || 0}
-            sub="All time transactions"
-            variant="metric-blue"
-            icon="bi-receipt"
+        {statsTab === 'month' && (
+          <PeriodMetrics
+            summary={monthlySummary}
+            formatMoney={formatMoney}
+            collectionsSub="Payments collected this month"
           />
-        </div>
-        <div className="col-12 col-sm-6 col-xl-3">
-          <MetricCard
-            label="Total Revenue"
-            value={formatMoney(overallSummary?.total_revenue || 0)}
-            variant="metric-orange"
-            icon="bi-currency-dollar"
-          />
-        </div>
-        <div className="col-12 col-sm-6 col-xl-3">
-          <MetricCard
-            label="Total Profit"
-            value={formatMoney(overallSummary?.total_profit || 0)}
-            variant="metric-teal"
-            icon="bi-graph-up"
-          />
-        </div>
-        <div className="col-12 col-sm-6 col-xl-3">
-          <MetricCard
-            label="Items Sold"
-            value={overallSummary?.total_items_sold || 0}
-            sub="All time units"
-            variant="metric-dark"
-            icon="bi-boxes"
-          />
-        </div>
+        )}
+
+        {statsTab === 'overall' && (
+          <div className="row g-3">
+            <div className="col-12 col-sm-6 col-xl-4">
+              <MetricCard
+                label="Total Sales"
+                value={overallSummary?.total_sales || 0}
+                sub="All time transactions"
+                variant="metric-blue"
+                icon="bi-receipt"
+              />
+            </div>
+            <div className="col-12 col-sm-6 col-xl-4">
+              <MetricCard
+                label="Total Revenue"
+                value={formatMoney(overallSummary?.total_revenue || 0)}
+                variant="metric-orange"
+                icon="bi-currency-dollar"
+              />
+            </div>
+            <div className="col-12 col-sm-6 col-xl-4">
+              <MetricCard
+                label="Cash Sales Profit"
+                value={formatMoney(overallSummary?.total_profit || 0)}
+                sub="All time cash sales"
+                variant="metric-teal"
+                icon="bi-graph-up"
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="card">
         <div className="card-body">
-          <div className="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4">
-            <div>
-              <h5 className="card-title mb-1">All Sales</h5>
-              <p className="text-muted small mb-0">
-                {filteredSales.length} record{filteredSales.length !== 1 ? 's' : ''}
-                {hasActiveFilters ? ' (filtered)' : ''}
-              </p>
-            </div>
-          </div>
-
-          <div className="row g-3 mb-4 report-filters">
-            <div className="col-12 col-md-6 col-lg-3">
-              <label htmlFor="filterItem" className="form-label fw-semibold small">
-                Item
-              </label>
-              <select
-                id="filterItem"
-                className="form-select"
-                value={filterItem}
-                onChange={(e) => setFilterItem(e.target.value)}
-              >
-                <option value="">All items</option>
-                {itemOptions.map((name) => (
-                  <option key={name} value={name}>
-                    {name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="col-12 col-md-6 col-lg-3">
-              <label htmlFor="filterTeller" className="form-label fw-semibold small">
-                Teller
-              </label>
-              <select
-                id="filterTeller"
-                className="form-select"
-                value={filterTeller}
-                onChange={(e) => setFilterTeller(e.target.value)}
-              >
-                <option value="">All tellers</option>
-                {tellerOptions.map((name) => (
-                  <option key={name} value={name}>
-                    {name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="col-12 col-md-6 col-lg-2">
-              <label htmlFor="filterStartDate" className="form-label fw-semibold small">
-                From
-              </label>
-              <input
-                id="filterStartDate"
-                type="date"
-                className="form-control"
-                value={filterStartDate}
-                onChange={(e) => setFilterStartDate(e.target.value)}
-              />
-            </div>
-            <div className="col-12 col-md-6 col-lg-2">
-              <label htmlFor="filterEndDate" className="form-label fw-semibold small">
-                To
-              </label>
-              <input
-                id="filterEndDate"
-                type="date"
-                className="form-control"
-                value={filterEndDate}
-                onChange={(e) => setFilterEndDate(e.target.value)}
-                min={filterStartDate || undefined}
-              />
-            </div>
-            <div className="col-12 col-lg-2 d-flex align-items-end">
-              <button
-                type="button"
-                className="btn btn-outline-secondary w-100"
-                onClick={handleClearFilters}
-                disabled={!hasActiveFilters}
-              >
-                <i className="bi bi-x-circle me-1"></i>
-                Clear
-              </button>
-            </div>
+          <div className="d-flex align-items-baseline gap-2 mb-2">
+            <h5 className="card-title mb-0">All Sales</h5>
+            <span className="text-muted small">{filteredSales.length}</span>
           </div>
 
           <div className="card border-0 shadow-none">
             <div className="card-body p-0">
-              {filteredSales.length === 0 ? (
-                <div className="text-center py-5">
-                  <i className="bi bi-receipt text-muted fs-1 mb-3 d-block"></i>
-                  <h5 className="text-muted">No sales found</h5>
-                  <p className="text-muted mb-0">
-                    {hasActiveFilters ? 'Try adjusting your filters.' : 'No sales recorded yet.'}
-                  </p>
-                </div>
-              ) : (
-                <>
                   <div className="table-responsive">
-                    <table className="table table-hover mb-0">
+                    <table className="table table-hover admin-table mb-0">
                       <thead className="table-light">
                         <tr>
                           <th className="border-0 fw-semibold">Order ID</th>
                           <th className="border-0 fw-semibold">Date &amp; Time</th>
                           <th className="border-0 fw-semibold">Item</th>
+                          <th className="border-0 fw-semibold">Category</th>
                           <th className="border-0 fw-semibold">Qty</th>
+                          <th className="border-0 fw-semibold">Returned</th>
+                          <th className="border-0 fw-semibold">Flag</th>
                           <th className="border-0 fw-semibold">Price</th>
                           <th className="border-0 fw-semibold">Total</th>
                           <th className="border-0 fw-semibold">Teller</th>
                         </tr>
+                        <tr className="report-filter-row">
+                          <th>
+                            <input
+                              id="filterOrder"
+                              type="text"
+                              className="form-control form-control-sm"
+                              placeholder="Order ID"
+                              value={filterOrder}
+                              onChange={(e) => setFilterOrder(e.target.value)}
+                            />
+                          </th>
+                          <th>
+                            <div className="report-date-range">
+                              <input
+                                id="filterStartDate"
+                                type="date"
+                                className="form-control form-control-sm"
+                                value={filterStartDate}
+                                onChange={(e) => setFilterStartDate(e.target.value)}
+                                aria-label="From date"
+                              />
+                              <span className="report-date-range-sep" aria-hidden="true">–</span>
+                              <input
+                                id="filterEndDate"
+                                type="date"
+                                className="form-control form-control-sm"
+                                value={filterEndDate}
+                                onChange={(e) => setFilterEndDate(e.target.value)}
+                                min={filterStartDate || undefined}
+                                aria-label="To date"
+                              />
+                            </div>
+                          </th>
+                          <th>
+                            <select
+                              id="filterItem"
+                              className="form-select form-select-sm"
+                              value={filterItem}
+                              onChange={(e) => setFilterItem(e.target.value)}
+                            >
+                              <option value="">All items</option>
+                              {itemOptions.map((name) => (
+                                <option key={name} value={name}>
+                                  {name}
+                                </option>
+                              ))}
+                            </select>
+                          </th>
+                          <th>
+                            <select
+                              id="filterCategory"
+                              className="form-select form-select-sm"
+                              value={filterCategory}
+                              onChange={(e) => setFilterCategory(e.target.value)}
+                            >
+                              <option value="">All categories</option>
+                              {categoryOptions.map((name) => (
+                                <option key={name} value={name}>
+                                  {name}
+                                </option>
+                              ))}
+                            </select>
+                          </th>
+                          <th />
+                          <th />
+                          <th>
+                            <select
+                              id="filterType"
+                              className="form-select form-select-sm"
+                              value={filterType}
+                              onChange={(e) => setFilterType(e.target.value)}
+                            >
+                              <option value="">All</option>
+                              <option value="sale">Sales</option>
+                              <option value="return">Returns</option>
+                            </select>
+                          </th>
+                          <th />
+                          <th />
+                          <th>
+                            <div className="report-teller-filter">
+                              <select
+                                id="filterTeller"
+                                className="form-select form-select-sm"
+                                value={filterTeller}
+                                onChange={(e) => setFilterTeller(e.target.value)}
+                              >
+                                <option value="">All tellers</option>
+                                {tellerOptions.map((name) => (
+                                  <option key={name} value={name}>
+                                    {name}
+                                  </option>
+                                ))}
+                              </select>
+                              <button
+                                type="button"
+                                className="btn btn-outline-secondary btn-sm"
+                                onClick={handleClearFilters}
+                                disabled={!hasActiveFilters}
+                              >
+                                Clear
+                              </button>
+                            </div>
+                          </th>
+                        </tr>
                       </thead>
                       <tbody>
-                        {paginatedSales.map((sale) => (
+                        {paginatedSales.length === 0 ? (
+                          <tr>
+                            <td colSpan={10} className="text-center py-5">
+                              <i className="bi bi-receipt text-muted fs-1 mb-3 d-block"></i>
+                              <h5 className="text-muted">No sales found</h5>
+                              <p className="text-muted mb-0">
+                                {hasActiveFilters ? 'Try adjusting your filters.' : 'No sales recorded yet.'}
+                              </p>
+                            </td>
+                          </tr>
+                        ) : (
+                          paginatedSales.map((sale) => {
+                          const isReturn = Boolean(sale.is_return || sale.return_flag);
+                          return (
                           <tr key={sale.id}>
                             <td className="order-id-cell">
                               <span className="order-id-badge">{formatOrderId(sale.order_number, sale.id)}</span>
                             </td>
-                            <td className="text-muted">
-                              {new Date(sale.sale_date).toLocaleString()}
+                            <td className="text-muted text-nowrap">
+                              {new Date(sale.sale_date).toLocaleString(undefined, {
+                                month: 'numeric',
+                                day: 'numeric',
+                                year: 'numeric',
+                                hour: 'numeric',
+                                minute: '2-digit',
+                              })}
                             </td>
                             <td className="fw-semibold">{sale.item_name}</td>
+                            <td>{sale.category_name || sale.category || '—'}</td>
                             <td>{sale.quantity}</td>
+                            <td>{sale.returned_qty || 0}</td>
+                            <td>
+                              {isReturn ? (
+                                <span className="badge bg-danger">
+                                  Return
+                                  {sale.return_type && sale.return_type !== 'cash'
+                                    ? ` · ${sale.return_type}`
+                                    : sale.return_type === 'cash'
+                                      ? ' · cash'
+                                      : ''}
+                                </span>
+                              ) : (
+                                <span className="badge bg-success">Sale</span>
+                              )}
+                            </td>
                             <td>{formatMoney(sale.price || 0)}</td>
-                            <td className="fw-semibold">{formatMoney(sale.total || 0)}</td>
+                            <td className={`fw-semibold${isReturn ? ' text-danger' : ''}`}>
+                              {formatMoney(sale.total || 0)}
+                            </td>
                             <td>{sale.teller_name || '—'}</td>
                           </tr>
-                        ))}
+                          );
+                        })
+                        )}
                       </tbody>
                     </table>
                   </div>
 
+                  {filteredSales.length > 0 && (
                   <div className="d-flex flex-column flex-sm-row align-items-center justify-content-between gap-3 px-3 py-3 border-top">
                     <p className="text-muted small mb-0">
                       Showing {(currentPage - 1) * PAGE_SIZE + 1}–
@@ -520,8 +629,7 @@ const SalesReport = () => {
                       </ul>
                     </nav>
                   </div>
-                </>
-              )}
+                  )}
             </div>
           </div>
         </div>
