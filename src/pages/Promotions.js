@@ -5,6 +5,8 @@ import PageHeader from '../components/PageHeader';
 import AdminAlerts from '../components/AdminAlerts';
 import AdminLoading from '../components/AdminLoading';
 import { useConfirm } from '../contexts/ConfirmContext';
+import PaginationBar from '../components/PaginationBar';
+import { usePagination } from '../hooks/usePagination';
 import { addDays, localToday, promotionStatus } from '../utils/promotions';
 
 const EMPTY_FORM = {
@@ -88,6 +90,15 @@ function Promotions() {
     if (!q) return items;
     return items.filter((item) => (item.name || '').toLowerCase().includes(q));
   }, [items, itemSearch]);
+
+  const {
+    page,
+    setPage,
+    pageItems,
+    total,
+    totalPages,
+    pageSize,
+  } = usePagination(promotions);
 
   const handleCloseModal = () => {
     setShowModal(false);
@@ -195,7 +206,7 @@ function Promotions() {
   }
 
   return (
-    <div className="container-fluid matte-page admin-page">
+    <div className="container-fluid matte-page admin-page table-page">
       <PageHeader
         title={t('Promotions')}
         subtitle={t('Create percentage promotions for categories or items.')}
@@ -214,7 +225,7 @@ function Promotions() {
         onClearError={() => setError('')}
       />
 
-      <div className="card">
+      <div className="card table-panel">
         <div className="card-body p-0">
           {promotions.length === 0 ? (
             <div className="text-center py-5">
@@ -236,7 +247,7 @@ function Promotions() {
                   </tr>
                 </thead>
                 <tbody>
-                  {promotions.map((promo) => {
+                  {pageItems.map((promo) => {
                     const status = promotionStatus(promo);
                     return (
                       <tr key={promo.id}>
@@ -278,6 +289,14 @@ function Promotions() {
               </table>
             </div>
           )}
+          <PaginationBar
+            page={page}
+            totalPages={totalPages}
+            total={total}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            label={t('promotions')}
+          />
         </div>
       </div>
 

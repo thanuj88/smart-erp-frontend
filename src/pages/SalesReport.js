@@ -2,8 +2,10 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { saleService } from '../services';
 import { useCurrency } from '../contexts/TenantSettingsContext';
 import { formatOrderId } from '../utils/orderId';
-
-const PAGE_SIZE = 10;
+import PaginationBar from '../components/PaginationBar';
+import DateRangePicker from '../components/DateRangePicker';
+import { usePagination } from '../hooks/usePagination';
+import { useTranslation } from 'react-i18next';
 
 const actualIncome = (summary) => {
   if (!summary) return 0;
@@ -28,27 +30,27 @@ const MetricCard = ({ label, value, sub, variant = 'metric-orange', icon }) => (
   </div>
 );
 
-const STATS_TABS = [
-  { id: 'today', label: "Today's Statistics" },
-  { id: 'week', label: 'This Week' },
-  { id: 'month', label: 'This Month' },
-  { id: 'overall', label: 'Overall Statistics' },
+const STATS_TAB_KEYS = [
+  { id: 'today', labelKey: 'todayStatistics' },
+  { id: 'week', labelKey: 'thisWeek' },
+  { id: 'month', labelKey: 'thisMonth' },
+  { id: 'overall', labelKey: 'overallStatistics' },
 ];
 
-const PeriodMetrics = ({ summary, formatMoney, collectionsSub }) => (
+const PeriodMetrics = ({ summary, formatMoney, collectionsSub, t }) => (
   <div className="row g-3">
     <div className="col-12 col-sm-6 col-xl-3">
       <MetricCard
-        label="Down Payments"
+        label={t('downPayments')}
         value={formatMoney(summary?.down_payment_income || 0)}
-        sub="Installment down payments"
+        sub={t('subInstallmentDownPayments')}
         variant="metric-blue"
         icon="bi-cash-stack"
       />
     </div>
     <div className="col-12 col-sm-6 col-xl-3">
       <MetricCard
-        label="Installment Collections"
+        label={t('installmentCollections')}
         value={formatMoney(summary?.installment_income || 0)}
         sub={collectionsSub}
         variant="metric-teal"
@@ -57,18 +59,18 @@ const PeriodMetrics = ({ summary, formatMoney, collectionsSub }) => (
     </div>
     <div className="col-12 col-sm-6 col-xl-3">
       <MetricCard
-        label="Total Actual Income"
+        label={t('totalActualIncome')}
         value={formatMoney(actualIncome(summary))}
-        sub={`${formatMoney(summary?.total_revenue || 0)} cash revenue`}
+        sub={t('subCashRevenueAmount', { amount: formatMoney(summary?.total_revenue || 0) })}
         variant="metric-dark"
         icon="bi-graph-up-arrow"
       />
     </div>
     <div className="col-12 col-sm-6 col-xl-3">
       <MetricCard
-        label="Cash Sales Profit"
+        label={t('widgetCashProfit')}
         value={formatMoney(summary?.total_profit || 0)}
-        sub="On cash sales only"
+        sub={t('subOnCashSalesOnly')}
         variant="metric-teal"
         icon="bi-piggy-bank"
       />
@@ -77,6 +79,7 @@ const PeriodMetrics = ({ summary, formatMoney, collectionsSub }) => (
 );
 
 const SalesReport = () => {
+  const { t } = useTranslation();
   const { formatMoney } = useCurrency();
   const [allSales, setAllSales] = useState([]);
   const [returns, setReturns] = useState([]);
@@ -94,7 +97,6 @@ const SalesReport = () => {
   const [filterTeller, setFilterTeller] = useState('');
   const [filterStartDate, setFilterStartDate] = useState('');
   const [filterEndDate, setFilterEndDate] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
   const [statsTab, setStatsTab] = useState('today');
 
   const loadData = useCallback(async () => {
@@ -226,22 +228,16 @@ const SalesReport = () => {
     });
   }, [combinedSales, filterType, filterCategory, filterItem, filterOrder, filterTeller, filterStartDate, filterEndDate]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredSales.length / PAGE_SIZE));
-
-  const paginatedSales = useMemo(() => {
-    const start = (currentPage - 1) * PAGE_SIZE;
-    return filteredSales.slice(start, start + PAGE_SIZE);
-  }, [filteredSales, currentPage]);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [filterType, filterCategory, filterItem, filterOrder, filterTeller, filterStartDate, filterEndDate]);
-
-  useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(totalPages);
-    }
-  }, [currentPage, totalPages]);
+  const {
+    page,
+    setPage,
+    pageItems: paginatedSales,
+    total,
+    totalPages,
+    pageSize,
+  } = usePagination(filteredSales, {
+    resetKey: `${filterType}|${filterCategory}|${filterItem}|${filterOrder}|${filterTeller}|${filterStartDate}|${filterEndDate}`,
+  });
 
   const handleClearFilters = () => {
     setFilterItem('');
@@ -251,7 +247,7 @@ const SalesReport = () => {
     setFilterTeller('');
     setFilterStartDate('');
     setFilterEndDate('');
-    setCurrentPage(1);
+    setPage(1);
   };
 
   const hasActiveFilters =
@@ -262,23 +258,23 @@ const SalesReport = () => {
       <div className="d-flex align-items-center justify-content-center min-vh-100">
         <div className="text-center">
           <div className="spinner-border text-primary" role="status">
-            <span className="visually-hidden">Loading...</span>
+            <span className="visually-hidden">{t('loading')}</span>
           </div>
-          <p className="text-muted mt-2">Loading sales report...</p>
+          <p className="text-muted mt-2">{t('loadingSalesReport')}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container-fluid matte-page admin-page report-page">
+    <div className="container-fluid matte-page admin-page report-page table-page">
       <div className="row mb-3">
         <div className="col-12">
           <div className="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between">
             <div className="mb-3 mb-lg-0">
-              <h1 className="h3 mb-1">Sales Report</h1>
+              <h1 className="h3 mb-1">{t('salesReport')}</h1>
               <p className="text-muted small mb-0">
-                View sales performance, revenue, and transaction history.
+                {t('salesReportSubtitle')}
               </p>
             </div>
             <div className="text-muted small">
@@ -303,7 +299,7 @@ const SalesReport = () => {
       )}
 
       <ul className="nav nav-tabs admin-tabs mb-3" role="tablist">
-        {STATS_TABS.map((tab) => (
+        {STATS_TAB_KEYS.map((tab) => (
           <li className="nav-item" role="presentation" key={tab.id}>
             <button
               type="button"
@@ -314,7 +310,7 @@ const SalesReport = () => {
               className={`nav-link ${statsTab === tab.id ? 'active' : ''}`}
               onClick={() => setStatsTab(tab.id)}
             >
-              {tab.label}
+              {t(tab.labelKey)}
             </button>
           </li>
         ))}
@@ -325,7 +321,8 @@ const SalesReport = () => {
           <PeriodMetrics
             summary={dailySummary}
             formatMoney={formatMoney}
-            collectionsSub="Payments collected today"
+            collectionsSub={t('collectionsToday')}
+            t={t}
           />
         )}
 
@@ -333,7 +330,8 @@ const SalesReport = () => {
           <PeriodMetrics
             summary={weeklySummary}
             formatMoney={formatMoney}
-            collectionsSub="Payments collected this week"
+            collectionsSub={t('collectionsWeek')}
+            t={t}
           />
         )}
 
@@ -341,7 +339,8 @@ const SalesReport = () => {
           <PeriodMetrics
             summary={monthlySummary}
             formatMoney={formatMoney}
-            collectionsSub="Payments collected this month"
+            collectionsSub={t('collectionsMonth')}
+            t={t}
           />
         )}
 
@@ -349,26 +348,27 @@ const SalesReport = () => {
           <div className="row g-3">
             <div className="col-12 col-sm-6 col-xl-4">
               <MetricCard
-                label="Total Sales"
+                label={t('totalSales')}
                 value={overallSummary?.total_sales || 0}
-                sub="All time transactions"
+                sub={t('allTimeTransactions')}
                 variant="metric-blue"
                 icon="bi-receipt"
               />
             </div>
             <div className="col-12 col-sm-6 col-xl-4">
               <MetricCard
-                label="Total Revenue"
+                label={t('totalRevenue')}
                 value={formatMoney(overallSummary?.total_revenue || 0)}
+                sub={t('allTimeCashRevenue')}
                 variant="metric-orange"
                 icon="bi-currency-dollar"
               />
             </div>
             <div className="col-12 col-sm-6 col-xl-4">
               <MetricCard
-                label="Cash Sales Profit"
+                label={t('widgetCashProfit')}
                 value={formatMoney(overallSummary?.total_profit || 0)}
-                sub="All time cash sales"
+                sub={t('allTimeCashSales')}
                 variant="metric-teal"
                 icon="bi-graph-up"
               />
@@ -377,29 +377,38 @@ const SalesReport = () => {
         )}
       </div>
 
-      <div className="card">
-        <div className="card-body">
-          <div className="d-flex align-items-baseline gap-2 mb-2">
-            <h5 className="card-title mb-0">All Sales</h5>
+      <div className="card table-panel">
+        <div className="card-body p-0">
+          <div className="d-flex align-items-baseline gap-2 px-3 pt-3 pb-2">
+            <h5 className="card-title mb-0">{t('allSales')}</h5>
             <span className="text-muted small">{filteredSales.length}</span>
           </div>
-
-          <div className="card border-0 shadow-none">
-            <div className="card-body p-0">
-                  <div className="table-responsive">
-                    <table className="table table-hover admin-table mb-0">
+          <div className="table-responsive">
+                    <table className="table table-hover admin-table mb-0 sales-table">
+                      <colgroup>
+                        <col className="col-order" />
+                        <col className="col-datetime" />
+                        <col className="col-item" />
+                        <col className="col-category" />
+                        <col className="col-qty" />
+                        <col className="col-returned" />
+                        <col className="col-flag" />
+                        <col className="col-price" />
+                        <col className="col-total" />
+                        <col className="col-teller" />
+                      </colgroup>
                       <thead className="table-light">
                         <tr>
-                          <th className="border-0 fw-semibold">Order ID</th>
-                          <th className="border-0 fw-semibold">Date &amp; Time</th>
-                          <th className="border-0 fw-semibold">Item</th>
-                          <th className="border-0 fw-semibold">Category</th>
-                          <th className="border-0 fw-semibold">Qty</th>
-                          <th className="border-0 fw-semibold">Returned</th>
-                          <th className="border-0 fw-semibold">Flag</th>
-                          <th className="border-0 fw-semibold">Price</th>
-                          <th className="border-0 fw-semibold">Total</th>
-                          <th className="border-0 fw-semibold">Teller</th>
+                          <th className="border-0 fw-semibold">{t('orderId')}</th>
+                          <th className="border-0 fw-semibold">{t('date')}</th>
+                          <th className="border-0 fw-semibold">{t('item')}</th>
+                          <th className="border-0 fw-semibold">{t('category')}</th>
+                          <th className="border-0 fw-semibold text-center">{t('qty')}</th>
+                          <th className="border-0 fw-semibold text-center" title={t('returned')}>{t('rtn')}</th>
+                          <th className="border-0 fw-semibold">{t('flag')}</th>
+                          <th className="border-0 fw-semibold">{t('price')}</th>
+                          <th className="border-0 fw-semibold">{t('total')}</th>
+                          <th className="border-0 fw-semibold">{t('teller')}</th>
                         </tr>
                         <tr className="report-filter-row">
                           <th>
@@ -407,32 +416,21 @@ const SalesReport = () => {
                               id="filterOrder"
                               type="text"
                               className="form-control form-control-sm"
-                              placeholder="Order ID"
+                              placeholder={t('orderId')}
                               value={filterOrder}
                               onChange={(e) => setFilterOrder(e.target.value)}
                             />
                           </th>
                           <th>
-                            <div className="report-date-range">
-                              <input
-                                id="filterStartDate"
-                                type="date"
-                                className="form-control form-control-sm"
-                                value={filterStartDate}
-                                onChange={(e) => setFilterStartDate(e.target.value)}
-                                aria-label="From date"
-                              />
-                              <span className="report-date-range-sep" aria-hidden="true">–</span>
-                              <input
-                                id="filterEndDate"
-                                type="date"
-                                className="form-control form-control-sm"
-                                value={filterEndDate}
-                                onChange={(e) => setFilterEndDate(e.target.value)}
-                                min={filterStartDate || undefined}
-                                aria-label="To date"
-                              />
-                            </div>
+                            <DateRangePicker
+                              startDate={filterStartDate}
+                              endDate={filterEndDate}
+                              placeholder={t('dates')}
+                              onChange={({ startDate, endDate }) => {
+                                setFilterStartDate(startDate);
+                                setFilterEndDate(endDate);
+                              }}
+                            />
                           </th>
                           <th>
                             <select
@@ -441,7 +439,7 @@ const SalesReport = () => {
                               value={filterItem}
                               onChange={(e) => setFilterItem(e.target.value)}
                             >
-                              <option value="">All items</option>
+                              <option value="">{t('allItems')}</option>
                               {itemOptions.map((name) => (
                                 <option key={name} value={name}>
                                   {name}
@@ -456,7 +454,7 @@ const SalesReport = () => {
                               value={filterCategory}
                               onChange={(e) => setFilterCategory(e.target.value)}
                             >
-                              <option value="">All categories</option>
+                              <option value="">{t('All categories')}</option>
                               {categoryOptions.map((name) => (
                                 <option key={name} value={name}>
                                   {name}
@@ -473,9 +471,9 @@ const SalesReport = () => {
                               value={filterType}
                               onChange={(e) => setFilterType(e.target.value)}
                             >
-                              <option value="">All</option>
-                              <option value="sale">Sales</option>
-                              <option value="return">Returns</option>
+                              <option value="">{t('All')}</option>
+                              <option value="sale">{t('sale')}</option>
+                              <option value="return">{t('Returns')}</option>
                             </select>
                           </th>
                           <th />
@@ -488,7 +486,7 @@ const SalesReport = () => {
                                 value={filterTeller}
                                 onChange={(e) => setFilterTeller(e.target.value)}
                               >
-                                <option value="">All tellers</option>
+                                <option value="">{t('allTellers')}</option>
                                 {tellerOptions.map((name) => (
                                   <option key={name} value={name}>
                                     {name}
@@ -501,7 +499,7 @@ const SalesReport = () => {
                                 onClick={handleClearFilters}
                                 disabled={!hasActiveFilters}
                               >
-                                Clear
+                                {t('clear')}
                               </button>
                             </div>
                           </th>
@@ -512,9 +510,9 @@ const SalesReport = () => {
                           <tr>
                             <td colSpan={10} className="text-center py-5">
                               <i className="bi bi-receipt text-muted fs-1 mb-3 d-block"></i>
-                              <h5 className="text-muted">No sales found</h5>
+                              <h5 className="text-muted">{t('noSalesFound')}</h5>
                               <p className="text-muted mb-0">
-                                {hasActiveFilters ? 'Try adjusting your filters.' : 'No sales recorded yet.'}
+                                {hasActiveFilters ? t('tryAdjustFilters') : t('noSalesRecorded')}
                               </p>
                             </td>
                           </tr>
@@ -526,38 +524,40 @@ const SalesReport = () => {
                             <td className="order-id-cell">
                               <span className="order-id-badge">{formatOrderId(sale.order_number, sale.id)}</span>
                             </td>
-                            <td className="text-muted text-nowrap">
+                            <td className="text-muted sale-datetime">
                               {new Date(sale.sale_date).toLocaleString(undefined, {
                                 month: 'numeric',
                                 day: 'numeric',
-                                year: 'numeric',
+                                year: '2-digit',
                                 hour: 'numeric',
                                 minute: '2-digit',
-                              })}
+                              }).replace(',', '')}
                             </td>
-                            <td className="fw-semibold">{sale.item_name}</td>
-                            <td>{sale.category_name || sale.category || '—'}</td>
-                            <td>{sale.quantity}</td>
-                            <td>{sale.returned_qty || 0}</td>
+                            <td className="fw-semibold sale-item" title={sale.item_name}>{sale.item_name}</td>
+                            <td className="sale-category" title={sale.category_name || sale.category || ''}>
+                              {sale.category_name || sale.category || '-'}
+                            </td>
+                            <td className="text-center">{sale.quantity}</td>
+                            <td className="text-center">{sale.returned_qty || 0}</td>
                             <td>
                               {isReturn ? (
                                 <span className="badge bg-danger">
-                                  Return
+                                  {t('Return')}
                                   {sale.return_type && sale.return_type !== 'cash'
-                                    ? ` · ${sale.return_type}`
+                                    ? ` · ${sale.return_type === 'warranty' ? t('Warranty claim') : sale.return_type === 'defect' ? t('Defect') : sale.return_type}`
                                     : sale.return_type === 'cash'
-                                      ? ' · cash'
+                                      ? ` · ${t('cash')}`
                                       : ''}
                                 </span>
                               ) : (
-                                <span className="badge bg-success">Sale</span>
+                                <span className="badge bg-success">{t('sale')}</span>
                               )}
                             </td>
                             <td>{formatMoney(sale.price || 0)}</td>
                             <td className={`fw-semibold${isReturn ? ' text-danger' : ''}`}>
                               {formatMoney(sale.total || 0)}
                             </td>
-                            <td>{sale.teller_name || '—'}</td>
+                            <td>{sale.teller_name || '-'}</td>
                           </tr>
                           );
                         })
@@ -566,72 +566,14 @@ const SalesReport = () => {
                     </table>
                   </div>
 
-                  {filteredSales.length > 0 && (
-                  <div className="d-flex flex-column flex-sm-row align-items-center justify-content-between gap-3 px-3 py-3 border-top">
-                    <p className="text-muted small mb-0">
-                      Showing {(currentPage - 1) * PAGE_SIZE + 1}–
-                      {Math.min(currentPage * PAGE_SIZE, filteredSales.length)} of{' '}
-                      {filteredSales.length}
-                    </p>
-                    <nav aria-label="Sales pagination">
-                      <ul className="pagination pagination-sm mb-0">
-                        <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
-                          <button
-                            type="button"
-                            className="page-link"
-                            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                            disabled={currentPage === 1}
-                          >
-                            Previous
-                          </button>
-                        </li>
-                        {Array.from({ length: totalPages }, (_, i) => i + 1)
-                          .filter((page) => {
-                            if (totalPages <= 7) return true;
-                            return (
-                              page === 1 ||
-                              page === totalPages ||
-                              Math.abs(page - currentPage) <= 1
-                            );
-                          })
-                          .map((page, idx, arr) => {
-                            const prev = arr[idx - 1];
-                            const showEllipsis = prev && page - prev > 1;
-                            return (
-                              <React.Fragment key={page}>
-                                {showEllipsis && (
-                                  <li className="page-item disabled">
-                                    <span className="page-link">…</span>
-                                  </li>
-                                )}
-                                <li className={`page-item ${currentPage === page ? 'active' : ''}`}>
-                                  <button
-                                    type="button"
-                                    className="page-link"
-                                    onClick={() => setCurrentPage(page)}
-                                  >
-                                    {page}
-                                  </button>
-                                </li>
-                              </React.Fragment>
-                            );
-                          })}
-                        <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
-                          <button
-                            type="button"
-                            className="page-link"
-                            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                            disabled={currentPage === totalPages}
-                          >
-                            Next
-                          </button>
-                        </li>
-                      </ul>
-                    </nav>
-                  </div>
-                  )}
-            </div>
-          </div>
+          <PaginationBar
+            page={page}
+            totalPages={totalPages}
+            total={total}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            label={t('sales')}
+          />
         </div>
       </div>
     </div>

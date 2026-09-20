@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { platformService } from '../../services';
+import PaginationBar from '../../components/PaginationBar';
+import { usePagination } from '../../hooks/usePagination';
 
 const STAFF_ROLES = ['TENANT_ADMIN', 'MANAGER', 'TELLER', 'INVENTORY', 'ACCOUNTANT'];
 const PLATFORM_ROLES = ['SUPER_ADMIN', ...STAFF_ROLES];
@@ -30,6 +32,15 @@ const PlatformUsers = () => {
   useEffect(() => {
     load().catch(() => setError('Load failed'));
   }, []);
+
+  const {
+    page,
+    setPage,
+    pageItems,
+    total,
+    totalPages,
+    pageSize,
+  } = usePagination(users);
 
   const openCreate = () => {
     setForm(emptyForm());
@@ -76,7 +87,7 @@ const PlatformUsers = () => {
   };
 
   return (
-    <div className="page-content">
+    <div className="page-content table-page">
       <div className="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
         <h1 className="h3 mb-0">Platform Users</h1>
         <button type="button" className="btn btn-primary" onClick={openCreate}>
@@ -98,7 +109,7 @@ const PlatformUsers = () => {
         </div>
       )}
 
-      <div className="card">
+      <div className="card table-panel">
         <div className="table-responsive">
           <table className="table table-hover admin-table mb-0">
             <thead className="table-light">
@@ -111,12 +122,16 @@ const PlatformUsers = () => {
               </tr>
             </thead>
             <tbody>
-              {users.map((u) => (
+              {pageItems.map((u) => (
                 <tr key={u.id}>
                   <td className="fw-semibold">{u.email || u.username}</td>
                   <td>{u.tenant_name || 'Platform'}</td>
                   <td>{u.role}</td>
-                  <td>{u.is_active ? 'Yes' : 'No'}</td>
+                  <td>
+                    <span className={`badge ${u.is_active ? 'bg-success' : 'bg-secondary'}`}>
+                      {u.is_active ? 'Active' : 'Inactive'}
+                    </span>
+                  </td>
                   <td>
                     {u.role !== 'SUPER_ADMIN' ? (
                       <select
@@ -131,7 +146,7 @@ const PlatformUsers = () => {
                         ))}
                       </select>
                     ) : (
-                      '—'
+                      '-'
                     )}
                   </td>
                 </tr>
@@ -139,6 +154,14 @@ const PlatformUsers = () => {
             </tbody>
           </table>
         </div>
+        <PaginationBar
+          page={page}
+          totalPages={totalPages}
+          total={total}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          label="users"
+        />
       </div>
 
       {showModal && (

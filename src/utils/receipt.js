@@ -5,7 +5,7 @@ import { resolveBusinessName } from '../config/app';
 export const RECEIPT_PAPER_SIZES = [
   {
     code: '58mm',
-    label: '58mm — 2¼″ compact thermal',
+    label: '58mm - 2¼″ compact thermal',
     hint: 'Portable and small POS printers',
     widthMm: 58,
     previewPx: 200,
@@ -13,7 +13,7 @@ export const RECEIPT_PAPER_SIZES = [
   },
   {
     code: '80mm',
-    label: '80mm — 3⅛″ standard thermal',
+    label: '80mm - 3⅛″ standard thermal',
     hint: 'Most retail POS printers',
     widthMm: 80,
     previewPx: 280,
@@ -21,7 +21,7 @@ export const RECEIPT_PAPER_SIZES = [
   },
   {
     code: '112mm',
-    label: '112mm — 4⅜″ wide thermal',
+    label: '112mm - 4⅜″ wide thermal',
     hint: 'Wide kitchen and counter printers',
     widthMm: 112,
     previewPx: 360,
@@ -29,7 +29,7 @@ export const RECEIPT_PAPER_SIZES = [
   },
   {
     code: 'A5',
-    label: 'A5 — 148mm page printer',
+    label: 'A5 - 148mm page printer',
     hint: 'Small laser or inkjet invoices',
     widthMm: 148,
     previewPx: 400,
@@ -37,7 +37,7 @@ export const RECEIPT_PAPER_SIZES = [
   },
   {
     code: 'A4',
-    label: 'A4 — 210mm page printer',
+    label: 'A4 - 210mm page printer',
     hint: 'Standard office printer',
     widthMm: 210,
     previewPx: 440,
@@ -193,7 +193,7 @@ export function buildInstallmentPaymentReceipt(plan, { currentAmount } = {}) {
     tenderedLabel: thisPayment > 0 ? 'This payment' : 'Total paid',
     extraTotalLines: [{ label: 'Balance', value: remaining }],
     infoLines: [
-      { label: 'Customer', value: plan?.customer_name || plan?.customer?.name || '—' },
+      { label: 'Customer', value: plan?.customer_name || plan?.customer?.name || '-' },
       { label: 'Order ID', value: formatOrderId(plan?.order_number, plan?.sale_id, plan?.id) },
     ].filter((line) => line.value && line.value !== '#'),
     invoiceTitle: 'Installment Payment Receipt',
@@ -279,7 +279,7 @@ export function createReturnReceiptPrintJob({ settings, currency, cashierName, r
       showChange: false,
       infoLines: [
         { label: 'Original order', value: formatOrderId(result?.order_number) },
-        { label: 'Return ID', value: result?.return_number || '—' },
+        { label: 'Return ID', value: result?.return_number || '-' },
         { label: 'Return type', value: RETURN_TYPE_LABELS[result?.return_type] || 'Cash refund' },
         result?.replacement_qty
           ? { label: 'Replacement qty', value: String(result.replacement_qty) }

@@ -172,7 +172,7 @@ const PlatformRoles = () => {
               </div>
               <div className="card-body">
                 {selectedRole.system && (
-                  <p className="text-muted">System role — capabilities cannot be edited.</p>
+                  <p className="text-muted">System role - capabilities cannot be edited.</p>
                 )}
                 {selectedRole.description && (
                   <p className="text-muted small">{selectedRole.description}</p>

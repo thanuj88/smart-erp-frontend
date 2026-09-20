@@ -22,7 +22,7 @@ export const getCopyrightText = () => {
 
 export const getPageTitle = (page, storeName = APP_NAME) => {
   const name = String(storeName || APP_NAME).trim() || APP_NAME;
-  return page ? `${page} | ${name}` : `${name} — ${APP_CONFIG.tagline}`;
+  return page ? `${page} | ${name}` : `${name} - ${APP_CONFIG.tagline}`;
 };
 
 export const resolveBusinessName = (settings, fallback = APP_NAME) => {

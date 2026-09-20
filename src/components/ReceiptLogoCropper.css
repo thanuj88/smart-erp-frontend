@@ -12,7 +12,7 @@
 .logo-crop-dialog {
   width: 100%;
   max-width: 22.5rem;
-  background: #fff;
+  background: var(--dreams-surface);
   border: 1px solid var(--dreams-border, #e8ecef);
   border-radius: 1rem;
   box-shadow: 0 18px 48px rgba(33, 43, 54, 0.22);
@@ -79,7 +79,7 @@
   height: 2.1rem;
   border: 1px solid var(--dreams-border, #e8ecef);
   border-radius: 0.5rem;
-  background: #fff;
+  background: var(--dreams-surface);
   color: var(--dreams-text, #212b36);
   font-size: 1.25rem;
   font-weight: 600;
@@ -90,7 +90,7 @@
 }
 
 .logo-crop-zoom-btn:hover:not(:disabled) {
-  background: #f5f6fa;
+  background: var(--dreams-hover);
   border-color: var(--dreams-orange, #ff9f43);
 }
 

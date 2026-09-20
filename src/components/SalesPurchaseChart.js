@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 import { useCurrency } from '../contexts/TenantSettingsContext';
 
 const RANGES = ['1D', '1W', '1M', '3M', '6M', '1Y'];
@@ -25,6 +26,7 @@ const SalesPurchaseChart = ({
   summary,
   trendData,
 }) => {
+  const { t } = useTranslation();
   const { formatMoney } = useCurrency();
   const chartModel = useMemo(() => {
     const points = trendData || [];
@@ -53,11 +55,11 @@ const SalesPurchaseChart = ({
               <i className="bi bi-bar-chart-line"></i>
             </span>
             <div>
-              <h5 className="sp-title mb-0">Sales &amp; Purchase</h5>
-              <p className="sp-subtitle mb-0">View sales and purchase totals over the selected timeframe.</p>
+              <h5 className="sp-title mb-0">{t('widgetSalesChart')}</h5>
+              <p className="sp-subtitle mb-0">{t('salesPurchaseSubtitle')}</p>
             </div>
           </div>
-          <div className="sales-purchase-tabs" aria-label="Timeframe selector">
+          <div className="sales-purchase-tabs" aria-label={t('timeframeSelector')}>
             {RANGES.map((range) => (
               <button
                 key={range}
@@ -74,12 +76,12 @@ const SalesPurchaseChart = ({
         <div className="sp-legend-row">
           <div className="sp-legend-chip">
             <span className="legend-dot legend-purchase" />
-            <span className="sp-legend-label">Total Purchase</span>
+            <span className="sp-legend-label">{t('totalPurchase')}</span>
             <strong className="sp-legend-value">{formatCompact(totalPurchase)}</strong>
           </div>
           <div className="sp-legend-chip">
             <span className="legend-dot legend-sales" />
-            <span className="sp-legend-label">Total Sales</span>
+            <span className="sp-legend-label">{t('totalSales')}</span>
             <strong className="sp-legend-value">{formatCompact(totalSales)}</strong>
           </div>
         </div>
@@ -101,7 +103,7 @@ const SalesPurchaseChart = ({
             </div>
 
             {chartModel.points.length === 0 ? (
-              <div className="sp-chart-empty">No trend data available for this range.</div>
+              <div className="sp-chart-empty">{t('chartEmpty')}</div>
             ) : (
               <div className="sp-bars">
                 {chartModel.points.map((point, idx) => {
@@ -116,7 +118,13 @@ const SalesPurchaseChart = ({
                     <div
                       key={`${point.label}-${idx}`}
                       className="sp-bar-column"
-                      title={`${point.label}: Sales ${formatMoney(sales)}, Purchase ${formatMoney(purchase)}`}
+                      title={t('chartTooltip', {
+                        label: point.label,
+                        salesLabel: t('totalSales'),
+                        sales: formatMoney(sales),
+                        purchaseLabel: t('totalPurchase'),
+                        purchase: formatMoney(purchase),
+                      })}
                     >
                       <div className="sp-bar-track">
                         <div

@@ -22,5 +22,5 @@ export function formatOrderId(...candidates) {
     const normalized = normalizeOrderNumber(value);
     if (normalized) return `#${normalized}`;
   }
-  return '—';
+  return '-';
 }

@@ -53,7 +53,7 @@ const PlatformCapabilities = () => {
           <ul className="list-group list-group-flush">
             {perms.map((p) => (
               <li key={p.code} className="list-group-item d-flex justify-content-between">
-                <span><code>{p.code}</code> — {p.name}</span>
+                <span><code>{p.code}</code> - {p.name}</span>
               </li>
             ))}
           </ul>

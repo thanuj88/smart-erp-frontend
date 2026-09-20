@@ -1,15 +1,17 @@
 /* Dreams POS Register */
 
 .pos-shell {
-  min-height: 100vh;
-  background: #f5f6fa;
+  min-height: 0;
+  height: 100%;
+  background: var(--dreams-bg);
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .pos-topbar {
   height: 60px;
-  background: #fff;
+  background: var(--dreams-surface);
   border-bottom: 1px solid #e8ecef;
   display: flex;
   align-items: center;
@@ -46,7 +48,7 @@
   width: 2rem;
   height: 2rem;
   border-radius: 0.5rem;
-  background: #fff4e8;
+  background: var(--dreams-orange-soft);
   color: #ff9f43;
   display: inline-flex;
   align-items: center;
@@ -68,7 +70,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  background: #e8f8ef;
+  background: var(--dreams-teal-soft);
   color: #28c76f;
   border-radius: 2rem;
   padding: 0.3rem 0.75rem;
@@ -91,7 +93,7 @@
 
 .pos-store-select {
   border: 1px solid #e8ecef;
-  background: #fff;
+  background: var(--dreams-surface);
   border-radius: 0.5rem;
   padding: 0.45rem 0.75rem;
   font-size: 0.82rem;
@@ -111,7 +113,7 @@
   height: 2.1rem;
   border: 1px solid #e8ecef;
   border-radius: 0.45rem;
-  background: #fff;
+  background: var(--dreams-surface);
   color: #67748e;
   display: inline-flex;
   align-items: center;
@@ -165,7 +167,7 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.65rem 1rem;
-  background: #fff;
+  background: var(--dreams-surface);
   border-bottom: 1px solid #e8ecef;
   flex-shrink: 0;
 }
@@ -192,7 +194,7 @@
 
 .pos-mode-btn {
   border: 1px solid #e8ecef;
-  background: #f8f9fb;
+  background: var(--dreams-surface-2);
   color: #67748e;
   border-radius: 2rem;
   padding: 0.4rem 1rem;
@@ -202,7 +204,7 @@
 }
 
 .pos-mode-btn.active {
-  background: #fff4e8;
+  background: var(--dreams-orange-soft);
   border-color: #ff9f43;
   color: #ff9f43;
 }
@@ -220,13 +222,13 @@
 }
 
 .pos-alert-error {
-  background: #fee2e2;
+  background: var(--dreams-danger-soft);
   color: #b91c1c;
   border: 1px solid #fecaca;
 }
 
 .pos-alert-success {
-  background: #d1fae5;
+  background: var(--dreams-teal-soft);
   color: #065f46;
   border: 1px solid #a7f3d0;
 }
@@ -241,7 +243,7 @@
 /* Category sidebar */
 .pos-categories {
   width: 88px;
-  background: #fff;
+  background: var(--dreams-surface);
   border-right: 1px solid #e8ecef;
   overflow-y: auto;
   flex-shrink: 0;
@@ -278,12 +280,12 @@
 }
 
 .pos-cat-item:hover {
-  background: #f8f9fb;
+  background: var(--dreams-surface-2);
 }
 
 .pos-cat-item.active {
   border-color: #ff9f43;
-  background: #fff;
+  background: var(--dreams-surface);
   color: #ff9f43;
 }
 
@@ -293,12 +295,13 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
+  min-height: 0;
   overflow: hidden;
 }
 
 .pos-products-header {
   padding: 1rem 1.25rem 0.75rem;
-  background: #f5f6fa;
+  background: var(--dreams-bg);
   flex-shrink: 0;
 }
 
@@ -341,7 +344,7 @@
   border-radius: 0.5rem;
   padding: 0.55rem 0.85rem 0.55rem 2.25rem;
   font-size: 0.88rem;
-  background: #fff;
+  background: var(--dreams-surface);
 }
 
 .pos-search-wrap input:focus {
@@ -352,8 +355,25 @@
 
 .pos-product-grid-wrap {
   flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
   overflow-y: auto;
-  padding: 0 1.25rem 1rem;
+  overscroll-behavior: contain;
+  padding: 0 1.25rem 0.25rem;
+  scrollbar-gutter: stable;
+}
+
+.pos-product-grid-wrap::-webkit-scrollbar {
+  width: 8px;
+}
+
+.pos-product-grid-wrap::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.pos-product-grid-wrap::-webkit-scrollbar-thumb {
+  background: #cfd6de;
+  border-radius: 8px;
 }
 
 .pos-product-grid {
@@ -363,7 +383,7 @@
 }
 
 .pos-product-card {
-  background: #fff;
+  background: var(--dreams-surface);
   border: 1px solid #e8ecef;
   border-radius: 0.75rem;
   padding: 0.75rem;
@@ -408,7 +428,7 @@
 .pos-product-image {
   height: 100px;
   border-radius: 0.5rem;
-  background: linear-gradient(145deg, #f8f9fb, #eef1f6);
+  background: linear-gradient(145deg, var(--dreams-surface-2), var(--dreams-navy-soft));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -451,17 +471,17 @@
 }
 
 .pos-stock-badge--ok {
-  background: #e8f8f0;
+  background: var(--dreams-teal-soft);
   color: #28c76f;
 }
 
 .pos-stock-badge--low {
-  background: #fff4e0;
+  background: var(--dreams-orange-soft);
   color: #ff9f43;
 }
 
 .pos-stock-badge--out {
-  background: #fdeaea;
+  background: var(--dreams-danger-soft);
   color: #ea5455;
 }
 
@@ -516,7 +536,7 @@
   height: 1.75rem;
   border: 1px solid #e8ecef;
   border-radius: 0.4rem;
-  background: #fff;
+  background: var(--dreams-surface);
   color: #212b36;
   display: inline-flex;
   align-items: center;
@@ -575,12 +595,14 @@
   width: 32%;
   min-width: 320px;
   max-width: 420px;
-  background: #fff;
+  background: var(--dreams-surface);
   border-left: 1px solid #e8ecef;
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
   position: relative;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .pos-order-header {
@@ -598,7 +620,7 @@
 }
 
 .pos-order-id {
-  background: #e8f4fd;
+  background: var(--dreams-blue-soft);
   color: #4b7bff;
   font-size: 0.75rem;
   font-weight: 700;
@@ -635,6 +657,35 @@
   border-radius: 0.5rem;
   padding: 0.5rem 0.65rem;
   font-size: 0.85rem;
+}
+
+.pos-customer-lookup {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.pos-customer-phone {
+  width: 100%;
+  border: 1px solid #e8ecef;
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.65rem;
+  font-size: 0.85rem;
+}
+
+.pos-customer-match {
+  font-size: 0.72rem;
+  color: #6e6b7b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pos-customer-match.is-member {
+  color: #28c76f;
+  font-weight: 600;
 }
 
 .pos-icon-action {
@@ -678,7 +729,7 @@
   width: 2.5rem;
   height: 2.5rem;
   border-radius: 0.4rem;
-  background: #f5f6fa;
+  background: var(--dreams-bg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -713,7 +764,7 @@
 }
 
 .pos-order-item-remove:hover {
-  background: #fee2e2;
+  background: var(--dreams-danger-soft);
   color: #ea5455;
 }
 
@@ -863,7 +914,7 @@ body.pos-installment-modal-open .pos-plans-area::-webkit-scrollbar {
   align-items: baseline;
   gap: 0.5rem;
   padding: 0.75rem 1rem;
-  background: #fff8f0;
+  background: var(--dreams-orange-soft);
   border: 1px solid #ffe0b8;
   border-radius: 0.5rem;
   font-size: 0.95rem;
@@ -888,7 +939,7 @@ body.pos-installment-modal-open .pos-plans-area::-webkit-scrollbar {
 }
 
 .pos-installment-preview {
-  background: #f8f9fa;
+  background: var(--dreams-surface-2);
   border: 1px solid #e8ecef;
   border-radius: 0.5rem;
   padding: 0.6rem 0.85rem;
@@ -913,7 +964,7 @@ body.pos-installment-modal-open .pos-plans-area::-webkit-scrollbar {
 .pos-summary {
   padding: 0.75rem 1rem;
   border-top: 1px solid #e8ecef;
-  background: #fafbfc;
+  background: var(--dreams-hover);
 }
 
 .pos-summary-row {
@@ -948,7 +999,7 @@ body.pos-installment-modal-open .pos-plans-area::-webkit-scrollbar {
   width: 4.35rem;
   border: 1px solid #e8ecef;
   border-radius: 0.35rem;
-  background: #fff;
+  background: var(--dreams-surface);
   text-align: right;
   font-size: 0.82rem;
   color: #212b36;
@@ -1090,7 +1141,7 @@ body.pos-installment-modal-open .pos-plans-area::-webkit-scrollbar {
 }
 
 .pos-return-lines {
-  background: #fff;
+  background: var(--dreams-surface);
   border: 1px solid #e8ecef;
   border-radius: 0.75rem;
   padding: 1rem;
@@ -1162,7 +1213,7 @@ body.pos-installment-modal-open .pos-plans-area::-webkit-scrollbar {
 }
 
 .pos-plan-card {
-  background: #fff;
+  background: var(--dreams-surface);
   border: 1px solid #e8ecef;
   border-radius: 0.75rem;
   padding: 1rem;
@@ -1214,6 +1265,10 @@ body.pos-installment-modal-open .pos-plans-area::-webkit-scrollbar {
 @media (max-width: 992px) {
   .pos-main {
     flex-direction: column;
+  }
+
+  .pos-product-grid-wrap {
+    min-height: 42vh;
   }
 
   .pos-categories {
@@ -1300,3 +1355,77 @@ body.pos-installment-modal-open .pos-plans-area::-webkit-scrollbar {
     display: none;
   }
 }
+
+[data-theme="dark"] .pos-shell {
+  background: var(--dreams-bg);
+}
+
+[data-theme="dark"] .pos-topbar,
+[data-theme="dark"] .pos-mode-bar,
+[data-theme="dark"] .pos-order-panel,
+[data-theme="dark"] .pos-categories,
+[data-theme="dark"] .pos-product-card,
+[data-theme="dark"] .pos-plan-card,
+[data-theme="dark"] .pos-summary,
+[data-theme="dark"] .pos-return-lines,
+[data-theme="dark"] .pos-return-note,
+[data-theme="dark"] .pos-installment-preview,
+[data-theme="dark"] .pos-installment-order-summary {
+  background: var(--dreams-surface);
+  border-color: var(--dreams-border);
+  color: var(--dreams-text);
+}
+
+[data-theme="dark"] .pos-products-header,
+[data-theme="dark"] .pos-product-image,
+[data-theme="dark"] .pos-order-item-thumb,
+[data-theme="dark"] .pos-search-wrap,
+[data-theme="dark"] .pos-mode-btn,
+[data-theme="dark"] .pos-icon-btn,
+[data-theme="dark"] .pos-store-select,
+[data-theme="dark"] .pos-qty-btn,
+[data-theme="dark"] .pos-summary-input,
+[data-theme="dark"] .pos-customer-select,
+[data-theme="dark"] .pos-customer-phone {
+  background: var(--dreams-surface-2);
+  color: var(--dreams-text);
+  border-color: var(--dreams-border);
+}
+
+[data-theme="dark"] .pos-logo-text,
+[data-theme="dark"] .pos-product-name,
+[data-theme="dark"] .pos-product-price,
+[data-theme="dark"] .pos-order-item-name,
+[data-theme="dark"] .pos-summary-row,
+[data-theme="dark"] .pos-installment-section-title {
+  color: var(--dreams-text);
+}
+
+[data-theme="dark"] .pos-product-cat,
+[data-theme="dark"] .pos-product-price-original {
+  color: var(--dreams-text-muted);
+}
+
+[data-theme="dark"] .pos-mode-btn.active,
+[data-theme="dark"] .pos-logo-icon {
+  background: var(--dreams-orange-soft);
+}
+
+[data-theme="dark"] .pos-stock-badge--low {
+  background: #f0b429;
+  color: #1a1404;
+}
+
+[data-theme="dark"] .pos-product-image {
+  background: linear-gradient(145deg, var(--dreams-surface-2), var(--dreams-navy-soft));
+}
+
+[data-theme="dark"] .pos-alert-error {
+  background: var(--dreams-danger-soft);
+  color: #f87171;
+}
+
+[data-theme="dark"] .pos-product-grid-wrap::-webkit-scrollbar-thumb {
+  background: var(--dreams-nav-hover);
+}
+

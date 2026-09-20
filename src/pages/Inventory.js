@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { itemService, categoryService } from '../services';
+import PaginationBar from '../components/PaginationBar';
+import { usePagination } from '../hooks/usePagination';
 import ProductThumbnail from '../components/ProductThumbnail';
 import ProductImageField from '../components/ProductImageField';
 import CategoryFormModal from '../components/CategoryFormModal';
@@ -7,8 +9,10 @@ import '../components/ProductThumbnail.css';
 import { resolveProductImageUrl } from '../utils/productImage';
 import { useCurrency } from '../contexts/TenantSettingsContext';
 import { useConfirm } from '../contexts/ConfirmContext';
+import { useTranslation } from 'react-i18next';
 
 const Inventory = () => {
+  const { t } = useTranslation();
   const { formatMoney, symbol, settings } = useCurrency();
   const { confirm } = useConfirm();
   const [items, setItems] = useState([]);
@@ -73,6 +77,15 @@ const Inventory = () => {
 
     return matchesSearch && matchesCategory;
   });
+
+  const {
+    page,
+    setPage,
+    pageItems,
+    total,
+    totalPages,
+    pageSize,
+  } = usePagination(visibleItems, { resetKey: `${searchQuery}|${categoryFilter}` });
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -215,10 +228,10 @@ const Inventory = () => {
 
   const handleDelete = async (id) => {
     const ok = await confirm({
-      title: 'Delete item',
-      message: 'Are you sure you want to delete this item?',
-      confirmLabel: 'Delete',
-      cancelLabel: 'Cancel',
+      title: t('deleteItem'),
+      message: t('deleteItemConfirm'),
+      confirmLabel: t('delete'),
+      cancelLabel: t('cancel'),
       variant: 'danger',
     });
     if (!ok) return;
@@ -237,24 +250,24 @@ const Inventory = () => {
       <div className="d-flex align-items-center justify-content-center min-vh-100">
         <div className="text-center">
           <div className="spinner-border text-primary" aria-hidden="true">
-            <span className="visually-hidden">Loading...</span>
+            <span className="visually-hidden">{t('loading')}</span>
           </div>
-          <p className="text-muted mt-2">Loading inventory...</p>
+          <p className="text-muted mt-2">{t('loadingInventory')}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container-fluid matte-page admin-page inventory-page">
+    <div className="container-fluid matte-page admin-page inventory-page table-page">
       {/* Header */}
       <div className="row mb-3">
         <div className="col-12">
           <div className="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between">
             <div className="d-flex align-items-center mb-3 mb-lg-0">
               <div>
-                <h1 className="h3 mb-1">Inventory Management</h1>
-                <p className="text-muted small mb-0">Manage products, stock levels and pricing in one place.</p>
+                <h1 className="h3 mb-1">{t('inventoryManagement')}</h1>
+                <p className="text-muted small mb-0">{t('inventorySubtitle')}</p>
               </div>
             </div>
 
@@ -266,7 +279,7 @@ const Inventory = () => {
                   onChange={(e) => setCategoryFilter(e.target.value)}
                   style={{ minWidth: 150 }}
                 >
-                  <option value="all">All Categories</option>
+                  <option value="all">{t('allCategories')}</option>
                   {categories.map((category) => (
                     <option key={category.id} value={category.id}>
                       {category.name}
@@ -276,14 +289,14 @@ const Inventory = () => {
                 <input
                   type="search"
                   className="form-control"
-                  placeholder="Search by name or barcode..."
+                  placeholder={t('searchNameOrBarcode')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   style={{ minWidth: 250 }}
                 />
               </div>
               <button onClick={openAddModal} className="btn btn-primary">
-                <i className="bi bi-plus-circle me-2"></i>Add Product
+                <i className="bi bi-plus-circle me-2"></i>{t('addProduct')}
               </button>
             </div>
           </div>
@@ -306,30 +319,30 @@ const Inventory = () => {
       )}
 
       {/* Inventory Table */}
-      <div className="card">
+      <div className="card table-panel">
         <div className="card-body p-0">
           {visibleItems.length === 0 ? (
             <div className="text-center py-5">
               <i className="bi bi-box-seam text-muted fs-1 mb-3"></i>
-              <h5 className="text-muted">No items found</h5>
-              <p className="text-muted">Try adjusting your search or add your first product.</p>
+              <h5 className="text-muted">{t('noItemsFound')}</h5>
+              <p className="text-muted">{t('tryAdjustSearch')}</p>
             </div>
           ) : (
             <div className="table-responsive">
               <table className="table table-hover admin-table mb-0">
                 <thead className="table-light">
                   <tr>
-                    <th className="border-0 fw-semibold">Product</th>
-                    <th className="border-0 fw-semibold">Category</th>
-                    <th className="border-0 fw-semibold">Barcode</th>
-                    <th className="border-0 fw-semibold">Selling Price</th>
-                    <th className="border-0 fw-semibold">Stock</th>
-                    <th className="border-0 fw-semibold">Returns</th>
-                    <th className="border-0 fw-semibold">Actions</th>
+                    <th className="border-0 fw-semibold">{t('product')}</th>
+                    <th className="border-0 fw-semibold">{t('category')}</th>
+                    <th className="border-0 fw-semibold">{t('barcode')}</th>
+                    <th className="border-0 fw-semibold">{t('sellingPrice')}</th>
+                    <th className="border-0 fw-semibold">{t('stock')}</th>
+                    <th className="border-0 fw-semibold">{t('Returns')}</th>
+                    <th className="border-0 fw-semibold">{t('actions')}</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {visibleItems.map((item) => (
+                  {pageItems.map((item) => (
                     <tr key={item.id}>
                       <td>
                         <div className="d-flex align-items-center gap-2">
@@ -338,12 +351,12 @@ const Inventory = () => {
                           </span>
                           <div>
                             <div className="fw-semibold">{item.name}</div>
-                            <small className="text-muted">{item.description || 'No description'}</small>
+                            <small className="text-muted">{item.description || t('noDescription')}</small>
                           </div>
                         </div>
                       </td>
-                      <td>{item.category_name || item.category || '—'}</td>
-                      <td className="text-muted">{item.barcode || '—'}</td>
+                      <td>{item.category_name || item.category || '-'}</td>
+                      <td className="text-muted">{item.barcode || '-'}</td>
                       <td className="fw-semibold">
                         {formatMoney(item.selling_price ?? item.price ?? 0)}
                       </td>
@@ -385,6 +398,14 @@ const Inventory = () => {
               </table>
             </div>
           )}
+          <PaginationBar
+            page={page}
+            totalPages={totalPages}
+            total={total}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            label={t('products')}
+          />
         </div>
       </div>
 
@@ -396,7 +417,7 @@ const Inventory = () => {
               <div className="modal-header">
                 <h5 className="modal-title">
                   <i className="bi bi-box-seam me-2"></i>
-                  {editingItem ? 'Edit Product' : 'Add New Product'}
+                  {editingItem ? t('editProduct') : t('addNewProduct')}
                 </h5>
                 <button
                   type="button"
@@ -415,7 +436,7 @@ const Inventory = () => {
 
                   <div className="row g-2">
                     <div className="col-md-6">
-                      <label className="form-label fw-semibold">Product Name *</label>
+                      <label className="form-label fw-semibold">{t('productName')} *</label>
                       <input
                         type="text"
                         name="name"
@@ -428,13 +449,13 @@ const Inventory = () => {
 
                     <div className="col-md-6">
                       <label className="form-label fw-semibold inventory-field-label">
-                        Category
+                        {t('category')}
                         <button
                           type="button"
                           className="btn btn-link inventory-add-category-btn"
                           onClick={() => setShowCategoryModal(true)}
-                          title="Add category"
-                          aria-label="Add category"
+                          title={t('addCategory')}
+                          aria-label={t('addCategory')}
                         >
                           <i className="bi bi-plus-circle"></i>
                         </button>
@@ -445,7 +466,7 @@ const Inventory = () => {
                         value={formData.categoryId}
                         onChange={handleInputChange}
                       >
-                        <option value="">Select a category...</option>
+                        <option value="">{t('selectCategory')}</option>
                         {categories.map((category) => (
                           <option key={category.id} value={category.id}>
                             {category.name}
@@ -456,19 +477,19 @@ const Inventory = () => {
                     </div>
 
                     <div className="col-12">
-                      <label className="form-label fw-semibold">Description</label>
+                      <label className="form-label fw-semibold">{t('description')}</label>
                       <input
                         type="text"
                         name="description"
                         className="form-control"
                         value={formData.description}
                         onChange={handleInputChange}
-                        placeholder="Optional product description"
+                        placeholder={t('optionalDescription')}
                       />
                     </div>
 
                     <div className="col-md-6">
-                      <label className="form-label fw-semibold">Buying Price *</label>
+                      <label className="form-label fw-semibold">{t('buyingPrice')} *</label>
                       <div className="input-group">
                         <span className="input-group-text">{symbol}</span>
                         <input
@@ -485,7 +506,7 @@ const Inventory = () => {
                     </div>
 
                     <div className="col-md-6">
-                      <label className="form-label fw-semibold">Selling Price *</label>
+                      <label className="form-label fw-semibold">{t('sellingPrice')} *</label>
                       <div className="input-group">
                         <span className="input-group-text">{symbol}</span>
                         <input
@@ -502,7 +523,7 @@ const Inventory = () => {
                     </div>
 
                     <div className={editingItem ? 'col-md-6' : 'col-12'}>
-                      <label className="form-label fw-semibold">Stock Quantity *</label>
+                      <label className="form-label fw-semibold">{t('stockQuantity')} *</label>
                       <input
                         type="number"
                         name="quantity"
@@ -516,7 +537,7 @@ const Inventory = () => {
 
                     {editingItem && (
                       <div className="col-md-6">
-                        <label className="form-label fw-semibold">Returns</label>
+                        <label className="form-label fw-semibold">{t('Returns')}</label>
                         <input
                           type="number"
                           name="returnQuantity"
@@ -526,7 +547,7 @@ const Inventory = () => {
                           min="0"
                         />
                         <small className="text-muted">
-                          Returned units stay out of sellable stock until you change both counts.
+                          {t('returnStockHelp')}
                         </small>
                       </div>
                     )}
@@ -549,11 +570,11 @@ const Inventory = () => {
                     className="btn btn-secondary"
                     onClick={() => setShowModal(false)}
                   >
-                    Cancel
+                    {t('cancel')}
                   </button>
                   <button type="submit" className="btn btn-primary">
                     <i className="bi bi-check-circle me-2"></i>
-                    {editingItem ? 'Update Product' : 'Add Product'}
+                    {editingItem ? t('updateProduct') : t('addProduct')}
                   </button>
                 </div>
               </form>

@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import AppLogo from './AppLogo';
 import { getCopyrightText } from '../config/app';
+import ThemeToggle from './ThemeToggle';
 
 const authVariantClass = (variant, prefix) => (variant ? ` ${prefix}--${variant}` : '');
 
@@ -11,6 +12,7 @@ const AuthLayout = ({ children, footerExtra, variant }) => {
   if (variant === 'login') {
     return (
       <div className="auth-page auth-page--login">
+        <ThemeToggle className="top-navbar-icon-btn theme-toggle-float" />
         <div className="auth-login-backdrop" aria-hidden="true">
           <div
             className="auth-login-backdrop-media"
@@ -46,6 +48,7 @@ const AuthLayout = ({ children, footerExtra, variant }) => {
 
   return (
     <div className={`auth-page${authVariantClass(variant, 'auth-page')}`}>
+      <ThemeToggle className="top-navbar-icon-btn theme-toggle-float" />
       <div className="auth-page-backdrop" aria-hidden="true">
         <div
           className="auth-page-backdrop-media"

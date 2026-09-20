@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import AuthLayout, { AuthFooterLink } from '../components/AuthLayout';
+import LanguageToggle from '../components/LanguageToggle';
 import { APP_CONFIG } from '../config/app';
 import useAuthBodyClass from '../hooks/useAuthBodyClass';
 import { resolveHomePath } from '../utils/authRouting';
@@ -21,7 +22,7 @@ const Login = () => {
   const { login, loginPin } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const registered = location.state?.registered;
   const verified = location.state?.verified;
 
@@ -59,22 +60,7 @@ const Login = () => {
 
   return (
     <AuthLayout variant="login">
-      <div className="auth-lang-toggle">
-        <button
-          type="button"
-          className={`auth-lang-btn ${i18n.language === 'en' ? 'active' : ''}`}
-          onClick={() => i18n.changeLanguage('en')}
-        >
-          EN
-        </button>
-        <button
-          type="button"
-          className={`auth-lang-btn ${i18n.language === 'si' ? 'active' : ''}`}
-          onClick={() => i18n.changeLanguage('si')}
-        >
-          සිං
-        </button>
-      </div>
+      <LanguageToggle variant="auth" />
 
       <div className="auth-login-body">
       <div className="auth-login-main">

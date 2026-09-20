@@ -3,6 +3,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 
 import { LayoutProvider } from './contexts/LayoutContext';
 
@@ -43,6 +44,7 @@ import SellItems from './pages/SellItems';
 import SalesReport from './pages/SalesReport';
 
 import Users from './pages/Users';
+import Customers from './pages/Customers';
 
 import InstallmentPlans from './pages/InstallmentPlans';
 
@@ -165,6 +167,8 @@ function AppRoutes() {
 
       <Route path="/users" element={<ProtectedRoute requirePermission={[PERMISSIONS.USERS_MANAGE, PERMISSIONS.USERS_VIEW]}><Layout><Users /></Layout></ProtectedRoute>} />
 
+      <Route path="/customers" element={<ProtectedRoute requirePermission={[PERMISSIONS.REPORTS_VIEW, PERMISSIONS.USERS_VIEW, PERMISSIONS.USERS_MANAGE]}><Layout><Customers /></Layout></ProtectedRoute>} />
+
       <Route path="/installment-plans" element={<ProtectedRoute requireAdmin><Layout><InstallmentPlans /></Layout></ProtectedRoute>} />
 
       <Route path="/installment-payments" element={<ProtectedRoute><Layout><InstallmentPayments /></Layout></ProtectedRoute>} />
@@ -193,6 +197,7 @@ function App() {
 
   return (
 
+    <ThemeProvider>
     <Router>
 
       <AuthProvider>
@@ -212,6 +217,7 @@ function App() {
       </AuthProvider>
 
     </Router>
+    </ThemeProvider>
 
   );
 

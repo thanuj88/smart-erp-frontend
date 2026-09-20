@@ -413,7 +413,22 @@ export const customerService = {
   },
 
   search: async (query) => {
-    const response = await api.get(`/customers/search?q=${query}`);
+    const response = await api.get(`/customers/search?q=${encodeURIComponent(query)}`);
+    return response.data;
+  },
+
+  lookupByPhone: async (phone) => {
+    const response = await api.get(`/customers/lookup?phone=${encodeURIComponent(phone)}`);
+    return response.data;
+  },
+
+  create: async (payload) => {
+    const response = await api.post('/customers', payload);
+    return response.data;
+  },
+
+  update: async (id, payload) => {
+    const response = await api.put(`/customers/${id}`, payload);
     return response.data;
   },
 };

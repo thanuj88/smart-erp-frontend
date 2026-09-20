@@ -2,7 +2,7 @@
   display: block;
   object-fit: cover;
   border-radius: 0.4rem;
-  background: #f5f6fa;
+  background: var(--dreams-surface-2);
 }
 
 .product-thumbnail-wrap {
@@ -12,7 +12,7 @@
   flex-shrink: 0;
   overflow: hidden;
   border-radius: 0.4rem;
-  background: #f5f6fa;
+  background: var(--dreams-surface-2);
 }
 
 .product-image-preview {
@@ -48,7 +48,7 @@
 
 .product-form-image-group .input-group-text {
   padding: 0.35rem 0.5rem;
-  background: #f8f9fa;
+  background: var(--dreams-surface-2);
 }
 
 .product-form-image-thumb {
@@ -76,15 +76,15 @@
   padding: 0.65rem 0.85rem;
   border: 1px dashed #ced4da;
   border-radius: 0.375rem;
-  background: #fff;
-  color: #67748e;
+  background: var(--dreams-surface);
+  color: var(--dreams-text-muted);
   cursor: pointer;
   text-align: left;
 }
 
 .product-form-image-empty:hover {
   border-color: #ff9f43;
-  background: #fffaf5;
+  background: var(--dreams-orange-soft);
 }
 
 .product-form-image-empty-text {
@@ -98,7 +98,7 @@
   padding: 0.65rem;
   border: 1px solid #e8ecef;
   border-radius: 0.375rem;
-  background: #fafbfc;
+  background: var(--dreams-hover);
 }
 
 .product-form-image-display-btn {
@@ -160,7 +160,7 @@
   padding: 0.65rem;
   border: 1px dashed #ced4da;
   border-radius: 0.375rem;
-  background: #fafbfc;
+  background: var(--dreams-hover);
 }
 
 .nested-category-modal {

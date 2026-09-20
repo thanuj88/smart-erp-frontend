@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { platformService } from '../../services';
+import PaginationBar from '../../components/PaginationBar';
+import { usePagination } from '../../hooks/usePagination';
 
 const emptyForm = () => ({
   name: '',
@@ -29,6 +31,15 @@ const PlatformTenants = () => {
   useEffect(() => {
     load().catch((e) => setError(e.response?.data?.error || 'Load failed'));
   }, []);
+
+  const {
+    page,
+    setPage,
+    pageItems,
+    total,
+    totalPages,
+    pageSize,
+  } = usePagination(tenants);
 
   const openCreate = () => {
     setForm(emptyForm());
@@ -74,7 +85,7 @@ const PlatformTenants = () => {
   }
 
   return (
-    <div className="page-content">
+    <div className="page-content table-page">
       <div className="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
         <h1 className="h3 mb-0">Tenants</h1>
         <button type="button" className="btn btn-primary" onClick={openCreate}>
@@ -96,7 +107,7 @@ const PlatformTenants = () => {
         </div>
       )}
 
-      <div className="card">
+      <div className="card table-panel">
         <div className="table-responsive">
           <table className="table table-hover admin-table mb-0">
             <thead className="table-light">
@@ -110,12 +121,16 @@ const PlatformTenants = () => {
               </tr>
             </thead>
             <tbody>
-              {tenants.map((t) => (
+              {pageItems.map((t) => (
                 <tr key={t.id}>
                   <td className="fw-semibold">{t.name}</td>
                   <td><code>{t.slug}</code></td>
-                  <td><span className="badge bg-secondary">{t.status}</span></td>
-                  <td>{t.plan_code || '—'}</td>
+                  <td>
+                    <span className={`badge ${String(t.status).toLowerCase() === 'active' ? 'bg-success' : 'bg-secondary'}`}>
+                      {t.status}
+                    </span>
+                  </td>
+                  <td>{t.plan_code || '-'}</td>
                   <td>{t.user_count}</td>
                   <td>
                     <select
@@ -135,6 +150,14 @@ const PlatformTenants = () => {
             </tbody>
           </table>
         </div>
+        <PaginationBar
+          page={page}
+          totalPages={totalPages}
+          total={total}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          label="tenants"
+        />
       </div>
 
       {showModal && (
@@ -166,7 +189,7 @@ const PlatformTenants = () => {
                       <input
                         id="tenantSlug"
                         className="form-control"
-                        placeholder="Optional — auto-generated from name"
+                        placeholder="Optional - auto-generated from name"
                         value={form.slug}
                         onChange={(e) => setForm({ ...form, slug: e.target.value })}
                       />
