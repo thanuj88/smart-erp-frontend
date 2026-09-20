@@ -1,16 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { useTranslation } from 'react-i18next';
 import { useLayout } from '../contexts/LayoutContext';
 import { useBusinessName } from '../contexts/TenantSettingsContext';
 import { usePosSaleGuard } from '../contexts/PosSaleGuardContext';
-import clsx from 'clsx';
+import { useTranslation } from 'react-i18next';
+import ThemeToggle from './ThemeToggle';
+import LanguageToggle from './LanguageToggle';
 import UserMenu from './UserMenu';
 
 const Header = () => {
+  const { t } = useTranslation();
   const { getHomePath } = useAuth();
-  const { i18n } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const { sidebarCollapsed, toggleSidebar } = useLayout();
@@ -40,7 +41,7 @@ const Header = () => {
     document.documentElement.requestFullscreen?.();
   };
 
-  const fullscreenLabel = isFullscreen ? 'Exit full screen' : 'Enter full screen';
+  const fullscreenLabel = isFullscreen ? t('exitFullScreen') : t('enterFullScreen');
 
   return (
     <header className="top-navbar">
@@ -49,7 +50,7 @@ const Header = () => {
           type="button"
           className="top-navbar-icon-btn d-lg-none"
           onClick={toggleSidebar}
-          aria-label="Toggle menu"
+          aria-label={t('toggleMenu')}
         >
           <i className="bi bi-list"></i>
         </button>
@@ -70,8 +71,8 @@ const Header = () => {
             type="button"
             className="top-navbar-collapse-btn"
             onClick={toggleSidebar}
-            title={sidebarCollapsed ? 'Expand menu' : 'Collapse menu'}
-            aria-label={sidebarCollapsed ? 'Expand menu' : 'Collapse menu'}
+            title={sidebarCollapsed ? t('expandMenu') : t('collapseMenu')}
+            aria-label={sidebarCollapsed ? t('expandMenu') : t('collapseMenu')}
           >
             <i className="bi bi-list"></i>
           </button>
@@ -102,22 +103,8 @@ const Header = () => {
             <i className={`bi ${isFullscreen ? 'bi-fullscreen-exit' : 'bi-arrows-fullscreen'}`}></i>
           </button>
         )}
-        <div className="lang-toggle d-none d-sm-flex">
-          <button
-            type="button"
-            className={clsx('lang-toggle-btn', i18n.language === 'en' && 'active')}
-            onClick={() => i18n.changeLanguage('en')}
-          >
-            EN
-          </button>
-          <button
-            type="button"
-            className={clsx('lang-toggle-btn', i18n.language === 'si' && 'active')}
-            onClick={() => i18n.changeLanguage('si')}
-          >
-            සිං
-          </button>
-        </div>
+        <ThemeToggle />
+        <LanguageToggle />
 
         <UserMenu />
       </div>

@@ -11,6 +11,8 @@ import {
   isBsIconName,
 } from '../config/categoryIcons';
 import { useConfirm } from '../contexts/ConfirmContext';
+import PaginationBar from '../components/PaginationBar';
+import { usePagination } from '../hooks/usePagination';
 
 function Categories() {
   const { t } = useTranslation();
@@ -91,6 +93,15 @@ function Categories() {
     }
   };
 
+  const {
+    page,
+    setPage,
+    pageItems,
+    total,
+    totalPages,
+    pageSize,
+  } = usePagination(categories);
+
   const handleEdit = (category) => {
     setEditingCategory(category);
     setFormData({
@@ -135,7 +146,7 @@ function Categories() {
   }
 
   return (
-    <div className="container-fluid matte-page admin-page">
+    <div className="container-fluid matte-page admin-page table-page">
       <PageHeader
         title={t('Category Management')}
         subtitle={t('Manage categories in one place.')}
@@ -154,7 +165,7 @@ function Categories() {
         onClearError={() => setError('')}
       />
 
-      <div className="card">
+      <div className="card table-panel">
         <div className="card-body p-0">
           {categories.length === 0 ? (
             <div className="text-center py-5">
@@ -176,7 +187,7 @@ function Categories() {
                   </tr>
                 </thead>
                 <tbody>
-                  {categories.map((category) => (
+                  {pageItems.map((category) => (
                     <tr key={category.id}>
                       <td className="text-center">
                         <CategoryIcon
@@ -186,7 +197,7 @@ function Categories() {
                         />
                       </td>
                       <td className="fw-semibold">{category.name}</td>
-                      <td className="text-muted">{category.description || '—'}</td>
+                      <td className="text-muted">{category.description || '-'}</td>
                       <td>
                         <div className="btn-group">
                           <button
@@ -213,6 +224,14 @@ function Categories() {
               </table>
             </div>
           )}
+          <PaginationBar
+            page={page}
+            totalPages={totalPages}
+            total={total}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            label={t('categories')}
+          />
         </div>
       </div>
 

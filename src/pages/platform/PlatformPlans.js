@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { platformService } from '../../services';
+import PaginationBar from '../../components/PaginationBar';
+import { usePagination } from '../../hooks/usePagination';
 
 const emptyForm = () => ({
   code: '',
@@ -32,6 +34,15 @@ const PlatformPlans = () => {
   useEffect(() => {
     load().catch(() => setError('Failed to load plans'));
   }, []);
+
+  const {
+    page,
+    setPage,
+    pageItems,
+    total,
+    totalPages,
+    pageSize,
+  } = usePagination(plans);
 
   const openCreate = () => {
     setEditingCode(null);
@@ -100,7 +111,7 @@ const PlatformPlans = () => {
   };
 
   return (
-    <div className="page-content">
+    <div className="page-content table-page">
       <div className="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
         <h1 className="h3 mb-0">SaaS Plans</h1>
         <button type="button" className="btn btn-primary" onClick={openCreate}>
@@ -116,7 +127,7 @@ const PlatformPlans = () => {
         </div>
       )}
 
-      <div className="card">
+      <div className="card table-panel">
         <div className="table-responsive">
           <table className="table table-hover admin-table mb-0">
             <thead className="table-light">
@@ -132,7 +143,7 @@ const PlatformPlans = () => {
               </tr>
             </thead>
             <tbody>
-              {plans.map((p) => (
+              {pageItems.map((p) => (
                 <tr key={p.code}>
                   <td><code>{p.code}</code></td>
                   <td className="fw-semibold">{p.name}</td>
@@ -140,7 +151,7 @@ const PlatformPlans = () => {
                   <td>{formatLimit(p.max_tellers)}</td>
                   <td>{formatLimit(p.max_managers)}</td>
                   <td>{formatLimit(p.max_accountants)}</td>
-                  <td className="text-muted">{p.description || '—'}</td>
+                  <td className="text-muted">{p.description || '-'}</td>
                   <td className="text-end">
                     <button type="button" className="btn btn-outline-primary btn-sm" onClick={() => openEdit(p)}>
                       Edit
@@ -151,6 +162,14 @@ const PlatformPlans = () => {
             </tbody>
           </table>
         </div>
+        <PaginationBar
+          page={page}
+          totalPages={totalPages}
+          total={total}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          label="plans"
+        />
       </div>
 
       {showModal && (

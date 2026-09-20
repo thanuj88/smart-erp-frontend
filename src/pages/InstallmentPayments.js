@@ -8,8 +8,12 @@ import { useCurrency } from '../contexts/TenantSettingsContext';
 import { useAuth } from '../contexts/AuthContext';
 import { createInstallmentReceiptPrintJob } from '../utils/receipt';
 import { formatOrderId } from '../utils/orderId';
+import PaginationBar from '../components/PaginationBar';
+import { usePagination } from '../hooks/usePagination';
+import { useTranslation } from 'react-i18next';
 
 const InstallmentPayments = () => {
+  const { t } = useTranslation();
   const { formatMoney, currency, settings } = useCurrency();
   const { user } = useAuth();
   const [payments, setPayments] = useState([]);
@@ -66,6 +70,24 @@ const InstallmentPayments = () => {
       ),
     }));
   }, [payments]);
+
+  const {
+    page: plansPage,
+    setPage: setPlansPage,
+    pageItems: pagedPlans,
+    total: plansTotal,
+    totalPages: plansTotalPages,
+    pageSize: plansPageSize,
+  } = usePagination(plans, { resetKey: `${activeTab}|${plansTab}` });
+
+  const {
+    page: groupsPage,
+    setPage: setGroupsPage,
+    pageItems: pagedGroups,
+    total: groupsTotal,
+    totalPages: groupsTotalPages,
+    pageSize: groupsPageSize,
+  } = usePagination(groupedPlans, { resetKey: activeTab });
 
   const loadPlans = async () => {
     setLoading(true);
@@ -186,7 +208,7 @@ const InstallmentPayments = () => {
   const getStatusBadgeClass = (status) => {
     switch (status) {
       case 'active':
-        return 'bg-primary';
+        return 'bg-success';
       case 'completed':
       case 'paid':
         return 'bg-success';
@@ -207,21 +229,21 @@ const InstallmentPayments = () => {
   };
 
   const getPaymentLabel = (payment) => {
-    if (isOverdue(payment.due_date, payment.status)) return 'Overdue';
-    return payment.status;
+    if (isOverdue(payment.due_date, payment.status)) return t('overdue');
+    return t(`status_${payment.status}`, { defaultValue: payment.status });
   };
 
   const renderInstallmentsTable = (installments, customerName, customerPhone) => (
     <table className="table table-hover admin-table mb-0">
       <thead className="table-light">
         <tr>
-          <th>Payment #</th>
-          <th>Due Date</th>
-          <th>Amount Due</th>
-          <th>Amount Paid</th>
-          <th>Remaining</th>
-          <th>Status</th>
-          <th>Action</th>
+          <th>{t('paymentNumber')}</th>
+          <th>{t('dueDate')}</th>
+          <th>{t('amountDue')}</th>
+          <th>{t('amountPaid')}</th>
+          <th>{t('remaining')}</th>
+          <th>{t('status')}</th>
+          <th>{t('actions')}</th>
         </tr>
       </thead>
       <tbody>
@@ -234,7 +256,7 @@ const InstallmentPayments = () => {
             <td>
               {new Date(payment.due_date).toLocaleDateString()}
               {isOverdue(payment.due_date, payment.status) && (
-                <span className="badge bg-danger ms-2">Overdue</span>
+                <span className="badge bg-danger ms-2">{t('overdue')}</span>
               )}
             </td>
             <td>{formatMoney(payment.amount_due)}</td>
@@ -261,7 +283,7 @@ const InstallmentPayments = () => {
                   }}
                   className="btn btn-primary btn-sm"
                 >
-                  Record Payment
+                  {t('recordPayment')}
                 </button>
               )}
             </td>
@@ -277,14 +299,14 @@ const InstallmentPayments = () => {
       (activeTab !== 'plans' && groupedPlans.length === 0));
 
   if (isInitialLoading) {
-    return <AdminLoading message={activeTab === 'plans' ? 'Loading plans...' : 'Loading payments...'} />;
+    return <AdminLoading message={activeTab === 'plans' ? t('loadingPlans') : t('loadingPayments')} />;
   }
 
   return (
-    <div className="container-fluid matte-page admin-page">
+    <div className="container-fluid matte-page admin-page table-page">
       <PageHeader
-        title="Installment Payments"
-        subtitle="View installment plans and record pending or overdue payments."
+        title={t('installmentPayments')}
+        subtitle={t('installmentPaymentsSubtitle')}
       />
 
       <AdminAlerts
@@ -301,7 +323,7 @@ const InstallmentPayments = () => {
             className={`nav-link ${activeTab === 'plans' ? 'active' : ''}`}
             onClick={() => setActiveTab('plans')}
           >
-            Installment Plans
+            {t('installmentPlans')}
           </button>
         </li>
         <li className="nav-item">
@@ -310,7 +332,7 @@ const InstallmentPayments = () => {
             className={`nav-link ${activeTab === 'pending' ? 'active' : ''}`}
             onClick={() => setActiveTab('pending')}
           >
-            Pending Payments
+            {t('pendingPayments')}
           </button>
         </li>
         <li className="nav-item">
@@ -319,7 +341,7 @@ const InstallmentPayments = () => {
             className={`nav-link ${activeTab === 'overdue' ? 'active' : ''}`}
             onClick={() => setActiveTab('overdue')}
           >
-            Overdue Payments
+            {t('overduePayments')}
           </button>
         </li>
       </ul>
@@ -332,54 +354,54 @@ const InstallmentPayments = () => {
               className={`btn btn-sm ${plansTab === 'all' ? 'btn-primary' : 'btn-outline-secondary'}`}
               onClick={() => setPlansTab('all')}
             >
-              All Plans
+              {t('allPlans')}
             </button>
             <button
               type="button"
-              className={`btn btn-sm ${plansTab === 'active' ? 'btn-primary' : 'btn-outline-secondary'}`}
+              className={`btn btn-sm ${plansTab === 'active' ? 'btn-success' : 'btn-outline-secondary'}`}
               onClick={() => setPlansTab('active')}
             >
-              Active
+              {t('Active')}
             </button>
             <button
               type="button"
               className={`btn btn-sm ${plansTab === 'completed' ? 'btn-primary' : 'btn-outline-secondary'}`}
               onClick={() => setPlansTab('completed')}
             >
-              Completed
+              {t('completed')}
             </button>
           </div>
 
-          <div className="card">
+          <div className="card table-panel">
             <div className="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
               <div className="d-flex align-items-baseline gap-2">
-                <h5 className="admin-section-title mb-0">Installment Plans</h5>
+                <h5 className="admin-section-title mb-0">{t('installmentPlans')}</h5>
                 <span className="text-muted small">{plans.length}</span>
               </div>
             </div>
             <div className="card-body p-0">
               {loading && plans.length === 0 ? (
-                <p className="text-muted text-center py-5 mb-0">Loading plans...</p>
+                <p className="text-muted text-center py-5 mb-0">{t('loadingPlans')}</p>
               ) : plans.length === 0 ? (
-                <p className="text-muted text-center py-5 mb-0">No installment plans found.</p>
+                <p className="text-muted text-center py-5 mb-0">{t('noInstallmentPlans')}</p>
               ) : (
                 <div className="table-responsive">
                   <table className="table table-hover admin-table mb-0">
                     <thead className="table-light">
                       <tr>
-                        <th className="border-0 order-id-toggle" aria-label="Expand"></th>
-                        <th className="border-0 fw-semibold">Order ID</th>
-                        <th className="border-0 fw-semibold">Customer</th>
-                        <th className="border-0 fw-semibold">Phone</th>
-                        <th className="border-0 fw-semibold">Total Amount</th>
-                        <th className="border-0 fw-semibold">Paid Amount</th>
-                        <th className="border-0 fw-semibold">Remaining</th>
-                        <th className="border-0 fw-semibold">Monthly Payment</th>
-                        <th className="border-0 fw-semibold">Status</th>
+                        <th className="border-0 order-id-toggle" aria-label={t('expand')}></th>
+                        <th className="border-0 fw-semibold">{t('orderId')}</th>
+                        <th className="border-0 fw-semibold">{t('customer')}</th>
+                        <th className="border-0 fw-semibold">{t('phone')}</th>
+                        <th className="border-0 fw-semibold">{t('totalAmount')}</th>
+                        <th className="border-0 fw-semibold">{t('paidAmount')}</th>
+                        <th className="border-0 fw-semibold">{t('remaining')}</th>
+                        <th className="border-0 fw-semibold">{t('monthlyPayment')}</th>
+                        <th className="border-0 fw-semibold">{t('status')}</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {plans.map((plan) => {
+                      {pagedPlans.map((plan) => {
                         const isExpanded = expandedPlanId === plan.id;
                         const details = planDetails[plan.id];
                         const installments = details?.payments || [];
@@ -409,7 +431,7 @@ const InstallmentPayments = () => {
                               <td>{formatMoney(plan.monthly_payment)}</td>
                               <td>
                                 <span className={`badge text-capitalize ${getStatusBadgeClass(plan.status)}`}>
-                                  {plan.status}
+                                  {t(`status_${plan.status}`, { defaultValue: plan.status })}
                                 </span>
                               </td>
                             </tr>
@@ -427,13 +449,13 @@ const InstallmentPayments = () => {
                                         }}
                                       >
                                         <i className="bi bi-printer me-1"></i>
-                                        Print receipt
+                                        {t('printReceipt')}
                                       </button>
                                     </div>
                                     {loadingPlanId === plan.id && !details ? (
-                                      <p className="text-muted small mb-0 py-2">Loading installments...</p>
+                                      <p className="text-muted small mb-0 py-2">{t('loadingInstallments')}</p>
                                     ) : installments.length === 0 ? (
-                                      <p className="text-muted small mb-0 py-2">No installments found for this plan.</p>
+                                      <p className="text-muted small mb-0 py-2">{t('noInstallmentsFound')}</p>
                                     ) : (
                                       renderInstallmentsTable(
                                         installments,
@@ -452,43 +474,51 @@ const InstallmentPayments = () => {
                   </table>
                 </div>
               )}
+              <PaginationBar
+                page={plansPage}
+                totalPages={plansTotalPages}
+                total={plansTotal}
+                pageSize={plansPageSize}
+                onPageChange={setPlansPage}
+                label={t('plans')}
+              />
             </div>
           </div>
         </>
       )}
 
       {activeTab !== 'plans' && (
-        <div className="card">
+        <div className="card table-panel">
           <div className="card-body p-0">
             {groupedPlans.length === 0 ? (
               <p className="text-muted text-center py-5 mb-0">
-                No {activeTab} payments found.
-                {activeTab === 'overdue' && ' Great! All payments are up to date.'}
+                {t('noTabPaymentsFound', { tab: activeTab === 'overdue' ? t('overdue') : t('pending') })}
+                {activeTab === 'overdue' && t('allPaymentsUpToDate')}
               </p>
             ) : (
               <>
                 {activeTab === 'overdue' && (
                   <div className="alert alert-danger m-3 mb-0">
                     <i className="bi bi-exclamation-triangle-fill me-2"></i>
-                    {payments.length} overdue payment(s) across {groupedPlans.length} plan(s) require immediate attention!
+                    {t('overduePaymentsAlert', { count: payments.length, plans: groupedPlans.length })}
                   </div>
                 )}
                 <div className="table-responsive">
                   <table className="table table-hover admin-table mb-0">
                     <thead className="table-light">
                       <tr>
-                        <th className="border-0 order-id-toggle" aria-label="Expand"></th>
-                        <th className="border-0 fw-semibold">Order ID</th>
-                        <th className="border-0 fw-semibold">Customer</th>
-                        <th className="border-0 fw-semibold">Phone</th>
+                        <th className="border-0 order-id-toggle" aria-label={t('expand')}></th>
+                        <th className="border-0 fw-semibold">{t('orderId')}</th>
+                        <th className="border-0 fw-semibold">{t('customer')}</th>
+                        <th className="border-0 fw-semibold">{t('phone')}</th>
                         <th className="border-0 fw-semibold">
-                          {activeTab === 'overdue' ? 'Overdue' : 'Pending'} Installments
+                          {activeTab === 'overdue' ? t('overdueInstallments') : t('pendingInstallments')}
                         </th>
-                        <th className="border-0 fw-semibold">Remaining</th>
+                        <th className="border-0 fw-semibold">{t('remaining')}</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {groupedPlans.map((group) => {
+                      {pagedGroups.map((group) => {
                         const isExpanded = expandedPlanId === group.planId;
                         const details = planDetails[group.planId];
                         const installments = details?.payments || group.payments;
@@ -510,8 +540,8 @@ const InstallmentPayments = () => {
                                   {formatOrderId(group.order_number, group.sale_id, group.planId)}
                                 </span>
                               </td>
-                              <td>{group.customer_name || details?.customer_name || '—'}</td>
-                              <td className="text-muted">{group.customer_phone || details?.customer_phone || '—'}</td>
+                              <td>{group.customer_name || details?.customer_name || '-'}</td>
+                              <td className="text-muted">{group.customer_phone || details?.customer_phone || '-'}</td>
                               <td>
                                 <span className={`badge ${activeTab === 'overdue' ? 'bg-danger' : 'bg-warning text-dark'}`}>
                                   {group.payments.length}
@@ -533,13 +563,13 @@ const InstallmentPayments = () => {
                                         }}
                                       >
                                         <i className="bi bi-printer me-1"></i>
-                                        Print receipt
+                                        {t('printReceipt')}
                                       </button>
                                     </div>
                                     {loadingPlanId === group.planId && !details ? (
-                                      <p className="text-muted small mb-0 py-2">Loading installments...</p>
+                                      <p className="text-muted small mb-0 py-2">{t('loadingInstallments')}</p>
                                     ) : installments.length === 0 ? (
-                                      <p className="text-muted small mb-0 py-2">No installments found for this plan.</p>
+                                      <p className="text-muted small mb-0 py-2">{t('noInstallmentsFound')}</p>
                                     ) : (
                                       renderInstallmentsTable(
                                         installments,
@@ -559,6 +589,14 @@ const InstallmentPayments = () => {
                 </div>
               </>
             )}
+              <PaginationBar
+                page={groupsPage}
+                totalPages={groupsTotalPages}
+                total={groupsTotal}
+                pageSize={groupsPageSize}
+                onPageChange={setGroupsPage}
+                label={t('plans')}
+              />
           </div>
         </div>
       )}
@@ -568,7 +606,7 @@ const InstallmentPayments = () => {
           <div className="modal-dialog">
             <div className="modal-content">
               <div className="modal-header">
-                <h5 className="modal-title"><i className="bi bi-cash-coin me-2"></i>Record Payment</h5>
+                <h5 className="modal-title"><i className="bi bi-cash-coin me-2"></i>{t('recordPayment')}</h5>
                 <button type="button" className="btn-close" onClick={() => setShowPaymentModal(false)}></button>
               </div>
               <form onSubmit={handleRecordPayment}>
@@ -579,16 +617,16 @@ const InstallmentPayments = () => {
                     </div>
                   )}
                   <div className="bg-light rounded p-3 mb-3 small">
-                    <p className="mb-1"><strong>Customer:</strong> {selectedPayment.customer_name}</p>
-                    <p className="mb-1"><strong>Phone:</strong> {selectedPayment.customer_phone}</p>
-                    <p className="mb-1"><strong>Payment #:</strong> {selectedPayment.payment_number}</p>
-                    <p className="mb-1"><strong>Due Date:</strong> {new Date(selectedPayment.due_date).toLocaleDateString()}</p>
-                    <p className="mb-1"><strong>Amount Due:</strong> {formatMoney(selectedPayment.amount_due)}</p>
-                    <p className="mb-1"><strong>Already Paid:</strong> {formatMoney(selectedPayment.amount_paid)}</p>
-                    <p className="mb-0 text-danger"><strong>Remaining:</strong> {formatMoney(selectedPayment.amount_due - selectedPayment.amount_paid)}</p>
+                    <p className="mb-1"><strong>{t('customer')}:</strong> {selectedPayment.customer_name}</p>
+                    <p className="mb-1"><strong>{t('phone')}:</strong> {selectedPayment.customer_phone}</p>
+                    <p className="mb-1"><strong>{t('paymentNumber')}:</strong> {selectedPayment.payment_number}</p>
+                    <p className="mb-1"><strong>{t('dueDate')}:</strong> {new Date(selectedPayment.due_date).toLocaleDateString()}</p>
+                    <p className="mb-1"><strong>{t('amountDue')}:</strong> {formatMoney(selectedPayment.amount_due)}</p>
+                    <p className="mb-1"><strong>{t('alreadyPaid')}:</strong> {formatMoney(selectedPayment.amount_paid)}</p>
+                    <p className="mb-0 text-danger"><strong>{t('remaining')}:</strong> {formatMoney(selectedPayment.amount_due - selectedPayment.amount_paid)}</p>
                   </div>
                   <div className="mb-3">
-                    <label className="form-label fw-semibold">Payment Amount *</label>
+                    <label className="form-label fw-semibold">{t('paymentAmount')} *</label>
                     <input
                       type="number"
                       className="form-control"
@@ -599,10 +637,10 @@ const InstallmentPayments = () => {
                       max={selectedPayment.amount_due - selectedPayment.amount_paid}
                       required
                     />
-                    <div className="form-text">You can enter a partial payment amount</div>
+                    <div className="form-text">{t('partialPaymentHelp')}</div>
                   </div>
                   <div className="mb-0">
-                    <label className="form-label fw-semibold">Payment Notes (Optional)</label>
+                    <label className="form-label fw-semibold">{t('paymentNotes')} ({t('optional')})</label>
                     <textarea
                       className="form-control"
                       value={paymentNotes}
@@ -613,9 +651,9 @@ const InstallmentPayments = () => {
                   </div>
                 </div>
                 <div className="modal-footer">
-                  <button type="button" className="btn btn-secondary" onClick={() => setShowPaymentModal(false)}>Cancel</button>
+                  <button type="button" className="btn btn-secondary" onClick={() => setShowPaymentModal(false)}>{t('cancel')}</button>
                   <button type="submit" className="btn btn-primary">
-                    <i className="bi bi-check-circle me-2"></i>Confirm Payment
+                    <i className="bi bi-check-circle me-2"></i>{t('confirmPayment')}
                   </button>
                 </div>
               </form>

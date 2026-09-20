@@ -2,8 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { userService } from '../services';
 import { useAuth } from '../contexts/AuthContext';
 import { useConfirm } from '../contexts/ConfirmContext';
+import PaginationBar from '../components/PaginationBar';
+import { usePagination } from '../hooks/usePagination';
+import { useTranslation } from 'react-i18next';
 
 const Users = () => {
+  const { t } = useTranslation();
   const { user: currentUser } = useAuth();
   const { confirm } = useConfirm();
   const [users, setUsers] = useState([]);
@@ -33,6 +37,15 @@ const Users = () => {
       setLoading(false);
     }
   };
+
+  const {
+    page,
+    setPage,
+    pageItems,
+    total,
+    totalPages,
+    pageSize,
+  } = usePagination(users);
 
   const handleInputChange = (e) => {
     setFormData({
@@ -71,10 +84,10 @@ const Users = () => {
 
   const handleDelete = async (id) => {
     const ok = await confirm({
-      title: 'Delete user',
-      message: 'Are you sure you want to delete this user?',
-      confirmLabel: 'Delete',
-      cancelLabel: 'Cancel',
+      title: t('deleteUser'),
+      message: t('deleteUserConfirm'),
+      confirmLabel: t('delete'),
+      cancelLabel: t('cancel'),
       variant: 'danger',
     });
     if (!ok) return;
@@ -93,31 +106,31 @@ const Users = () => {
       <div className="d-flex align-items-center justify-content-center min-vh-100">
         <div className="text-center">
           <div className="spinner-border text-primary" aria-hidden="true">
-            <span className="visually-hidden">Loading...</span>
+            <span className="visually-hidden">{t('loading')}</span>
           </div>
-          <p className="text-muted mt-2">Loading users...</p>
+          <p className="text-muted mt-2">{t('loadingUsers')}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container-fluid matte-page admin-page users-page">
+    <div className="container-fluid matte-page admin-page users-page table-page">
       {/* Header */}
       <div className="row mb-3">
         <div className="col-12">
           <div className="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between">
             <div className="d-flex align-items-center mb-3 mb-lg-0">
               <div>
-                <h1 className="h3 mb-1">User Management</h1>
-                <p className="text-muted small mb-0">Create and manage staff accounts and roles.</p>
+                <h1 className="h3 mb-1">{t('userManagement')}</h1>
+                <p className="text-muted small mb-0">{t('usersSubtitle')}</p>
               </div>
             </div>
 
             <div className="d-flex flex-column flex-sm-row gap-3">
               <button type="button" onClick={openAddModal} className="btn btn-primary">
                 <i className="bi bi-plus-circle me-2"></i>
-                Add New User
+                {t('addNewUser')}
               </button>
             </div>
           </div>
@@ -142,40 +155,40 @@ const Users = () => {
       )}
 
       {/* Users Table */}
-      <div className="card">
+      <div className="card table-panel">
         <div className="card-body p-0">
           {users.length === 0 ? (
             <div className="text-center py-5">
               <i className="bi bi-people text-muted fs-1 mb-3"></i>
-              <h5 className="text-muted">No users found</h5>
-              <p className="text-muted">Add your first user to get started.</p>
+              <h5 className="text-muted">{t('noUsersFound')}</h5>
+              <p className="text-muted">{t('addFirstUser')}</p>
             </div>
           ) : (
             <div className="table-responsive">
               <table className="table table-hover admin-table mb-0">
                 <thead className="table-light">
                   <tr>
-                    <th className="border-0 fw-semibold">Email</th>
-                    <th className="border-0 fw-semibold">Name</th>
-                    <th className="border-0 fw-semibold">Role</th>
-                    <th className="border-0 fw-semibold">Created At</th>
-                    <th className="border-0 fw-semibold">Actions</th>
+                    <th className="border-0 fw-semibold">{t('email')}</th>
+                    <th className="border-0 fw-semibold">{t('name')}</th>
+                    <th className="border-0 fw-semibold">{t('role')}</th>
+                    <th className="border-0 fw-semibold">{t('createdAt')}</th>
+                    <th className="border-0 fw-semibold">{t('actions')}</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {users.map((user) => {
+                  {pageItems.map((user) => {
                     const isOwnAccount =
                       currentUser && String(user.id) === String(currentUser.id);
 
                     return (
                     <tr key={user.id}>
                       <td className="fw-semibold">
-                        {user.email || '—'}
+                        {user.email || '-'}
                         {isOwnAccount && (
-                          <span className="badge bg-light text-muted border ms-2">You</span>
+                          <span className="badge bg-light text-muted border ms-2">{t('you')}</span>
                         )}
                       </td>
-                      <td className="text-muted">{user.full_name || user.fullName || '—'}</td>
+                      <td className="text-muted">{user.full_name || user.fullName || '-'}</td>
                       <td>
                         <span
                           className={`badge ${
@@ -184,7 +197,15 @@ const Users = () => {
                               : 'bg-success'
                           }`}
                         >
-                          {user.role}
+                          {user.role === 'TELLER'
+                            ? t('tellerCashier')
+                            : user.role === 'MANAGER'
+                              ? t('manager')
+                              : user.role === 'INVENTORY'
+                                ? t('inventory')
+                                : user.role === 'ACCOUNTANT'
+                                  ? t('accountant')
+                                  : t('admin')}
                         </span>
                       </td>
                       <td className="text-muted">
@@ -196,7 +217,7 @@ const Users = () => {
                             type="button"
                             onClick={() => handleDelete(user.id)}
                             className="btn btn-outline-danger btn-sm"
-                            title={isOwnAccount ? 'You cannot delete your own account' : 'Delete user'}
+                            title={isOwnAccount ? t('cannotDeleteOwn') : t('deleteUser')}
                             disabled={isOwnAccount}
                             aria-disabled={isOwnAccount}
                           >
@@ -211,6 +232,14 @@ const Users = () => {
               </table>
             </div>
           )}
+          <PaginationBar
+            page={page}
+            totalPages={totalPages}
+            total={total}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            label={t('users')}
+          />
         </div>
       </div>
 
@@ -222,7 +251,7 @@ const Users = () => {
               <div className="modal-header">
                 <h5 className="modal-title">
                   <i className="bi bi-person-plus me-2"></i>
-                  Add New User
+                  {t('addNewUser')}
                 </h5>
                 <button type="button" className="btn-close" onClick={() => setShowModal(false)} aria-label="Close"></button>
               </div>
@@ -237,7 +266,7 @@ const Users = () => {
                   <div className="row g-3">
                     <div className="col-sm-6">
                       <label htmlFor="email" className="form-label fw-semibold">
-                        Email
+                        {t('email')}
                       </label>
                       <input
                         id="email"
@@ -251,12 +280,12 @@ const Users = () => {
                         autoFocus
                       />
                       <div className="form-text">
-                        Email is unique and used to sign in.
+                        {t('emailUniqueHelp')}
                       </div>
                     </div>
                     <div className="col-sm-6">
                       <label htmlFor="fullName" className="form-label fw-semibold">
-                        Full name
+                        {t('fullName')}
                       </label>
                       <input
                         id="fullName"
@@ -269,7 +298,7 @@ const Users = () => {
                     </div>
                     <div className="col-sm-6">
                       <label htmlFor="password" className="form-label fw-semibold">
-                        Password
+                        {t('password')}
                       </label>
                       <input
                         id="password"
@@ -281,11 +310,11 @@ const Users = () => {
                         required
                         minLength={8}
                       />
-                      <div className="form-text">Min. 8 characters</div>
+                      <div className="form-text">{t('minCharacters')}</div>
                     </div>
                     <div className="col-sm-6">
                       <label htmlFor="pin" className="form-label fw-semibold">
-                        POS PIN <span className="text-muted fw-normal">(optional)</span>
+                        {t('posPin')} <span className="text-muted fw-normal">({t('optional')})</span>
                       </label>
                       <input
                         id="pin"
@@ -300,7 +329,7 @@ const Users = () => {
                     </div>
                     <div className="col-sm-6">
                       <label htmlFor="role" className="form-label fw-semibold">
-                        Role
+                        {t('role')}
                       </label>
                       <select
                         id="role"
@@ -310,21 +339,21 @@ const Users = () => {
                         onChange={handleInputChange}
                         required
                       >
-                        <option value="TELLER">Teller / Cashier</option>
-                        <option value="MANAGER">Manager</option>
-                        <option value="INVENTORY">Inventory</option>
-                        <option value="ACCOUNTANT">Accountant</option>
+                        <option value="TELLER">{t('tellerCashier')}</option>
+                        <option value="MANAGER">{t('manager')}</option>
+                        <option value="INVENTORY">{t('inventory')}</option>
+                        <option value="ACCOUNTANT">{t('accountant')}</option>
                       </select>
                     </div>
                   </div>
                 </div>
                 <div className="modal-footer justify-content-end">
                   <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>
-                    Cancel
+                    {t('cancel')}
                   </button>
                   <button type="submit" className="btn btn-primary">
                     <i className="bi bi-check-circle me-2"></i>
-                    Create User
+                    {t('createUser')}
                   </button>
                 </div>
               </form>

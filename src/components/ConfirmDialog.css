@@ -78,13 +78,13 @@
 }
 
 .app-confirm-btn--cancel {
-  background: #f5f6fa;
+  background: var(--dreams-surface-2);
   color: var(--dreams-text, #212b36);
   border: 1px solid var(--dreams-border, #e8ecef);
 }
 
 .app-confirm-btn--cancel:hover {
-  background: #eef0f4;
+  background: var(--dreams-hover);
 }
 
 .app-confirm-btn--primary {

@@ -6,8 +6,12 @@ import { installmentSettingsService } from '../services';
 import { useAuth } from '../contexts/AuthContext';
 import { useCurrency } from '../contexts/TenantSettingsContext';
 import { useConfirm } from '../contexts/ConfirmContext';
+import PaginationBar from '../components/PaginationBar';
+import { usePagination } from '../hooks/usePagination';
+import { useTranslation } from 'react-i18next';
 
 const InstallmentPlans = () => {
+  const { t } = useTranslation();
   const { isAdmin } = useAuth();
   const { formatMoney } = useCurrency();
   const { confirm } = useConfirm();
@@ -84,10 +88,10 @@ const InstallmentPlans = () => {
 
   const handleDeleteSetting = async (months) => {
     const ok = await confirm({
-      title: 'Delete settings',
-      message: `Are you sure you want to delete settings for ${months} months?`,
-      confirmLabel: 'Delete',
-      cancelLabel: 'Cancel',
+      title: t('deleteSettings'),
+      message: t('deleteSettingsConfirm', { months }),
+      confirmLabel: t('delete'),
+      cancelLabel: t('cancel'),
       variant: 'danger',
     });
     if (!ok) return;
@@ -102,15 +106,24 @@ const InstallmentPlans = () => {
     }
   };
 
+  const {
+    page,
+    setPage,
+    pageItems,
+    total,
+    totalPages,
+    pageSize,
+  } = usePagination(settings);
+
   if (loading && settings.length === 0) {
-    return <AdminLoading message="Loading installment settings..." />;
+    return <AdminLoading message={t('loadingInstallmentSettings')} />;
   }
 
   return (
-    <div className="container-fluid matte-page admin-page installment-page">
+    <div className="container-fluid matte-page admin-page installment-page table-page">
       <PageHeader
-        title="Interest Rate Settings"
-        subtitle="Configure interest rates for different installment periods."
+        title={t('interestRateSettings')}
+        subtitle={t('interestRateSubtitle')}
       />
 
       <AdminAlerts
@@ -121,40 +134,40 @@ const InstallmentPlans = () => {
       />
 
       {isAdmin && (
-        <div className="card">
+        <div className="card table-panel">
           <div className="card-header d-flex flex-wrap align-items-center justify-content-between gap-3">
             <div>
-              <h5 className="admin-section-title mb-1">Interest Rate Configuration</h5>
+              <h5 className="admin-section-title mb-1">{t('interestRateConfiguration')}</h5>
               <p className="admin-section-subtitle">
-                These rates will be available when creating new installment sales.
+                {t('interestRateHelp')}
               </p>
             </div>
             <button type="button" onClick={openAddSettingModal} className="btn btn-primary btn-sm">
               <i className="bi bi-plus-circle me-1"></i>
-              Add New Setting
+              {t('addNewSetting')}
             </button>
           </div>
           <div className="card-body p-0">
             {loading ? (
-              <p className="text-muted text-center py-5 mb-0">Loading settings...</p>
+              <p className="text-muted text-center py-5 mb-0">{t('loadingSettings')}</p>
             ) : settings.length === 0 ? (
               <p className="text-muted text-center py-5 mb-0">
-                No installment settings found. Click &quot;Add New Setting&quot; to create one.
+                {t('noInstallmentSettings')}
               </p>
             ) : (
               <div className="table-responsive">
                 <table className="table table-hover admin-table mb-0">
                   <thead className="table-light">
                     <tr>
-                      <th className="border-0 fw-semibold">Months</th>
-                      <th className="border-0 fw-semibold">Interest Rate</th>
-                      <th className="border-0 fw-semibold">Example: $1000 Item</th>
-                      <th className="border-0 fw-semibold">Last Updated</th>
-                      <th className="border-0 fw-semibold">Actions</th>
+                      <th className="border-0 fw-semibold">{t('months')}</th>
+                      <th className="border-0 fw-semibold">{t('interestRate')}</th>
+                      <th className="border-0 fw-semibold">{t('exampleItem', { amount: formatMoney(1000) })}</th>
+                      <th className="border-0 fw-semibold">{t('lastUpdated')}</th>
+                      <th className="border-0 fw-semibold">{t('actions')}</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {settings.map((setting) => {
+                    {pageItems.map((setting) => {
                       const exampleAmount = 1000;
                       const interestAmount = (exampleAmount * setting.interest_rate) / 100;
                       const totalWithInterest = exampleAmount + interestAmount;
@@ -162,10 +175,13 @@ const InstallmentPlans = () => {
 
                       return (
                         <tr key={setting.id}>
-                          <td className="fw-semibold">{setting.months} months</td>
+                          <td className="fw-semibold">{t('monthsCount', { count: setting.months })}</td>
                           <td className="text-primary fw-semibold">{setting.interest_rate}%</td>
                           <td className="text-muted">
-                            Total: {formatMoney(totalWithInterest)} · Monthly: {formatMoney(monthlyPayment)}
+                            {t('totalMonthlyExample', {
+                              total: formatMoney(totalWithInterest),
+                              monthly: formatMoney(monthlyPayment),
+                            })}
                           </td>
                           <td className="text-muted">{new Date(setting.updated_at).toLocaleDateString()}</td>
                           <td>
@@ -175,14 +191,14 @@ const InstallmentPlans = () => {
                                 onClick={() => openEditSettingModal(setting)}
                                 className="btn btn-outline-primary btn-sm"
                               >
-                                Edit
+                                {t('edit')}
                               </button>
                               <button
                                 type="button"
                                 onClick={() => handleDeleteSetting(setting.months)}
                                 className="btn btn-outline-danger btn-sm"
                               >
-                                Delete
+                                {t('delete')}
                               </button>
                             </div>
                           </td>
@@ -193,6 +209,14 @@ const InstallmentPlans = () => {
                 </table>
               </div>
             )}
+            <PaginationBar
+              page={page}
+              totalPages={totalPages}
+              total={total}
+              pageSize={pageSize}
+              onPageChange={setPage}
+              label={t('rateSettings')}
+            />
           </div>
         </div>
       )}
@@ -203,7 +227,7 @@ const InstallmentPlans = () => {
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="modal-title">
-                  {editingSetting ? 'Edit Installment Setting' : 'Add New Installment Setting'}
+                  {editingSetting ? t('editInstallmentSetting') : t('addInstallmentSetting')}
                 </h5>
                 <button
                   type="button"
@@ -222,7 +246,7 @@ const InstallmentPlans = () => {
                   )}
 
                   <div className="mb-3">
-                    <label className="form-label fw-semibold">Number of Months *</label>
+                    <label className="form-label fw-semibold">{t('numberOfMonths')} *</label>
                     <input
                       type="number"
                       className="form-control"
@@ -235,13 +259,13 @@ const InstallmentPlans = () => {
                     />
                     {editingSetting && (
                       <div className="form-text">
-                        Months cannot be changed. Delete and create a new setting if needed.
+                        {t('monthsCannotChange')}
                       </div>
                     )}
                   </div>
 
                   <div className="mb-3">
-                    <label className="form-label fw-semibold">Interest Rate (%) *</label>
+                    <label className="form-label fw-semibold">{t('interestRate')} (%) *</label>
                     <input
                       type="number"
                       className="form-control"
@@ -257,17 +281,17 @@ const InstallmentPlans = () => {
                   {settingMonths && settingInterestRate && (
                     <div className="bg-light rounded p-3">
                       <h6 className="fw-semibold mb-2 small">
-                        Preview: {formatMoney(1000)} item over {settingMonths} months
+                        {t('previewItemOverMonths', { amount: formatMoney(1000), months: settingMonths })}
                       </h6>
                       <div className="small text-muted">
                         <p className="mb-1">
-                          Interest: {formatMoney((1000 * parseFloat(settingInterestRate || 0)) / 100)}
+                          {t('interest')}: {formatMoney((1000 * parseFloat(settingInterestRate || 0)) / 100)}
                         </p>
                         <p className="mb-1">
-                          Total Amount: {formatMoney(1000 + (1000 * parseFloat(settingInterestRate || 0)) / 100)}
+                          {t('totalAmount')}: {formatMoney(1000 + (1000 * parseFloat(settingInterestRate || 0)) / 100)}
                         </p>
                         <p className="mb-0 fw-semibold text-dark">
-                          Monthly Payment:{' '}
+                          {t('monthlyPayment')}:{' '}
                           {formatMoney(
                             (1000 + (1000 * parseFloat(settingInterestRate || 0)) / 100) /
                               parseInt(settingMonths || 1, 10)
@@ -279,10 +303,10 @@ const InstallmentPlans = () => {
                 </div>
                 <div className="modal-footer">
                   <button type="button" className="btn btn-secondary" onClick={() => setShowSettingsModal(false)}>
-                    Cancel
+                    {t('cancel')}
                   </button>
                   <button type="submit" className="btn btn-primary">
-                    {editingSetting ? 'Update Setting' : 'Add Setting'}
+                    {editingSetting ? t('updateSetting') : t('addSetting')}
                   </button>
                 </div>
               </form>

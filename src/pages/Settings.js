@@ -12,14 +12,16 @@ import { COUNTRIES, DEFAULT_COUNTRY_CODE } from '../utils/phone';
 import { DEFAULT_RECEIPT, mergeReceipt, RECEIPT_PAPER_SIZES, getReceiptPaperSize } from '../utils/receipt';
 import { resolveProductImageUrl } from '../utils/productImage';
 import { RECEIPT_LOGO, RECEIPT_LOGO_HINT, validateReceiptLogoFile } from '../utils/receiptLogo';
+import { useTranslation } from 'react-i18next';
 
 const TABS = [
-  { id: 'store', label: 'Store details' },
-  { id: 'currency', label: 'Currency & tax' },
-  { id: 'receipt', label: 'Receipt' },
+  { id: 'store', labelKey: 'tabStoreDetails' },
+  { id: 'currency', labelKey: 'tabCurrencyTax' },
+  { id: 'receipt', labelKey: 'tabReceipt' },
 ];
 
 const Settings = () => {
+  const { t } = useTranslation();
   const { refreshUser } = useAuth();
   const { settings, reloadSettings, setSettings } = useTenantSettings();
   const logoInputRef = useRef(null);
@@ -174,11 +176,11 @@ const Settings = () => {
   return (
     <div className="container-fluid matte-page admin-page settings-page">
       <PageHeader
-        title="Store Settings"
-        subtitle="Customize your business information, country, currency and tax behavior."
+        title={t('storeSettings')}
+        subtitle={t('settingsSubtitle')}
         actions={
           <button type="submit" form="store-settings-form" className="btn btn-primary" disabled={saving}>
-            {saving ? 'Saving…' : 'Save settings'}
+            {saving ? t('saving') : t('saveSettings')}
           </button>
         }
       />
@@ -200,7 +202,7 @@ const Settings = () => {
                     className={`nav-link ${activeTab === tab.id ? 'active' : ''}`}
                     onClick={() => setActiveTab(tab.id)}
                   >
-                    {tab.label}
+                    {t(tab.labelKey)}
                   </button>
                 </li>
               ))}
@@ -211,7 +213,7 @@ const Settings = () => {
               <div className="row g-3">
                 <div className="col-md-6">
                   <label htmlFor="settings-business-name" className="form-label fw-semibold">
-                    Business name
+                    {t('businessName')}
                   </label>
                   <input
                     id="settings-business-name"
@@ -224,7 +226,7 @@ const Settings = () => {
                 </div>
                 <div className="col-md-6">
                   <label htmlFor="settings-country" className="form-label fw-semibold">
-                    Country
+                    {t('country')}
                   </label>
                   <select
                     id="settings-country"
@@ -242,7 +244,7 @@ const Settings = () => {
                 </div>
                 <div className="col-md-6">
                   <label htmlFor="settings-low-stock" className="form-label fw-semibold">
-                    Low stock threshold
+                    {t('lowStockThreshold')}
                   </label>
                   <input
                     id="settings-low-stock"
@@ -261,10 +263,10 @@ const Settings = () => {
               <div className="row g-3">
                 <div className="col-md-6">
                   <label htmlFor="settings-currency" className="form-label fw-semibold">
-                    Currency
+                    {t('currency')}
                   </label>
                   <div className="settings-currency-field">
-                    <span className="settings-currency-prefix" aria-label="Currency symbol">
+                    <span className="settings-currency-prefix" aria-label={t('currency')}>
                       {selectedCurrency.symbol}
                     </span>
                     <select
@@ -273,7 +275,7 @@ const Settings = () => {
                       className="form-select"
                       value={formData.currency}
                       onChange={handleChange}
-                      aria-label="Currency"
+                      aria-label={t('currency')}
                     >
                       {CURRENCY_OPTIONS.map((opt) => (
                         <option key={opt.code} value={opt.label}>
@@ -285,7 +287,7 @@ const Settings = () => {
                 </div>
                 <div className="col-md-6">
                   <label htmlFor="settings-tax-rate" className="form-label fw-semibold">
-                    Tax rate (%)
+                    {t('taxRatePercent')}
                   </label>
                   <input
                     id="settings-tax-rate"
@@ -313,14 +315,14 @@ const Settings = () => {
                   />
 
                   <div className="receipt-field">
-                    <label className="form-label fw-semibold">Logo</label>
+                    <label className="form-label fw-semibold">{t('logo')}</label>
                     {logoPreview ? (
                       <div className="receipt-logo-row">
                         <button
                           type="button"
                           className="receipt-logo-btn"
                           onClick={handleLogoAdjust}
-                          title="Adjust logo"
+                          title={t('adjustLogo')}
                         >
                           <img src={logoPreview} alt="Receipt logo" />
                         </button>
@@ -330,17 +332,17 @@ const Settings = () => {
                             className="btn btn-sm btn-outline-secondary"
                             onClick={handleLogoAdjust}
                           >
-                            Adjust
+                            {t('adjust')}
                           </button>
                           <button
                             type="button"
                             className="btn btn-sm btn-outline-secondary"
                             onClick={() => logoInputRef.current?.click()}
                           >
-                            Change
+                            {t('change')}
                           </button>
                           <button type="button" className="btn btn-sm btn-outline-danger" onClick={handleLogoRemove}>
-                            Remove
+                            {t('remove')}
                           </button>
                         </div>
                       </div>
@@ -350,7 +352,7 @@ const Settings = () => {
                         className="receipt-logo-empty"
                         onClick={() => logoInputRef.current?.click()}
                       >
-                        Upload logo
+                        {t('uploadLogo')}
                       </button>
                     )}
                     {logoError ? (
@@ -362,7 +364,7 @@ const Settings = () => {
 
                   <div className="receipt-field">
                     <label htmlFor="receipt-paper-size" className="form-label fw-semibold">
-                      Printer paper size
+                      {t('printerPaperSize')}
                     </label>
                     <select
                       id="receipt-paper-size"
@@ -384,7 +386,7 @@ const Settings = () => {
 
                   <div className="receipt-field">
                     <label htmlFor="receipt-slogan" className="form-label fw-semibold">
-                      Slogan
+                      {t('slogan')}
                     </label>
                     <input
                       id="receipt-slogan"
@@ -398,7 +400,7 @@ const Settings = () => {
 
                   <div className="receipt-field">
                     <label htmlFor="receipt-registration" className="form-label fw-semibold">
-                      Registration / ABN
+                      {t('registrationAbn')}
                     </label>
                     <input
                       id="receipt-registration"
@@ -412,7 +414,7 @@ const Settings = () => {
 
                   <div className="receipt-field">
                     <label htmlFor="receipt-address" className="form-label fw-semibold">
-                      Address
+                      {t('address')}
                     </label>
                     <input
                       id="receipt-address"
@@ -427,7 +429,7 @@ const Settings = () => {
                   <div className="row g-2">
                     <div className="col-md-6">
                       <label htmlFor="receipt-email" className="form-label fw-semibold">
-                        Email
+                        {t('email')}
                       </label>
                       <input
                         id="receipt-email"
@@ -439,7 +441,7 @@ const Settings = () => {
                     </div>
                     <div className="col-md-6">
                       <label htmlFor="receipt-website" className="form-label fw-semibold">
-                        Website
+                        {t('website')}
                       </label>
                       <input
                         id="receipt-website"
@@ -451,7 +453,7 @@ const Settings = () => {
                     </div>
                     <div className="col-md-6">
                       <label htmlFor="receipt-phone" className="form-label fw-semibold">
-                        Phone
+                        {t('phone')}
                       </label>
                       <input
                         id="receipt-phone"
@@ -465,7 +467,7 @@ const Settings = () => {
 
                   <div className="receipt-field">
                     <label htmlFor="receipt-header-message" className="form-label fw-semibold">
-                      Header message
+                      {t('headerMessage')}
                     </label>
                     <input
                       id="receipt-header-message"
@@ -479,7 +481,7 @@ const Settings = () => {
 
                   <div className="receipt-field">
                     <label htmlFor="receipt-invoice-title" className="form-label fw-semibold">
-                      Invoice title
+                      {t('invoiceTitle')}
                     </label>
                     <input
                       id="receipt-invoice-title"
@@ -492,7 +494,7 @@ const Settings = () => {
 
                   <div className="receipt-field">
                     <label htmlFor="receipt-return-policy" className="form-label fw-semibold">
-                      Return policy
+                      {t('returnPolicy')}
                     </label>
                     <textarea
                       id="receipt-return-policy"
@@ -506,7 +508,7 @@ const Settings = () => {
 
                   <div className="receipt-field">
                     <label htmlFor="receipt-footer" className="form-label fw-semibold">
-                      Thank-you message
+                      {t('thankYouMessage')}
                     </label>
                     <input
                       id="receipt-footer"
@@ -527,7 +529,7 @@ const Settings = () => {
                       onChange={handleReceiptChange}
                     />
                     <label htmlFor="receipt-show-qr" className="form-check-label">
-                      Show sale QR code
+                      {t('showSaleQr')}
                     </label>
                   </div>
 
@@ -541,7 +543,7 @@ const Settings = () => {
                       onChange={handleReceiptChange}
                     />
                     <label htmlFor="receipt-show-voucher" className="form-check-label">
-                      Include gift voucher
+                      {t('includeGiftVoucher')}
                     </label>
                   </div>
 
@@ -549,7 +551,7 @@ const Settings = () => {
                     <>
                       <div className="receipt-field">
                         <label htmlFor="receipt-voucher-title" className="form-label fw-semibold">
-                          Voucher title
+                          {t('voucherTitle')}
                         </label>
                         <input
                           id="receipt-voucher-title"
@@ -562,7 +564,7 @@ const Settings = () => {
                       <div className="row g-2">
                         <div className="col-6">
                           <label htmlFor="receipt-voucher-offer-type" className="form-label fw-semibold">
-                            Offer type
+                            {t('offerType')}
                           </label>
                           <select
                             id="receipt-voucher-offer-type"
@@ -571,13 +573,13 @@ const Settings = () => {
                             value={formData.receipt.voucherOfferType || 'percent'}
                             onChange={handleReceiptChange}
                           >
-                            <option value="percent">Percentage</option>
-                            <option value="value">Fixed value</option>
+                            <option value="percent">{t('percentage')}</option>
+                            <option value="value">{t('fixedValue')}</option>
                           </select>
                         </div>
                         <div className="col-6">
                           <label htmlFor="receipt-voucher-offer-value" className="form-label fw-semibold">
-                            Offer value
+                            {t('offerValue')}
                           </label>
                           {formData.receipt.voucherOfferType === 'value' ? (
                             <div className="settings-currency-field">
@@ -615,7 +617,7 @@ const Settings = () => {
                       </div>
                       <div className="receipt-field">
                         <label htmlFor="receipt-voucher-offer" className="form-label fw-semibold">
-                          Offer text
+                          {t('offerText')}
                         </label>
                         <input
                           id="receipt-voucher-offer"
@@ -627,7 +629,7 @@ const Settings = () => {
                       </div>
                       <div className="receipt-field">
                         <label htmlFor="receipt-voucher-loyalty" className="form-label fw-semibold">
-                          Loyalty message
+                          {t('loyaltyMessage')}
                         </label>
                         <textarea
                           id="receipt-voucher-loyalty"
@@ -640,7 +642,7 @@ const Settings = () => {
                       </div>
                       <div className="receipt-field">
                         <label htmlFor="receipt-voucher-terms" className="form-label fw-semibold">
-                          Terms
+                          {t('terms')}
                         </label>
                         <textarea
                           id="receipt-voucher-terms"
@@ -657,14 +659,14 @@ const Settings = () => {
 
                 <div className="receipt-designer-preview">
                   <div className="receipt-designer-preview-label">
-                    <span>Live preview · {getReceiptPaperSize(formData.receipt.paperSize).code}</span>
+                    <span>{t('livePreview')} · {getReceiptPaperSize(formData.receipt.paperSize).code}</span>
                     <button
                       type="button"
                       className="btn btn-sm btn-outline-secondary"
                       onClick={() => setReceiptFullscreen(true)}
                     >
                       <i className="bi bi-arrows-fullscreen me-1"></i>
-                      Full screen
+                      {t('fullScreen')}
                     </button>
                   </div>
                   <div className="receipt-preview-stage">
