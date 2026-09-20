@@ -44,6 +44,7 @@ import SellItems from './pages/SellItems';
 import SalesReport from './pages/SalesReport';
 
 import Users from './pages/Users';
+import Customers from './pages/Customers';
 
 import InstallmentPlans from './pages/InstallmentPlans';
 
@@ -165,6 +166,8 @@ function AppRoutes() {
       <Route path="/sales-report" element={<ProtectedRoute requirePermission={PERMISSIONS.REPORTS_VIEW}><Layout><SalesReport /></Layout></ProtectedRoute>} />
 
       <Route path="/users" element={<ProtectedRoute requirePermission={[PERMISSIONS.USERS_MANAGE, PERMISSIONS.USERS_VIEW]}><Layout><Users /></Layout></ProtectedRoute>} />
+
+      <Route path="/customers" element={<ProtectedRoute requirePermission={[PERMISSIONS.REPORTS_VIEW, PERMISSIONS.USERS_VIEW, PERMISSIONS.USERS_MANAGE]}><Layout><Customers /></Layout></ProtectedRoute>} />
 
       <Route path="/installment-plans" element={<ProtectedRoute requireAdmin><Layout><InstallmentPlans /></Layout></ProtectedRoute>} />
 

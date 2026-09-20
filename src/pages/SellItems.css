@@ -659,6 +659,35 @@
   font-size: 0.85rem;
 }
 
+.pos-customer-lookup {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.pos-customer-phone {
+  width: 100%;
+  border: 1px solid #e8ecef;
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.65rem;
+  font-size: 0.85rem;
+}
+
+.pos-customer-match {
+  font-size: 0.72rem;
+  color: #6e6b7b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pos-customer-match.is-member {
+  color: #28c76f;
+  font-weight: 600;
+}
+
 .pos-icon-action {
   width: 2.25rem;
   height: 2.25rem;
@@ -1356,7 +1385,8 @@ body.pos-installment-modal-open .pos-plans-area::-webkit-scrollbar {
 [data-theme="dark"] .pos-store-select,
 [data-theme="dark"] .pos-qty-btn,
 [data-theme="dark"] .pos-summary-input,
-[data-theme="dark"] .pos-customer-select {
+[data-theme="dark"] .pos-customer-select,
+[data-theme="dark"] .pos-customer-phone {
   background: var(--dreams-surface-2);
   color: var(--dreams-text);
   border-color: var(--dreams-border);

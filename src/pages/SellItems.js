@@ -8,6 +8,7 @@ import {
   installmentPaymentService,
   installmentPlanService,
   promotionService,
+  customerService,
 } from '../services';
 import CategoryIcon from '../components/CategoryIcon';
 import ProductThumbnail from '../components/ProductThumbnail';
@@ -22,11 +23,13 @@ import {
   getInstallmentValidationMessage,
   getCustomerWitnessDuplicates,
   isValidNic,
+  looksLikeNic,
   normalizeNic,
   sanitizeNicInput,
   NIC_FORMAT_MESSAGE,
 } from '../utils/installmentValidation';
 import { generateOrderId, formatOrderId } from '../utils/orderId';
+import { sanitizeLocalPhoneInput } from '../utils/phone';
 import { billToReceiptItems, mergeReceipt, getReceiptPaperSize, receiptPrintPageSize, createInstallmentReceiptPrintJob, createReturnReceiptPrintJob } from '../utils/receipt';
 import { applyPromotionPrice } from '../utils/promotions';
 import { resolveBusinessName } from '../config/app';
@@ -106,6 +109,9 @@ function SellItems() {
   const [elapsed, setElapsed] = useState(0);
   const [orderStartedAt, setOrderStartedAt] = useState(null);
   const [walkInCustomer, setWalkInCustomer] = useState('Walk in Customer');
+  const [memberPhone, setMemberPhone] = useState('');
+  const [memberCustomer, setMemberCustomer] = useState(null);
+  const [memberLookupStatus, setMemberLookupStatus] = useState('idle');
 
   const [interestRates, setInterestRates] = useState({});
   const [customer, setCustomer] = useState({
@@ -188,6 +194,8 @@ function SellItems() {
     downPayment,
     installmentMonths,
     walkInCustomer,
+    memberPhone,
+    memberCustomer,
     shipping,
     shippingPercent,
     discount,
@@ -206,6 +214,48 @@ function SellItems() {
     setOpenedHold(false);
   }, [user?.id]);
 
+  const countryCode = settings?.countryCode;
+
+  useEffect(() => {
+    const phone = memberPhone.trim();
+    const digits = memberPhone.replace(/\D/g, '');
+    if (!phone || digits.length < 7) {
+      setMemberCustomer(null);
+      setMemberLookupStatus('idle');
+      setWalkInCustomer('Walk in Customer');
+      return undefined;
+    }
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      setMemberLookupStatus('loading');
+      try {
+        const found = await customerService.lookupByPhone(phone);
+        if (cancelled) return;
+        setMemberCustomer(found);
+        setMemberLookupStatus('matched');
+        setWalkInCustomer(found.name || 'Walk in Customer');
+        setCustomer((prev) => ({
+          ...prev,
+          name: found.name || prev.name,
+          phone: found.phone || phone,
+          idCardNo: found.id_card_no || prev.idCardNo,
+          email: found.email || prev.email,
+          address: found.address || prev.address,
+        }));
+      } catch (err) {
+        if (cancelled) return;
+        setMemberCustomer(null);
+        setMemberLookupStatus(err.response?.status === 404 ? 'none' : 'idle');
+        setWalkInCustomer('Walk in Customer');
+        setCustomer((prev) => ({ ...prev, phone }));
+      }
+    }, 300);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [memberPhone]);
+
   const resetBillCharges = useCallback(() => {
     setShipping('');
     setShippingPercent('');
@@ -219,6 +269,9 @@ function SellItems() {
     setWitness({ name: '', phone: '', idCardNo: '', address: '', idImage: null });
     setIncludeWitness(false);
     setDownPayment('');
+    setMemberPhone('');
+    setMemberCustomer(null);
+    setMemberLookupStatus('idle');
     resetBillCharges();
     setShowInstallmentModal(false);
     setOpenedHold(false);
@@ -237,6 +290,8 @@ function SellItems() {
       downPayment: sale.downPayment,
       installmentMonths: sale.installmentMonths,
       walkInCustomer: sale.walkInCustomer,
+      memberPhone: sale.memberPhone,
+      memberCustomer: sale.memberCustomer,
       shipping: sale.shipping,
       shippingPercent: sale.shippingPercent,
       discount: sale.discount,
@@ -262,6 +317,9 @@ function SellItems() {
     if (data.downPayment != null) setDownPayment(data.downPayment);
     if (data.installmentMonths) setInstallmentMonths(data.installmentMonths);
     if (data.walkInCustomer) setWalkInCustomer(data.walkInCustomer);
+    if (data.memberPhone != null) setMemberPhone(data.memberPhone);
+    if (data.memberCustomer) setMemberCustomer(data.memberCustomer);
+    else setMemberCustomer(null);
     setShipping(data.shipping != null ? String(data.shipping) : '');
     setShippingPercent(data.shippingPercent != null ? String(data.shippingPercent) : '');
     setDiscount(data.discount != null ? String(data.discount) : '');
@@ -602,6 +660,9 @@ function SellItems() {
     setError('');
     setInstallmentModalError('');
     setInstallmentTouched(false);
+    if (memberPhone.trim() && !customer.phone) {
+      setCustomer((prev) => ({ ...prev, phone: memberPhone.trim() }));
+    }
     setShowInstallmentModal(true);
   };
 
@@ -660,7 +721,10 @@ function SellItems() {
       setProcessing(true);
       setError('');
       for (const item of bill) {
-        await saleService.processCashSale(item.id, item.quantity, { orderNumber: orderRef });
+        await saleService.processCashSale(item.id, item.quantity, {
+          orderNumber: orderRef,
+          customerPhone: memberCustomer ? memberPhone : undefined,
+        });
       }
       const charges = calculateCharges();
       printSaleReceipt(bill, {
@@ -671,6 +735,10 @@ function SellItems() {
       setSuccess(t('Sale completed successfully!'));
       setBill([]);
       resetBillCharges();
+      setMemberPhone('');
+      setMemberCustomer(null);
+      setMemberLookupStatus('idle');
+      setWalkInCustomer('Walk in Customer');
       releaseOpenedHoldIfNeeded();
       newOrderRef();
       await loadData();
@@ -761,6 +829,10 @@ function SellItems() {
       setWitness({ name: '', phone: '', idCardNo: '', address: '', idImage: null });
       setIncludeWitness(false);
       setDownPayment('');
+      setMemberPhone('');
+      setMemberCustomer(null);
+      setMemberLookupStatus('idle');
+      setWalkInCustomer('Walk in Customer');
       resetBillCharges();
       setShowInstallmentModal(false);
       setInstallmentModalError('');
@@ -1053,7 +1125,7 @@ function SellItems() {
       ? getInstallmentFieldErrors(customer, witness, downPayment, total, { includeWitness })
       : {};
 
-    if (normalizeNic(customer.idCardNo) && !isValidNic(customer.idCardNo)) {
+    if (looksLikeNic(customer.idCardNo) && !isValidNic(customer.idCardNo)) {
       errors['customer.idCardNo'] = true;
     }
     if (includeWitness && normalizeNic(witness.idCardNo) && !isValidNic(witness.idCardNo)) {
@@ -1174,7 +1246,7 @@ function SellItems() {
                 <div className="col-md-6">
                   <h6 className="pos-installment-section-title">{t('Customer Details')}</h6>
                   <div className="mb-2">
-                    <label className="form-label">{t('Customer Name')} *</label>
+                    <label className="form-label">{t('Customer Name')}</label>
                     <input
                       className={installmentControlClass('customer.name')}
                       value={customer.name}
@@ -1190,8 +1262,15 @@ function SellItems() {
                     <label className="form-label">{t('Phone')} *</label>
                     <input
                       className={installmentControlClass('customer.phone')}
+                      type="tel"
+                      inputMode="tel"
+                      placeholder={t('enterCustomerPhone')}
                       value={customer.phone}
-                      onChange={(e) => setCustomer({ ...customer, phone: e.target.value })}
+                      onChange={(e) => {
+                        const phone = sanitizeLocalPhoneInput(e.target.value, countryCode);
+                        setCustomer({ ...customer, phone });
+                        setMemberPhone(phone);
+                      }}
                     />
                     {installmentFieldFeedback(
                       'customer.phone',
@@ -1200,7 +1279,7 @@ function SellItems() {
                     )}
                   </div>
                   <div className="mb-2">
-                    <label className="form-label">{t('ID Card No')} *</label>
+                    <label className="form-label">{t('ID Card No')}</label>
                     <input
                       className={installmentControlClass('customer.idCardNo')}
                       value={customer.idCardNo}
@@ -1219,13 +1298,12 @@ function SellItems() {
                     )}
                   </div>
                   <div className="mb-2">
-                    <label className="form-label">{t('Address')} *</label>
+                    <label className="form-label">{t('Address')}</label>
                     <input
                       className={installmentControlClass('customer.address')}
                       value={customer.address}
                       onChange={(e) => setCustomer({ ...customer, address: e.target.value })}
                     />
-                    {installmentFieldFeedback('customer.address', t('Address is required'))}
                   </div>
                   <div className="mb-2">
                     <label className="form-label">{t('Email')}</label>
@@ -1464,18 +1542,32 @@ function SellItems() {
       {mode !== 'payment' && (
         <>
           <div className="pos-customer-row">
-            <select
-              className="pos-customer-select"
-              value={walkInCustomer}
-              onChange={(e) => setWalkInCustomer(e.target.value)}
-            >
-              <option>Walk in Customer</option>
-              <option>Regular Customer</option>
-              <option>Member Customer</option>
-            </select>
-            <button type="button" className="pos-icon-action green" title="Add customer">
-              <i className="bi bi-person-plus"></i>
-            </button>
+            <div className="pos-customer-lookup">
+              <input
+                type="tel"
+                inputMode="tel"
+                className="pos-customer-phone"
+                placeholder={t('enterCustomerPhone')}
+                value={memberPhone}
+                onChange={(e) =>
+                  setMemberPhone(sanitizeLocalPhoneInput(e.target.value, countryCode))
+                }
+                autoComplete="off"
+              />
+              <span
+                className={`pos-customer-match${
+                  memberLookupStatus === 'matched' ? ' is-member' : ''
+                }`}
+              >
+                {memberLookupStatus === 'loading'
+                  ? t('lookingUpMember')
+                  : memberLookupStatus === 'matched'
+                    ? memberCustomer?.name || memberCustomer?.phone || t('memberCustomer')
+                    : memberLookupStatus === 'none'
+                      ? t('noMemberForPhone')
+                      : t('walkInCustomer')}
+              </span>
+            </div>
             {hasHeldBill && (
               <button
                 type="button"

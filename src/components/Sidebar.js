@@ -38,6 +38,10 @@ const Sidebar = () => {
   const showReports = hasPermission(PERMISSIONS.REPORTS_VIEW);
   const showUsers =
     hasPermission(PERMISSIONS.USERS_MANAGE) || hasPermission(PERMISSIONS.USERS_VIEW);
+  const showCustomers =
+    hasPermission(PERMISSIONS.REPORTS_VIEW) ||
+    hasPermission(PERMISSIONS.USERS_VIEW) ||
+    hasPermission(PERMISSIONS.USERS_MANAGE);
   const showSettings = hasPermission(PERMISSIONS.SETTINGS_MANAGE);
   const showPos = hasPermission(PERMISSIONS.SALES_CREATE) || isTeller;
 
@@ -99,6 +103,7 @@ const Sidebar = () => {
         </SidebarSection>
 
         <SidebarSection title={t('sidebarAdministration') || 'Administration'}>
+          {showCustomers && <NavItem to="/customers" icon="bi-person-vcard" label={t('customers')} />}
           {showUsers && <NavItem to="/users" icon="bi-people" label={t('users')} />}
           {showSettings && <NavItem to="/settings" icon="bi-gear" label={t('settings')} />}
         </SidebarSection>

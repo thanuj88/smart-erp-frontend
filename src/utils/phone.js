@@ -231,3 +231,25 @@ export function toE164(phone, countryCode) {
   if (!nsn) return '';
   return `+${country.dialCode}${nsn}`;
 }
+
+/** Digit key for matching members without requiring a country code. */
+export function memberPhoneKey(phone, countryCode) {
+  const country = getCountry(countryCode);
+  return toNationalNumber(phone, country);
+}
+
+export function sanitizeLocalPhoneInput(value, countryCode) {
+  const country = getCountry(countryCode);
+  const cleaned = String(value || '').replace(/[^\d\s-]/g, '');
+  const maxDigits = (country.nsnMax || 10) + 1;
+  let digits = 0;
+  let out = '';
+  for (const ch of cleaned) {
+    if (/\d/.test(ch)) {
+      if (digits >= maxDigits) continue;
+      digits += 1;
+    }
+    out += ch;
+  }
+  return out;
+}

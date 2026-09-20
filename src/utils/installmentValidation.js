@@ -22,6 +22,12 @@ export function isValidNic(value) {
   return OLD_NIC.test(nic) || NEW_NIC.test(nic);
 }
 
+export function looksLikeNic(value) {
+  const nic = normalizeNic(value);
+  if (!nic) return false;
+  return OLD_NIC.test(nic) || NEW_NIC.test(nic) || /^[0-9]{9,12}$/.test(nic);
+}
+
 export const NIC_FORMAT_MESSAGE =
   'Enter a valid NIC (901234567V / 901234567X, or 12 digits e.g. 199012345678)';
 
@@ -90,11 +96,10 @@ export function getInstallmentFieldErrors(
 ) {
   const errors = {};
 
-  if (isBlank(customer?.name)) errors['customer.name'] = true;
   if (isBlank(customer?.phone)) errors['customer.phone'] = true;
-  if (isBlank(customer?.idCardNo)) errors['customer.idCardNo'] = true;
-  else if (!isValidNic(customer.idCardNo)) errors['customer.idCardNo'] = true;
-  if (isBlank(customer?.address)) errors['customer.address'] = true;
+  if (looksLikeNic(customer?.idCardNo) && !isValidNic(customer.idCardNo)) {
+    errors['customer.idCardNo'] = true;
+  }
 
   if (includeWitness) {
     if (isBlank(witness?.name)) errors['witness.name'] = true;
@@ -154,11 +159,11 @@ export function getInstallmentValidationMessage(
     return NIC_FORMAT_MESSAGE;
   }
 
-  const customerRequired = ['customer.name', 'customer.phone', 'customer.idCardNo', 'customer.address'];
+  const customerRequired = ['customer.phone'];
   const witnessRequired = ['witness.name', 'witness.phone', 'witness.idCardNo', 'witness.address'];
 
   if (customerRequired.some((key) => fieldErrors[key])) {
-    return 'Please fill in all customer details';
+    return 'Please enter the customer phone number';
   }
   if (includeWitness && witnessRequired.some((key) => fieldErrors[key])) {
     return 'Please fill in all witness details';
