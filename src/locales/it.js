@@ -109,6 +109,10 @@ const it = {
   memberCustomer: 'Cliente membro',
   lookingUpMember: 'Ricerca membro...',
   noMemberForPhone: 'Nessun membro per questo numero',
+  overdueBeforeBillingTitle: 'Pagamenti scaduti',
+  memberOverdueWarning:
+    '{{name}} ha {{count}} pagamento/i scaduto/i per {{amount}}. Continuare con questa vendita?',
+  memberOverdueShort: '{{count}} scaduti',
   idCardNumber: 'Numero documento',
   witnessInformation: 'Dati testimone',
   witnessName: 'Nome testimone',

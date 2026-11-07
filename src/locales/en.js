@@ -109,6 +109,10 @@ const en = {
   memberCustomer: 'Member customer',
   lookingUpMember: 'Looking up member...',
   noMemberForPhone: 'No member for this number',
+  overdueBeforeBillingTitle: 'Overdue payments',
+  memberOverdueWarning:
+    '{{name}} has {{count}} overdue payment(s) totaling {{amount}}. Continue with this sale?',
+  memberOverdueShort: '{{count}} overdue',
   idCardNumber: 'ID Card Number',
   witnessInformation: 'Witness Information',
   witnessName: 'Witness Name',

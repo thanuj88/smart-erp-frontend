@@ -256,6 +256,26 @@ function SellItems() {
     };
   }, [memberPhone]);
 
+  const memberOverdue = memberCustomer?.overdue;
+  const hasMemberOverdue = Number(memberOverdue?.count) > 0;
+
+  const confirmBilling = (title, message, confirmLabel) => {
+    const warning = hasMemberOverdue
+      ? t('memberOverdueWarning', {
+          name: memberCustomer?.name || memberCustomer?.phone || t('memberCustomer'),
+          count: memberOverdue.count,
+          amount: formatMoney(memberOverdue.amount),
+        })
+      : '';
+    return confirm({
+      title: hasMemberOverdue ? t('overdueBeforeBillingTitle') : title,
+      message: warning ? `${warning}\n\n${message}` : message,
+      confirmLabel,
+      cancelLabel: t('Cancel'),
+      variant: hasMemberOverdue ? 'warning' : 'primary',
+    });
+  };
+
   const resetBillCharges = useCallback(() => {
     setShipping('');
     setShippingPercent('');
@@ -707,14 +727,11 @@ function SellItems() {
       setTimeout(() => setError(''), 3000);
       return;
     }
-    const ok = await confirm({
-      title: t('Confirm sale'),
-      message: t('Confirm sale and process payment?'),
-      confirmLabel: t('Process payment'),
-      cancelLabel: t('Cancel'),
-      variant: 'primary',
-      icon: 'bi-cash-stack',
-    });
+    const ok = await confirmBilling(
+      t('Confirm sale'),
+      t('Confirm sale and process payment?'),
+      t('Process payment')
+    );
     if (!ok) return;
 
     try {
@@ -785,24 +802,18 @@ function SellItems() {
       return;
     }
 
-    const ok = await confirm({
-      title: t('Confirm installment sale'),
-      message: t('Confirm installment sale?'),
-      confirmLabel: t('Create installment'),
-      cancelLabel: t('Cancel'),
-      variant: 'primary',
-      icon: 'bi-clipboard-check',
-    });
+    const ok = await confirmBilling(
+      t('Confirm installment sale'),
+      t('Confirm installment sale?'),
+      t('Create installment')
+    );
     if (!ok) return;
 
     try {
       setProcessing(true);
       setInstallmentModalError('');
-      const firstItem = bill[0];
-      const totalQuantity = bill.reduce((sum, item) => sum + item.quantity, 0);
       await saleService.processInstallmentSale({
-        itemId: firstItem.id,
-        quantity: totalQuantity,
+        lines: bill.map((item) => ({ itemId: item.id, quantity: item.quantity })),
         customer: normalizedCustomer,
         includeWitness,
         witness: includeWitness ? normalizedWitness : null,
@@ -1567,6 +1578,12 @@ function SellItems() {
                       ? t('noMemberForPhone')
                       : t('walkInCustomer')}
               </span>
+              {hasMemberOverdue ? (
+                <span className="pos-customer-overdue">
+                  <i className="bi bi-exclamation-triangle-fill"></i>
+                  {t('memberOverdueShort', { count: memberOverdue.count })}
+                </span>
+              ) : null}
             </div>
             {hasHeldBill && (
               <button

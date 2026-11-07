@@ -44,7 +44,8 @@
   margin: 0;
   font-size: 0.88rem;
   color: var(--dreams-text-muted, #67748e);
-  line-height: 1.3;
+  line-height: 1.45;
+  white-space: pre-line;
 }
 
 .app-confirm-actions {

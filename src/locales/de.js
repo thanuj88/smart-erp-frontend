@@ -109,6 +109,10 @@ const de = {
   memberCustomer: 'Mitgliedskunde',
   lookingUpMember: 'Mitglied wird gesucht...',
   noMemberForPhone: 'Kein Mitglied zu dieser Nummer',
+  overdueBeforeBillingTitle: 'Überfällige Zahlungen',
+  memberOverdueWarning:
+    '{{name}} hat {{count}} überfällige Zahlung(en) über {{amount}}. Verkauf trotzdem fortsetzen?',
+  memberOverdueShort: '{{count}} überfällig',
   idCardNumber: 'Ausweisnummer',
   witnessInformation: 'Zeugendaten',
   witnessName: 'Name des Zeugen',

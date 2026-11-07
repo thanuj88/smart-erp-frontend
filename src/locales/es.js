@@ -109,6 +109,10 @@ const es = {
   memberCustomer: 'Cliente socio',
   lookingUpMember: 'Buscando socio...',
   noMemberForPhone: 'No hay socio con este número',
+  overdueBeforeBillingTitle: 'Pagos vencidos',
+  memberOverdueWarning:
+    '{{name}} tiene {{count}} pago(s) vencido(s) por {{amount}}. ¿Continuar con esta venta?',
+  memberOverdueShort: '{{count}} vencidos',
   idCardNumber: 'Número de documento',
   witnessInformation: 'Datos del testigo',
   witnessName: 'Nombre del testigo',

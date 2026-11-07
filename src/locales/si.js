@@ -109,6 +109,10 @@ const si = {
   memberCustomer: 'සාමාජික පාරිභෝගිකයා',
   lookingUpMember: 'සාමාජිකයා සොයමින්...',
   noMemberForPhone: 'මෙම අංකයට සාමාජිකයෙකු නැත',
+  overdueBeforeBillingTitle: 'කල් ඉකුත් ගෙවීම්',
+  memberOverdueWarning:
+    '{{name}} හට කල් ඉකුත් ගෙවීම් {{count}}ක් ඇත. මුළු මුදල {{amount}}. මෙම විකුණුම ඉදිරියට යන්නද?',
+  memberOverdueShort: 'කල් ඉකුත් {{count}}',
   idCardNumber: 'හැඳුනුම්පත් අංකය',
   witnessInformation: 'සාක්ෂිකරුගේ තොරතුරු',
   witnessName: 'සාක්ෂිකරුගේ නම',

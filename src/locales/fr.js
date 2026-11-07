@@ -109,6 +109,10 @@ const fr = {
   memberCustomer: 'Client membre',
   lookingUpMember: 'Recherche du membre...',
   noMemberForPhone: 'Aucun membre pour ce numéro',
+  overdueBeforeBillingTitle: 'Paiements en retard',
+  memberOverdueWarning:
+    '{{name}} a {{count}} paiement(s) en retard pour un total de {{amount}}. Continuer cette vente ?',
+  memberOverdueShort: '{{count}} en retard',
   idCardNumber: 'Numéro de pièce d’identité',
   witnessInformation: 'Informations du témoin',
   witnessName: 'Nom du témoin',

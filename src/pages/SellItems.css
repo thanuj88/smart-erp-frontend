@@ -688,6 +688,19 @@
   font-weight: 600;
 }
 
+.pos-customer-overdue {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #ea5455;
+}
+
+[data-theme="dark"] .pos-customer-overdue {
+  color: #ff6b6b;
+}
+
 .pos-icon-action {
   width: 2.25rem;
   height: 2.25rem;
