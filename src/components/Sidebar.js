@@ -42,6 +42,8 @@ const Sidebar = () => {
     hasPermission(PERMISSIONS.REPORTS_VIEW) ||
     hasPermission(PERMISSIONS.USERS_VIEW) ||
     hasPermission(PERMISSIONS.USERS_MANAGE);
+  // Store-wide collections page: back office only. Tellers collect from the POS "Payment" tab.
+  const showInstallmentPayments = showCustomers;
   const showSettings = hasPermission(PERMISSIONS.SETTINGS_MANAGE);
   const showPos = hasPermission(PERMISSIONS.SALES_CREATE) || isTeller;
 
@@ -96,7 +98,9 @@ const Sidebar = () => {
         </SidebarSection>
 
         <SidebarSection title={t('sidebarInstallments') || 'Installments'}>
-          <NavItem to="/installment-payments" icon="bi-credit-card" label={t('installmentPayments')} />
+          {showInstallmentPayments && (
+            <NavItem to="/installment-payments" icon="bi-credit-card" label={t('installmentPayments')} />
+          )}
           {isAdmin && (
             <NavItem to="/installment-plans" icon="bi-percent" label={t('interestRateSettings')} />
           )}
