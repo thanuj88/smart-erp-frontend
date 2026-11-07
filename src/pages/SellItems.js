@@ -28,7 +28,7 @@ import {
   sanitizeNicInput,
   NIC_FORMAT_MESSAGE,
 } from '../utils/installmentValidation';
-import { generateOrderId, formatOrderId } from '../utils/orderId';
+import { generateOrderId, formatOrderId, generateCheckoutKey, billFingerprint } from '../utils/orderId';
 import { sanitizeLocalPhoneInput } from '../utils/phone';
 import { billToReceiptItems, mergeReceipt, getReceiptPaperSize, receiptPrintPageSize, createInstallmentReceiptPrintJob, createReturnReceiptPrintJob } from '../utils/receipt';
 import { applyPromotionPrice } from '../utils/promotions';
@@ -106,6 +106,7 @@ function SellItems() {
   const [itemSearch, setItemSearch] = useState('');
   const [planSearch, setPlanSearch] = useState('');
   const [orderRef, setOrderRef] = useState(() => generateOrderId());
+  const [checkoutKey, setCheckoutKey] = useState(() => generateCheckoutKey());
   const [elapsed, setElapsed] = useState(0);
   const [orderStartedAt, setOrderStartedAt] = useState(null);
   const [walkInCustomer, setWalkInCustomer] = useState('Walk in Customer');
@@ -182,7 +183,11 @@ function SellItems() {
     return () => clearInterval(timer);
   }, [bill.length, orderStartedAt]);
 
-  const newOrderRef = () => setOrderRef(generateOrderId());
+  // A new order id and checkout key are minted only after a sale fully succeeds (or the bill is cleared/held).
+  const newOrderRef = () => {
+    setOrderRef(generateOrderId());
+    setCheckoutKey(generateCheckoutKey());
+  };
 
   const saleStateRef = React.useRef({});
   saleStateRef.current = {
@@ -737,12 +742,14 @@ function SellItems() {
     try {
       setProcessing(true);
       setError('');
-      for (const item of bill) {
-        await saleService.processCashSale(item.id, item.quantity, {
-          orderNumber: orderRef,
-          customerPhone: memberCustomer ? memberPhone : undefined,
-        });
-      }
+      // One request for the whole bill: all lines are booked together or not at all.
+      const lines = bill.map((item) => ({ itemId: item.id, quantity: item.quantity }));
+      await saleService.processCashSale({
+        lines,
+        orderNumber: orderRef,
+        idempotencyKey: `${checkoutKey}-${billFingerprint(lines)}`,
+        customerPhone: memberCustomer ? memberPhone : undefined,
+      });
       const charges = calculateCharges();
       printSaleReceipt(bill, {
         total: charges.grandTotal,

@@ -281,8 +281,9 @@ export const promotionService = {
 };
 
 export const saleService = {
-  processCashSale: async (itemId, quantity, extra = {}) => {
-    const response = await api.post('/sales/cash', { itemId, quantity, ...extra });
+  /** payload: { lines: [{ itemId, quantity }], idempotencyKey, orderNumber?, customerPhone? } */
+  processCashSale: async (payload) => {
+    const response = await api.post('/sales/cash', payload);
     return response.data;
   },
 
