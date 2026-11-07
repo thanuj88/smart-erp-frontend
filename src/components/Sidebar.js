@@ -42,10 +42,10 @@ const Sidebar = () => {
     hasPermission(PERMISSIONS.REPORTS_VIEW) ||
     hasPermission(PERMISSIONS.USERS_VIEW) ||
     hasPermission(PERMISSIONS.USERS_MANAGE);
-  // Store-wide collections page: back office only. Tellers collect from the POS "Payment" tab.
-  const showInstallmentPayments = showCustomers;
   const showSettings = hasPermission(PERMISSIONS.SETTINGS_MANAGE);
   const showPos = hasPermission(PERMISSIONS.SALES_CREATE) || isTeller;
+  // Installment directory (pending, overdue, plans): tellers work it daily, so sales:create is included.
+  const showInstallmentPayments = showPos || showCustomers;
 
   const SidebarSection = ({ title, children }) => {
     const items = React.Children.toArray(children).filter(Boolean);
