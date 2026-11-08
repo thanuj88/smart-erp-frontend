@@ -11,11 +11,20 @@ export function generateCheckoutKey() {
 }
 
 /** Same bill contents => same fingerprint, so editing the bill after a failure mints a new key. */
-export function billFingerprint(lines) {
-  const text = lines
+export function billFingerprint(lines, charges = null) {
+  const items = lines
     .map((line) => `${line.itemId}:${line.quantity}`)
     .sort()
     .join(',');
+  const shipping = Number(charges?.shipping) || 0;
+  const shippingPercent = Number(charges?.shippingPercent) || 0;
+  const discount = Number(charges?.discount) || 0;
+  const discountPercent = Number(charges?.discountPercent) || 0;
+  const chargeText =
+    shipping || shippingPercent || discount || discountPercent
+      ? `|s${shipping}:sp${shippingPercent}:d${discount}:dp${discountPercent}`
+      : '';
+  const text = `${items}${chargeText}`;
   let hash = 5381;
   for (let i = 0; i < text.length; i += 1) {
     hash = ((hash << 5) + hash + text.charCodeAt(i)) >>> 0;

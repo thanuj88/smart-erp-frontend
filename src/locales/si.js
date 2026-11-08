@@ -231,8 +231,8 @@ const si = {
   'Enter the order number from the receipt': 'රිසිට්පතේ ඇණවුම් අංකය ඇතුල් කරන්න',
   'Enter an order number': 'ඇණවුම් අංකයක් ඇතුල් කරන්න',
   'Order not found': 'ඇණවුම හමු නොවීය',
-  'Refund uses the stored item price. Shipping or promotions on the original receipt are not reversed.':
-    'ආපසු ගෙවීම සඳහා ගබඩා කළ භාණ්ඩ මිල භාවිතා වේ. මුල් රිසිට්පතේ බෙදාහැරීම හෝ ප්‍රවර්ධන ආපසු හරවන්නේ නැත.',
+  'Refunds use the charged price for each item, including that item\'s share of shipping, discount, and promotions.':
+    'මුදල් ආපසු ගෙවීම් එක් එක් භාණ්ඩයට අය කළ මිල භාවිතා කරයි. එයට නැව්ගත කිරීම, වට්ටම සහ ප්‍රවර්ධනයේ කොටස ඇතුළත් වේ.',
   Sold: 'විකුණු',
   Returned: 'ආපසු දුන්',
   'Return summary': 'ආපසු භාරදීමේ සාරාංශය',

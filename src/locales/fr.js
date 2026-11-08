@@ -231,8 +231,8 @@ const fr = {
   'Enter the order number from the receipt': 'Saisissez le numéro de commande du reçu',
   'Enter an order number': 'Saisissez un numéro de commande',
   'Order not found': 'Commande introuvable',
-  'Refund uses the stored item price. Shipping or promotions on the original receipt are not reversed.':
-    'Le remboursement utilise le prix enregistré de l’article. Livraison ou promotions du reçu d’origine ne sont pas annulées.',
+  'Refunds use the charged price for each item, including that item\'s share of shipping, discount, and promotions.':
+    'Les remboursements utilisent le prix facturé de chaque article, y compris sa part de livraison, de remise et de promotions.',
   Sold: 'Vendu',
   Returned: 'Retourné',
   'Return summary': 'Récapitulatif du retour',

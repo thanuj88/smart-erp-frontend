@@ -231,8 +231,8 @@ const de = {
   'Enter the order number from the receipt': 'Bestellnummer vom Beleg eingeben',
   'Enter an order number': 'Bestellnummer eingeben',
   'Order not found': 'Bestellung nicht gefunden',
-  'Refund uses the stored item price. Shipping or promotions on the original receipt are not reversed.':
-    'Die Erstattung verwendet den gespeicherten Artikelpreis. Versand oder Aktionen auf dem Originalbeleg werden nicht storniert.',
+  'Refunds use the charged price for each item, including that item\'s share of shipping, discount, and promotions.':
+    'Erstattungen nutzen den berechneten Preis je Artikel, einschließlich des Anteils an Versand, Rabatt und Aktionen.',
   Sold: 'Verkauft',
   Returned: 'Zurückgegeben',
   'Return summary': 'Rückgabeübersicht',

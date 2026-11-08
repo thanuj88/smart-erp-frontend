@@ -231,8 +231,8 @@ const it = {
   'Enter the order number from the receipt': 'Inserisci il numero d’ordine dello scontrino',
   'Enter an order number': 'Inserisci un numero d’ordine',
   'Order not found': 'Ordine non trovato',
-  'Refund uses the stored item price. Shipping or promotions on the original receipt are not reversed.':
-    'Il rimborso usa il prezzo salvato dell’articolo. Spedizione o promozioni dello scontrino originale non vengono stornate.',
+  'Refunds use the charged price for each item, including that item\'s share of shipping, discount, and promotions.':
+    'I rimborsi usano il prezzo addebitato per ogni articolo, inclusa la sua quota di spedizione, sconto e promozioni.',
   Sold: 'Venduto',
   Returned: 'Reso',
   'Return summary': 'Riepilogo reso',
