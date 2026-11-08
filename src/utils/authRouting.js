@@ -21,7 +21,6 @@ const isSuperAdminUser = (user) => hasRole(user, 'SUPER_ADMIN');
 const isAdminUser = (user) =>
   !!user &&
   (hasPermission(user, [
-    PERMISSIONS.INVENTORY_MANAGE,
     PERMISSIONS.SETTINGS_MANAGE,
     PERMISSIONS.USERS_MANAGE,
     PERMISSIONS.PLATFORM_MANAGE,

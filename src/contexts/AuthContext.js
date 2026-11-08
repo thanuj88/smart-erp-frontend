@@ -86,10 +86,10 @@ export const AuthProvider = ({ children }) => {
 
   const isSuperAdmin = hasRole('SUPER_ADMIN');
 
+  // Tenant admin only. inventory:manage is stock work and must not unlock profit or admin screens.
   const isAdmin =
     !!user &&
     (hasPermission([
-      PERMISSIONS.INVENTORY_MANAGE,
       PERMISSIONS.SETTINGS_MANAGE,
       PERMISSIONS.USERS_MANAGE,
       PERMISSIONS.PLATFORM_MANAGE,

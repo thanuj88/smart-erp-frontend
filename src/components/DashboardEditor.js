@@ -5,7 +5,11 @@ import { DASHBOARD_WIDGETS } from '../config/dashboardWidgets';
 
 const DashboardEditor = ({ widgets, onToggle, onClose, saving, isAdmin }) => {
   const { t } = useTranslation();
-  const groups = DASHBOARD_WIDGETS.filter((widget) => isAdmin || !widget.adminOnly).reduce((acc, widget) => {
+  const groups = DASHBOARD_WIDGETS.filter((widget) => {
+    if (widget.adminOnly && !isAdmin) return false;
+    if (widget.salesOnly && !isAdmin) return false;
+    return true;
+  }).reduce((acc, widget) => {
     if (!acc[widget.groupKey]) acc[widget.groupKey] = [];
     acc[widget.groupKey].push(widget);
     return acc;

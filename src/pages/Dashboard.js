@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { saleService, itemService, installmentPaymentService, settingsService } from '../services';
+import { saleService, itemService, installmentPaymentService, settingsService, PERMISSIONS } from '../services';
 import { useTranslation } from 'react-i18next';
 import SalesPurchaseChart from '../components/SalesPurchaseChart';
 import CategoryMixDonut from '../components/CategoryMixDonut';
@@ -81,7 +81,7 @@ const groupOverduePlans = (payments) => {
 const toStockRows = (items, mapItem) => items.slice(0, 6).map(mapItem);
 
 const Dashboard = () => {
-  const { isAdmin, user } = useAuth();
+  const { isAdmin, user, hasPermission } = useAuth();
   const { formatMoney, settings, setSettings } = useTenantSettings();
   const { t } = useTranslation();
   const [dailySummary, setDailySummary] = useState(null);
@@ -106,7 +106,8 @@ const Dashboard = () => {
     () => resolveDashboardWidgets(settings?.dashboardWidgets),
     [settings?.dashboardWidgets]
   );
-  const show = (id) => isDashboardWidgetVisible(id, widgets, isAdmin);
+  const canSeeSales = isAdmin || hasPermission(PERMISSIONS.REPORTS_VIEW);
+  const show = (id) => isDashboardWidgetVisible(id, widgets, { isAdmin, canSeeSales });
 
   const loadTopProducts = useCallback(async () => {
     try {
@@ -133,6 +134,15 @@ const Dashboard = () => {
 
   const loadData = useCallback(async () => {
     try {
+      if (!canSeeSales) {
+        const items = await itemService.getAll().catch(() => []);
+        setDailySummary(null);
+        setTodaySales([]);
+        setOverduePayments([]);
+        setRecentSales([]);
+        setInventoryItems(items || []);
+        return;
+      }
       const [daily, today, overdue, items, recent] = await Promise.all([
         saleService.getDailySummary(),
         saleService.getToday().catch(() => []),
@@ -150,21 +160,25 @@ const Dashboard = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [canSeeSales]);
 
   useEffect(() => {
     loadData();
-    loadSalesPurchaseSummary();
+    if (canSeeSales) loadSalesPurchaseSummary();
     const interval = setInterval(() => {
       loadData();
-      loadSalesPurchaseSummary();
+      if (canSeeSales) loadSalesPurchaseSummary();
     }, 10000);
     return () => clearInterval(interval);
-  }, [loadData, loadSalesPurchaseSummary]);
+  }, [loadData, loadSalesPurchaseSummary, canSeeSales]);
 
   useEffect(() => {
+    if (!canSeeSales) {
+      setTopProducts([]);
+      return;
+    }
     loadTopProducts();
-  }, [loadTopProducts]);
+  }, [loadTopProducts, canSeeSales]);
 
   const categoryMix = useMemo(() => buildCategoryMix(todaySales, t), [todaySales, t]);
   const overduePlans = useMemo(() => groupOverduePlans(overduePayments), [overduePayments]);
@@ -288,7 +302,7 @@ const Dashboard = () => {
     <div className="container-fluid matte-page dashboard-page">
       <div className="page-welcome d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
         <div>
-          <h4>{t('welcomeUser', { name: user?.name || user?.full_name || t('admin') })}</h4>
+          <h4>{t('welcomeUser', { name: user?.full_name || user?.fullName || user?.name || user?.username || t('admin') })}</h4>
           <p>{t('dashboardSubtitle')}</p>
         </div>
         <div className="d-flex align-items-center gap-2">
