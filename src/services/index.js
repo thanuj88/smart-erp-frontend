@@ -8,14 +8,14 @@ function persistAuth(data) {
 }
 
 export const authService = {
-  login: async (email, password) => {
-    const response = await api.post('/auth/login', { email, password });
+  login: async (email, password, captchaToken) => {
+    const response = await api.post('/auth/login', { email, password, captchaToken });
     persistAuth(response.data);
     return response.data;
   },
 
-  loginPin: async (email, pin, tenantId, branchId) => {
-    const response = await api.post('/auth/login/pin', { email, pin, tenantId, branchId });
+  loginPin: async (email, pin, tenantId, branchId, captchaToken) => {
+    const response = await api.post('/auth/login/pin', { email, pin, tenantId, branchId, captchaToken });
     persistAuth(response.data);
     return response.data;
   },
