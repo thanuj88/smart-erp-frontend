@@ -374,7 +374,7 @@ const en = {
   failedToSaveCustomer: 'Failed to save customer',
   loadingCustomers: 'Loading customers...',
   noCustomersFound: 'No customers found',
-  addFirstCustomer: 'Customers appear after installment sales. You can also add one here.',
+  addFirstCustomer: 'Add your first customer here. Installment plans sold to the same phone number are linked automatically.',
   tryAdjustCustomerSearch: 'Try a different name, phone, or ID card.',
   idCard: 'ID card',
   openPlans: 'Open plans',

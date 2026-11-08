@@ -374,7 +374,7 @@ const fr = {
   failedToSaveCustomer: 'Impossible d’enregistrer le client',
   loadingCustomers: 'Chargement des clients...',
   noCustomersFound: 'Aucun client',
-  addFirstCustomer: 'Les clients apparaissent après les ventes à tempérament. Vous pouvez aussi en ajouter un ici.',
+  addFirstCustomer: 'Ajoutez ici votre premier client. Les échéanciers vendus au même numéro de téléphone sont liés automatiquement.',
   tryAdjustCustomerSearch: 'Essayez un autre nom, téléphone ou numéro de pièce.',
   idCard: 'Pièce d’identité',
   openPlans: 'Plans ouverts',

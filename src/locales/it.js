@@ -374,7 +374,7 @@ const it = {
   failedToSaveCustomer: 'Impossibile salvare il cliente',
   loadingCustomers: 'Caricamento clienti...',
   noCustomersFound: 'Nessun cliente',
-  addFirstCustomer: 'I clienti compaiono dopo le vendite a rate. Puoi anche aggiungerne uno qui.',
+  addFirstCustomer: 'Aggiungi qui il tuo primo cliente. I piani rateali venduti allo stesso numero di telefono vengono collegati automaticamente.',
   tryAdjustCustomerSearch: 'Prova un altro nome, telefono o documento.',
   idCard: 'Documento',
   openPlans: 'Piani aperti',

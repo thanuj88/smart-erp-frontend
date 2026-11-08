@@ -374,7 +374,7 @@ const es = {
   failedToSaveCustomer: 'No se pudo guardar el cliente',
   loadingCustomers: 'Cargando clientes...',
   noCustomersFound: 'No hay clientes',
-  addFirstCustomer: 'Los clientes aparecen tras ventas a plazos. También puedes añadir uno aquí.',
+  addFirstCustomer: 'Añade aquí tu primer cliente. Los planes a plazos vendidos al mismo número de teléfono se vinculan automáticamente.',
   tryAdjustCustomerSearch: 'Prueba con otro nombre, teléfono o documento.',
   idCard: 'Documento',
   openPlans: 'Planes abiertos',
