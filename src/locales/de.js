@@ -374,7 +374,7 @@ const de = {
   failedToSaveCustomer: 'Kunde konnte nicht gespeichert werden',
   loadingCustomers: 'Kunden werden geladen...',
   noCustomersFound: 'Keine Kunden gefunden',
-  addFirstCustomer: 'Kunden erscheinen nach Ratenverkäufen. Sie können hier auch einen hinzufügen.',
+  addFirstCustomer: 'Fügen Sie hier Ihren ersten Kunden hinzu. Ratenpläne zur selben Telefonnummer werden automatisch verknüpft.',
   tryAdjustCustomerSearch: 'Versuchen Sie einen anderen Namen, eine andere Nummer oder einen anderen Ausweis.',
   idCard: 'Ausweis',
   openPlans: 'Offene Pläne',
