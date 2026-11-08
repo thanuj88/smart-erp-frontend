@@ -62,6 +62,9 @@ const es = {
   defaultCredentials: 'Credenciales predeterminadas',
   admin: 'Administrador',
   forgotPassword: '¿Olvidaste la contraseña?',
+  resendVerification: 'Reenviar correo de verificación',
+  verificationResent: 'Si esta cuenta está pendiente de verificación, se ha enviado un nuevo correo.',
+  resendVerificationFailed: 'No se pudo reenviar el correo. Inténtalo de nuevo.',
   welcomeMessage: 'Gestiona el inventario de tu tienda de forma eficiente',
 
   loading: 'Cargando...',

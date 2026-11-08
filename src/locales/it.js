@@ -62,6 +62,9 @@ const it = {
   defaultCredentials: 'Credenziali predefinite',
   admin: 'Amministratore',
   forgotPassword: 'Password dimenticata?',
+  resendVerification: 'Invia di nuovo l\'email di verifica',
+  verificationResent: 'Se questo account è in attesa di verifica, è stata inviata una nuova email.',
+  resendVerificationFailed: 'Impossibile inviare di nuovo l\'email. Riprova.',
   welcomeMessage: 'Gestisci l’inventario del negozio in modo efficiente',
 
   loading: 'Caricamento...',
