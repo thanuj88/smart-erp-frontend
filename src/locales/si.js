@@ -422,7 +422,17 @@ const si = {
   updateProduct: 'භාණ්ඩය යාවත්කාලීන කරන්න',
   stockQuantity: 'තොග ප්‍රමාණය',
   optionalDescription: 'විකල්ප භාණ්ඩ විස්තරය',
-  returnStockHelp: 'ආපසු දුන් ඒකක විකුණුම් තොගයෙන් පිටත තබයි, ඔබ දෙකම වෙනස් කරන තුරු.',
+  returnStockHelp: 'ආපසු දුන් ඒකක මෙහි නිදහස් කරන තුරු විකුණුම් තොගයෙන් පිටත පවතී.',
+
+  releaseUnits: 'නිදහස් කළ යුතු ඒකක',
+
+  releaseToSellable: 'විකුණුම් තොගයට නිදහස් කරන්න',
+
+  releaseUnitsInvalid: 'නිදහස් කළ යුතු ඒකක ගණන පූර්ණ සංඛ්‍යාවක් ලෙස ඇතුළත් කරන්න.',
+
+  releaseUnitsDone: 'ඒකක විකුණුම් තොගයට ආපසු දමන ලදී',
+
+  releaseUnitsFailed: 'ඒකක නිදහස් කිරීම අසාර්ථක විය',
   loadingSalesReport: 'විකුණුම් වාර්තාව පූරණය වෙමින්...',
   noSalesFound: 'විකුණුම් නැත',
   tryAdjustFilters: 'පෙරහන් වෙනස් කර බලන්න.',

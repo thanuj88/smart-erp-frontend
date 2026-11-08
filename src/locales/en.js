@@ -422,7 +422,17 @@ const en = {
   updateProduct: 'Update Product',
   stockQuantity: 'Stock Quantity',
   optionalDescription: 'Optional product description',
-  returnStockHelp: 'Returned units stay out of sellable stock until you change both counts.',
+  returnStockHelp: 'Returned units stay out of sellable stock until you release them here.',
+
+  releaseUnits: 'Units to release',
+
+  releaseToSellable: 'Release to sellable stock',
+
+  releaseUnitsInvalid: 'Enter a whole number of units to release.',
+
+  releaseUnitsDone: 'Units moved back to sellable stock',
+
+  releaseUnitsFailed: 'Failed to release units',
   loadingSalesReport: 'Loading sales report...',
   noSalesFound: 'No sales found',
   tryAdjustFilters: 'Try adjusting your filters.',

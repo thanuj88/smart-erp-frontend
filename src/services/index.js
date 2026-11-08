@@ -210,6 +210,12 @@ export const itemService = {
     return response.data;
   },
 
+  // Moves units from return stock to sellable stock in one atomic update.
+  releaseReturns: async (id, quantity) => {
+    const response = await api.post(`/items/${id}/release-returns`, { quantity });
+    return response.data;
+  },
+
   search: async (query) => {
     const response = await api.get(`/items/search?q=${query}`);
     return response.data;

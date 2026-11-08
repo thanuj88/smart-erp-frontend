@@ -422,7 +422,17 @@ const de = {
   updateProduct: 'Produkt aktualisieren',
   stockQuantity: 'Bestandsmenge',
   optionalDescription: 'Optionale Produktbeschreibung',
-  returnStockHelp: 'Zurückgegebene Einheiten bleiben außerhalb des verkaufbaren Bestands, bis Sie beide Werte ändern.',
+  returnStockHelp: 'Zurückgegebene Einheiten bleiben außerhalb des verkaufbaren Bestands, bis Sie sie hier freigeben.',
+
+  releaseUnits: 'Freizugebende Einheiten',
+
+  releaseToSellable: 'In verkaufbaren Bestand freigeben',
+
+  releaseUnitsInvalid: 'Geben Sie eine ganze Zahl an Einheiten ein.',
+
+  releaseUnitsDone: 'Einheiten in den verkaufbaren Bestand zurückgebucht',
+
+  releaseUnitsFailed: 'Freigabe der Einheiten fehlgeschlagen',
   loadingSalesReport: 'Verkaufsbericht wird geladen...',
   noSalesFound: 'Keine Verkäufe',
   tryAdjustFilters: 'Versuchen Sie, die Filter anzupassen.',
