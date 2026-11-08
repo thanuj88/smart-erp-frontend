@@ -8,14 +8,14 @@ function persistAuth(data) {
 }
 
 export const authService = {
-  login: async (email, password) => {
-    const response = await api.post('/auth/login', { email, password });
+  login: async (email, password, captchaToken) => {
+    const response = await api.post('/auth/login', { email, password, captchaToken });
     persistAuth(response.data);
     return response.data;
   },
 
-  loginPin: async (email, pin, tenantId, branchId) => {
-    const response = await api.post('/auth/login/pin', { email, pin, tenantId, branchId });
+  loginPin: async (email, pin, tenantId, branchId, captchaToken) => {
+    const response = await api.post('/auth/login/pin', { email, pin, tenantId, branchId, captchaToken });
     persistAuth(response.data);
     return response.data;
   },
@@ -75,6 +75,8 @@ export const authService = {
       currentPassword,
       newPassword,
     });
+    // The server signs out every session on a password change and returns a fresh pair for this one.
+    persistAuth(response.data);
     return response.data;
   },
 
@@ -212,6 +214,12 @@ export const itemService = {
 
   delete: async (id) => {
     const response = await api.delete(`/items/${id}`);
+    return response.data;
+  },
+
+  // Moves units from return stock to sellable stock in one atomic update.
+  releaseReturns: async (id, quantity) => {
+    const response = await api.post(`/items/${id}/release-returns`, { quantity });
     return response.data;
   },
 

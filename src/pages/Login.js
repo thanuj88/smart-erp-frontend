@@ -5,6 +5,7 @@ import { authService } from '../services';
 import { useTranslation } from 'react-i18next';
 import AuthLayout, { AuthFooterLink } from '../components/AuthLayout';
 import LanguageToggle from '../components/LanguageToggle';
+import Captcha, { RECAPTCHA_SITE_KEY } from '../components/Captcha';
 import { APP_CONFIG } from '../config/app';
 import useAuthBodyClass from '../hooks/useAuthBodyClass';
 import { resolveHomePath } from '../utils/authRouting';
@@ -21,6 +22,9 @@ const Login = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [resendState, setResendState] = useState('idle');
+  const [captchaRequired, setCaptchaRequired] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState(null);
+  const [captchaResetKey, setCaptchaResetKey] = useState(0);
   const { login, loginPin } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -28,14 +32,23 @@ const Login = () => {
   const registered = location.state?.registered;
   const verified = location.state?.verified;
 
+  // The server asks for a CAPTCHA after repeated failures. A token works once, so reset the widget.
+  const noteCaptchaOutcome = (err) => {
+    if (err.response?.data?.captchaRequired) setCaptchaRequired(true);
+    setCaptchaToken(null);
+    setCaptchaResetKey((k) => k + 1);
+  };
+  const captchaBlocked = captchaRequired && Boolean(RECAPTCHA_SITE_KEY) && !captchaToken;
+
   const handlePasswordSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
     try {
-      const data = await login(email, password);
+      const data = await login(email, password, captchaToken);
       navigate(resolveHomePath(data.user), { replace: true });
     } catch (err) {
+      noteCaptchaOutcome(err);
       setError(err.response?.data?.error || 'Login failed. Please try again.');
     } finally {
       setLoading(false);
@@ -47,9 +60,10 @@ const Login = () => {
     setError('');
     setLoading(true);
     try {
-      const data = await loginPin(email, pin);
+      const data = await loginPin(email, pin, undefined, undefined, captchaToken);
       navigate(resolveHomePath(data.user), { replace: true });
     } catch (err) {
+      noteCaptchaOutcome(err);
       setError(err.response?.data?.error || 'PIN login failed.');
     } finally {
       setLoading(false);
@@ -202,7 +216,8 @@ const Login = () => {
             </Link>
           </div>
 
-          <button type="submit" className="btn auth-btn-primary w-100" disabled={loading}>
+          {captchaRequired && <Captcha onToken={setCaptchaToken} resetKey={captchaResetKey} />}
+          <button type="submit" className="btn auth-btn-primary w-100" disabled={loading || captchaBlocked}>
             {loading ? t('signingIn') : t('signIn')}
           </button>
         </form>
@@ -245,7 +260,8 @@ const Login = () => {
               disabled={loading}
             />
           </div>
-          <button type="submit" className="btn auth-btn-primary w-100" disabled={loading}>
+          {captchaRequired && <Captcha onToken={setCaptchaToken} resetKey={captchaResetKey} />}
+          <button type="submit" className="btn auth-btn-primary w-100" disabled={loading || captchaBlocked}>
             {loading ? 'Signing in...' : 'Quick sign in'}
           </button>
         </form>
