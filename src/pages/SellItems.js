@@ -29,6 +29,7 @@ import {
 } from '../utils/installmentValidation';
 import { generateOrderId, formatOrderId, generateCheckoutKey, billFingerprint } from '../utils/orderId';
 import { sanitizeLocalPhoneInput } from '../utils/phone';
+import { planMatchesSearch } from '../utils/planSearch';
 import { billToReceiptItems, mergeReceipt, getReceiptPaperSize, receiptPrintPageSize, createInstallmentReceiptPrintJob, createReturnReceiptPrintJob } from '../utils/receipt';
 import { applyPromotionPrice, roundMoney } from '../utils/promotions';
 import { resolveBusinessName } from '../config/app';
@@ -504,12 +505,7 @@ function SellItems() {
     );
   }, [mode, allItems, items, selectedCategory, itemSearch]);
 
-  const filteredPlans = installmentPlans.filter(
-    (plan) =>
-      plan.customer_name.toLowerCase().includes(planSearch.toLowerCase()) ||
-      (plan.customer_id_card &&
-        plan.customer_id_card.toLowerCase().includes(planSearch.toLowerCase()))
-  );
+  const filteredPlans = installmentPlans.filter((plan) => planMatchesSearch(plan, planSearch));
 
   const addToBill = (item) => {
     const existingIndex = bill.findIndex((billItem) => billItem.id === item.id);
@@ -2031,7 +2027,7 @@ function SellItems() {
                     className={`pos-plan-card${selectedPlan?.id === plan.id ? ' selected' : ''}`}
                     onClick={() => setSelectedPlan(plan)}
                   >
-                    <div className="fw-bold">{plan.customer_name}</div>
+                    <div className="fw-bold">{plan.customer_name || plan.customer_phone || '—'}</div>
                     <div className="small mt-1">
                       <span className="order-id-badge">{formatOrderId(plan.order_number, plan.sale_id, plan.id)}</span>
                     </div>
