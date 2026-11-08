@@ -454,6 +454,7 @@ const si = {
   minCharacters: 'අවම අක්ෂර 8',
   optional: 'විකල්ප',
   posPin: 'POS PIN',
+  pinHelp: 'PIN: ඉලක්කම් 6 සිට 8 දක්වා, පුනරාවර්තන හෝ අනුක්‍රම නොමැතිව.',
   tellerCashier: 'අලෙවිකරු / කැෂියර්',
   manager: 'කළමනාකරු',
   accountant: 'ගණකාධිකාරී',

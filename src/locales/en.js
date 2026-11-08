@@ -454,6 +454,7 @@ const en = {
   minCharacters: 'Min. 8 characters',
   optional: 'optional',
   posPin: 'POS PIN',
+  pinHelp: 'PIN: 6 to 8 digits, no repeats or sequences.',
   tellerCashier: 'Teller / Cashier',
   manager: 'Manager',
   accountant: 'Accountant',
