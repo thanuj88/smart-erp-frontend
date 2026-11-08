@@ -422,7 +422,17 @@ const fr = {
   updateProduct: 'Mettre à jour le produit',
   stockQuantity: 'Quantité en stock',
   optionalDescription: 'Description facultative du produit',
-  returnStockHelp: 'Les unités retournées restent hors du stock vendable jusqu’à ce que vous changiez les deux comptes.',
+  returnStockHelp: 'Les unités retournées restent hors du stock vendable tant que vous ne les libérez pas ici.',
+
+  releaseUnits: 'Unités à libérer',
+
+  releaseToSellable: 'Libérer vers le stock vendable',
+
+  releaseUnitsInvalid: 'Saisissez un nombre entier d’unités à libérer.',
+
+  releaseUnitsDone: 'Unités remises dans le stock vendable',
+
+  releaseUnitsFailed: 'Impossible de libérer les unités',
   loadingSalesReport: 'Chargement du rapport des ventes...',
   noSalesFound: 'Aucune vente',
   tryAdjustFilters: 'Essayez d’ajuster les filtres.',

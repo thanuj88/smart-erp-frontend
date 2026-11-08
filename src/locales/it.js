@@ -422,7 +422,17 @@ const it = {
   updateProduct: 'Aggiorna prodotto',
   stockQuantity: 'Quantità in magazzino',
   optionalDescription: 'Descrizione prodotto opzionale',
-  returnStockHelp: 'Le unità rese restano fuori dallo stock vendibile finché non cambi entrambi i conteggi.',
+  returnStockHelp: 'Le unità rese restano fuori dallo stock vendibile finché non le rilasci qui.',
+
+  releaseUnits: 'Unità da rilasciare',
+
+  releaseToSellable: 'Rilascia nello stock vendibile',
+
+  releaseUnitsInvalid: 'Inserisci un numero intero di unità da rilasciare.',
+
+  releaseUnitsDone: 'Unità riportate nello stock vendibile',
+
+  releaseUnitsFailed: 'Impossibile rilasciare le unità',
   loadingSalesReport: 'Caricamento report vendite...',
   noSalesFound: 'Nessuna vendita',
   tryAdjustFilters: 'Prova a modificare i filtri.',
