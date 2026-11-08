@@ -26,11 +26,11 @@ import {
   looksLikeNic,
   normalizeNic,
   sanitizeNicInput,
-  NIC_FORMAT_MESSAGE,
 } from '../utils/installmentValidation';
 import { generateOrderId, formatOrderId, generateCheckoutKey, billFingerprint } from '../utils/orderId';
 import { sanitizeLocalPhoneInput } from '../utils/phone';
 import { isMemberLookupPending } from '../utils/memberLookup';
+import { planMatchesSearch } from '../utils/planSearch';
 import { billToReceiptItems, mergeReceipt, getReceiptPaperSize, receiptPrintPageSize, createInstallmentReceiptPrintJob, createReturnReceiptPrintJob } from '../utils/receipt';
 import { applyPromotionPrice, roundMoney } from '../utils/promotions';
 import { resolveBusinessName } from '../config/app';
@@ -243,13 +243,12 @@ function SellItems() {
         setMemberCustomer(found);
         setMemberLookupStatus('matched');
         setWalkInCustomer(found.name || 'Walk in Customer');
+        // The lookup returns only name, member id, phone and overdue. NIC, address and email are
+        // read at the till from the customer's ID, not pulled from the CRM by phone number.
         setCustomer((prev) => ({
           ...prev,
           name: found.name || prev.name,
           phone: found.phone || phone,
-          idCardNo: found.id_card_no || prev.idCardNo,
-          email: found.email || prev.email,
-          address: found.address || prev.address,
         }));
       } catch (err) {
         if (cancelled) return;
@@ -454,7 +453,7 @@ function SellItems() {
         setPendingPayments(paymentsData);
       }
     } catch (err) {
-      setError(t('Failed to load data'));
+      setError(t('posFailedToLoad'));
       console.error('Error loading data:', err);
     } finally {
       setLoading(false);
@@ -515,12 +514,7 @@ function SellItems() {
     );
   }, [mode, allItems, items, selectedCategory, itemSearch]);
 
-  const filteredPlans = installmentPlans.filter(
-    (plan) =>
-      plan.customer_name.toLowerCase().includes(planSearch.toLowerCase()) ||
-      (plan.customer_id_card &&
-        plan.customer_id_card.toLowerCase().includes(planSearch.toLowerCase()))
-  );
+  const filteredPlans = installmentPlans.filter((plan) => planMatchesSearch(plan, planSearch));
 
   const addToBill = (item) => {
     const existingIndex = bill.findIndex((billItem) => billItem.id === item.id);
@@ -535,7 +529,7 @@ function SellItems() {
           );
         setBill(newBill);
       } else {
-        setError('Cannot add more than available stock!');
+        setError(t('posStockLimit'));
         setTimeout(() => setError(''), 2000);
       }
     } else {
@@ -607,9 +601,9 @@ function SellItems() {
   const clearBill = async () => {
     if (bill.length === 0) return;
     const ok = await confirm({
-      title: t('Clear bill'),
-      message: t('Are you sure you want to clear the entire bill?'),
-      confirmLabel: t('Clear'),
+      title: t('posClearBill'),
+      message: t('posClearBillConfirm'),
+      confirmLabel: t('clear'),
       cancelLabel: t('Cancel'),
       variant: 'warning',
       icon: 'bi-trash3',
@@ -691,7 +685,7 @@ function SellItems() {
 
   const openInstallmentModal = () => {
     if (bill.length === 0) {
-      setError(t('Add items to bill before checkout'));
+      setError(t('posAddItemsFirst'));
       setTimeout(() => setError(''), 3000);
       return;
     }
@@ -748,14 +742,14 @@ function SellItems() {
 
   const handleCashSaleCheckout = async () => {
     if (bill.length === 0) {
-      setError(t('Add items to bill before checkout'));
+      setError(t('posAddItemsFirst'));
       setTimeout(() => setError(''), 3000);
       return;
     }
     const ok = await confirmBilling(
-      t('Confirm sale'),
-      t('Confirm sale and process payment?'),
-      t('Process payment')
+      t('posConfirmSale'),
+      t('posConfirmSaleMessage'),
+      t('posProcessPayment')
     );
     if (!ok) return;
 
@@ -779,7 +773,7 @@ function SellItems() {
         tendered: bookedTotal,
         adjustmentLines: getAdjustmentLines(charges),
       });
-      setSuccess(t('Sale completed successfully!'));
+      setSuccess(t('posSaleCompleted'));
       setBill([]);
       resetBillCharges();
       setMemberPhone('');
@@ -791,7 +785,7 @@ function SellItems() {
       await loadData();
       setTimeout(() => setSuccess(''), 5000);
     } catch (err) {
-      setError(err.response?.data?.error || t('Failed to process sale'));
+      setError(err.response?.data?.error || t('posSaleFailed'));
     } finally {
       setProcessing(false);
     }
@@ -833,9 +827,9 @@ function SellItems() {
     }
 
     const ok = await confirmBilling(
-      t('Confirm installment sale'),
-      t('Confirm installment sale?'),
-      t('Create installment')
+      t('posConfirmInstallment'),
+      t('posConfirmInstallmentMessage'),
+      t('posCreateInstallment')
     );
     if (!ok) return;
 
@@ -867,7 +861,7 @@ function SellItems() {
           { label: `${installmentMonths} monthly`, value: preview.monthlyPayment },
         ],
       });
-      setSuccess('Installment sale created successfully!');
+      setSuccess(t('posInstallmentCreated'));
       setBill([]);
       setCustomer({ name: '', phone: '', idCardNo: '', email: '', address: '', idImage: null });
       setWitness({ name: '', phone: '', idCardNo: '', address: '', idImage: null });
@@ -894,14 +888,14 @@ function SellItems() {
 
   const handleInstallmentPayment = async () => {
     if (!selectedPlan || !paymentAmount) {
-      setError('Please select a plan and enter payment amount');
+      setError(t('posSelectPlanAndAmount'));
       setTimeout(() => setError(''), 3000);
       return;
     }
     const ok = await confirm({
-      title: t('Confirm payment'),
-      message: t('Confirm payment recording?'),
-      confirmLabel: t('Record payment'),
+      title: t('confirmPayment'),
+      message: t('posConfirmPaymentMessage'),
+      confirmLabel: t('recordPayment'),
       cancelLabel: t('Cancel'),
       variant: 'primary',
       icon: 'bi-credit-card',
@@ -913,7 +907,7 @@ function SellItems() {
       setError('');
       const planPayments = pendingPayments.filter((p) => p.installment_plan_id === selectedPlan.id);
       if (planPayments.length === 0) {
-        setError('No pending payments for this plan');
+        setError(t('posNoPendingPayments'));
         return;
       }
       const nextPayment = planPayments.sort((a, b) => a.payment_number - b.payment_number)[0];
@@ -936,7 +930,7 @@ function SellItems() {
       } catch {
         // Sale still recorded if receipt print fails.
       }
-      setSuccess('Payment recorded successfully!');
+      setSuccess(t('posPaymentRecorded'));
       setSelectedPlan(null);
       setPaymentAmount('');
       setPaymentNotes('');
@@ -951,7 +945,7 @@ function SellItems() {
 
   const handleHold = () => {
     if (!holdBillNow()) {
-      setError(t('No items to hold'));
+      setError(t('posNoItemsToHold'));
       setTimeout(() => setError(''), 2000);
       return;
     }
@@ -1100,10 +1094,10 @@ function SellItems() {
     }
     const confirmMessage =
       returnType === 'warranty'
-        ? t('Process this warranty claim? A replacement will come from sellable stock. The returned item stays in return stock.')
+        ? t('posWarrantyConfirm')
         : returnType === 'defect'
-          ? t('Process this defect return? The item goes to return stock and is not sold again until released.')
-          : t('Process this cash return? The till will be updated and the item goes to return stock.');
+          ? t('posDefectConfirm')
+          : t('posCashReturnConfirm');
     const ok = await confirm({
       title: t('Confirm return'),
       message: confirmMessage,
@@ -1261,7 +1255,7 @@ function SellItems() {
             <div className="modal-header">
               <h5 className="modal-title" id="installmentModalTitle">
                 <i className="bi bi-clipboard-check me-2"></i>
-                {t('Installment Sale Details')}
+                {t('posInstallmentDetails')}
               </h5>
               <button
                 type="button"
@@ -1280,7 +1274,7 @@ function SellItems() {
               )}
 
               <div className="pos-installment-order-summary mb-3">
-                <span>{t('Order Total')}</span>
+                <span>{t('posOrderTotal')}</span>
                 <strong>{formatMoney(total)}</strong>
                 <span className="text-muted small ms-2">
                   ({bill.length} {bill.length === 1 ? t('item') : t('items')})
@@ -1289,9 +1283,9 @@ function SellItems() {
 
               <div className="row g-4">
                 <div className="col-md-6">
-                  <h6 className="pos-installment-section-title">{t('Customer Details')}</h6>
+                  <h6 className="pos-installment-section-title">{t('customerDetails')}</h6>
                   <div className="mb-2">
-                    <label className="form-label">{t('Customer Name')}</label>
+                    <label className="form-label">{t('customerName')}</label>
                     <input
                       className={installmentControlClass('customer.name')}
                       value={customer.name}
@@ -1299,12 +1293,12 @@ function SellItems() {
                     />
                     {installmentFieldFeedback(
                       'customer.name',
-                      t('Customer name is required'),
-                      t('Must differ from witness name')
+                      t('posCustomerNameRequired'),
+                      t('posDifferFromWitnessName')
                     )}
                   </div>
                   <div className="mb-2">
-                    <label className="form-label">{t('Phone')} *</label>
+                    <label className="form-label">{t('phone')} *</label>
                     <input
                       className={installmentControlClass('customer.phone')}
                       type="tel"
@@ -1319,12 +1313,12 @@ function SellItems() {
                     />
                     {installmentFieldFeedback(
                       'customer.phone',
-                      t('Phone is required'),
-                      t('Must differ from witness phone')
+                      t('posPhoneRequired'),
+                      t('posDifferFromWitnessPhone')
                     )}
                   </div>
                   <div className="mb-2">
-                    <label className="form-label">{t('ID Card No')}</label>
+                    <label className="form-label">{t('posIdCardNo')}</label>
                     <input
                       className={installmentControlClass('customer.idCardNo')}
                       value={customer.idCardNo}
@@ -1337,13 +1331,13 @@ function SellItems() {
                     />
                     {installmentFieldFeedback(
                       'customer.idCardNo',
-                      t('ID card number is required'),
-                      t('Must differ from witness ID'),
-                      t(NIC_FORMAT_MESSAGE)
+                      t('posIdCardRequired'),
+                      t('posDifferFromWitnessId'),
+                      t('posNicFormat')
                     )}
                   </div>
                   <div className="mb-2">
-                    <label className="form-label">{t('Address')}</label>
+                    <label className="form-label">{t('address')}</label>
                     <input
                       className={installmentControlClass('customer.address')}
                       value={customer.address}
@@ -1351,7 +1345,7 @@ function SellItems() {
                     />
                   </div>
                   <div className="mb-2">
-                    <label className="form-label">{t('Email')}</label>
+                    <label className="form-label">{t('email')}</label>
                     <input
                       type="email"
                       className="form-control"
@@ -1365,13 +1359,13 @@ function SellItems() {
                     onClick={() => handleImageCapture('idImage', 'customer')}
                   >
                     <i className="bi bi-camera me-1"></i>
-                    {customer.idImage ? t('ID Captured') : t('Capture Customer ID')}
+                    {customer.idImage ? t('posIdCaptured') : t('posCaptureCustomerId')}
                   </button>
                 </div>
 
                 <div className="col-md-6">
                   <div className="d-flex align-items-center justify-content-between gap-2 mb-2">
-                    <h6 className="pos-installment-section-title mb-0">{t('Witness Details')}</h6>
+                    <h6 className="pos-installment-section-title mb-0">{t('posWitnessDetails')}</h6>
                     <div className="form-check mb-0">
                       <input
                         className="form-check-input"
@@ -1400,7 +1394,7 @@ function SellItems() {
                   {includeWitness ? (
                     <>
                   <div className="mb-2">
-                    <label className="form-label">{t('Witness Name')} *</label>
+                    <label className="form-label">{t('witnessName')} *</label>
                     <input
                       className={installmentControlClass('witness.name')}
                       value={witness.name}
@@ -1408,12 +1402,12 @@ function SellItems() {
                     />
                     {installmentFieldFeedback(
                       'witness.name',
-                      t('Witness name is required'),
-                      t('Must differ from customer name')
+                      t('posWitnessNameRequired'),
+                      t('posDifferFromCustomerName')
                     )}
                   </div>
                   <div className="mb-2">
-                    <label className="form-label">{t('Witness Phone')} *</label>
+                    <label className="form-label">{t('posWitnessPhone')} *</label>
                     <input
                       className={installmentControlClass('witness.phone')}
                       value={witness.phone}
@@ -1421,12 +1415,12 @@ function SellItems() {
                     />
                     {installmentFieldFeedback(
                       'witness.phone',
-                      t('Witness phone is required'),
-                      t('Must differ from customer phone')
+                      t('posWitnessPhoneRequired'),
+                      t('posDifferFromCustomerPhone')
                     )}
                   </div>
                   <div className="mb-2">
-                    <label className="form-label">{t('Witness ID')} *</label>
+                    <label className="form-label">{t('posWitnessId')} *</label>
                     <input
                       className={installmentControlClass('witness.idCardNo')}
                       value={witness.idCardNo}
@@ -1439,19 +1433,19 @@ function SellItems() {
                     />
                     {installmentFieldFeedback(
                       'witness.idCardNo',
-                      t('Witness ID is required'),
-                      t('Must differ from customer ID'),
-                      t(NIC_FORMAT_MESSAGE)
+                      t('posWitnessIdRequired'),
+                      t('posDifferFromCustomerId'),
+                      t('posNicFormat')
                     )}
                   </div>
                   <div className="mb-2">
-                    <label className="form-label">{t('Witness Address')} *</label>
+                    <label className="form-label">{t('posWitnessAddress')} *</label>
                     <input
                       className={installmentControlClass('witness.address')}
                       value={witness.address}
                       onChange={(e) => setWitness({ ...witness, address: e.target.value })}
                     />
-                    {installmentFieldFeedback('witness.address', t('Witness address is required'))}
+                    {installmentFieldFeedback('witness.address', t('posWitnessAddressRequired'))}
                   </div>
                   <button
                     type="button"
@@ -1459,7 +1453,7 @@ function SellItems() {
                     onClick={() => handleImageCapture('idImage', 'witness')}
                   >
                     <i className="bi bi-camera me-1"></i>
-                    {witness.idImage ? t('ID Captured') : t('Capture Witness ID')}
+                    {witness.idImage ? t('posIdCaptured') : t('posCaptureWitnessId')}
                   </button>
                     </>
                   ) : (
@@ -1478,10 +1472,10 @@ function SellItems() {
 
               <hr className="my-4" />
 
-              <h6 className="pos-installment-section-title">{t('Payment Terms')}</h6>
+              <h6 className="pos-installment-section-title">{t('posPaymentTerms')}</h6>
               <div className="row g-3">
                 <div className="col-sm-6">
-                  <label className="form-label">{t('Down Payment')} *</label>
+                  <label className="form-label">{t('downPayment')} *</label>
                   <input
                     type="number"
                     min="0"
@@ -1492,12 +1486,12 @@ function SellItems() {
                   />
                   {installmentFieldFeedback(
                     'downPayment',
-                    t('Enter a valid down payment'),
-                    t('Down payment must be less than order total')
+                    t('posValidDownPayment'),
+                    t('posDownPaymentTooHigh')
                   )}
                 </div>
                 <div className="col-sm-6">
-                  <label className="form-label">{t('Installment Period')} *</label>
+                  <label className="form-label">{t('installmentPeriod')} *</label>
                   <select
                     className="form-select"
                     value={installmentMonths}
@@ -1516,27 +1510,27 @@ function SellItems() {
               {installmentPreview && (
                 <div className="pos-installment-preview mt-3">
                   <div className="preview-row">
-                    <span>{t('Total')}</span>
+                    <span>{t('total')}</span>
                     <span>{formatMoney(installmentPreview.total)}</span>
                   </div>
                   <div className="preview-row">
-                    <span>{t('Down Payment')}</span>
+                    <span>{t('downPayment')}</span>
                     <span>{formatMoney(installmentPreview.downPayment)}</span>
                   </div>
                   <div className="preview-row">
-                    <span>{t('Remaining')}</span>
+                    <span>{t('remaining')}</span>
                     <span>{formatMoney(installmentPreview.remaining)}</span>
                   </div>
                   <div className="preview-row">
-                    <span>{t('Interest')} ({installmentPreview.interestRate}%)</span>
+                    <span>{t('interest')} ({installmentPreview.interestRate}%)</span>
                     <span>{formatMoney(installmentPreview.interestAmount)}</span>
                   </div>
                   <div className="preview-row highlight">
-                    <span>{t('Total with Interest')}</span>
+                    <span>{t('posTotalWithInterest')}</span>
                     <span>{formatMoney(installmentPreview.totalWithInterest)}</span>
                   </div>
                   <div className="preview-row highlight">
-                    <span>{t('Monthly Payment')}</span>
+                    <span>{t('monthlyPayment')}</span>
                     <span>{formatMoney(installmentPreview.monthlyPayment)}</span>
                   </div>
                 </div>
@@ -1557,7 +1551,7 @@ function SellItems() {
                 disabled={processing || Boolean(witnessDuplicateError)}
                 onClick={handleInstallmentSaleCheckout}
               >
-                {processing ? t('Processing...') : `📋 ${t('Create Installment')}`}
+                {processing ? t('posProcessing') : `📋 ${t('posCreateInstallment')}`}
               </button>
             </div>
           </div>
@@ -1569,7 +1563,7 @@ function SellItems() {
   const renderOrderPanel = () => (
     <aside className="pos-order-panel">
       <div className="pos-order-header">
-        <h6>{mode === 'payment' ? t('Record Payment') : t('Order List')}</h6>
+        <h6>{mode === 'payment' ? t('recordPayment') : t('posOrderList')}</h6>
         <div className="d-flex align-items-center gap-2">
           {mode !== 'payment' && <span className="pos-order-id">{orderRef}</span>}
           <span className="pos-timer">
@@ -1577,7 +1571,7 @@ function SellItems() {
             {formatTimer(elapsed)}
           </span>
           {mode !== 'payment' && bill.length > 0 && (
-            <button type="button" className="pos-order-clear" onClick={clearBill} title="Clear order">
+            <button type="button" className="pos-order-clear" onClick={clearBill} title={t('posClearOrder')}>
               <i className="bi bi-trash"></i>
             </button>
           )}
@@ -1635,7 +1629,7 @@ function SellItems() {
             {bill.length === 0 ? (
               <div className="pos-order-empty">
                 <i className="bi bi-cart3 d-block fs-2 mb-2"></i>
-                {t('No items in bill')}
+                {t('posNoItemsInBill')}
               </div>
             ) : (
               bill.map((item) => (
@@ -1649,8 +1643,8 @@ function SellItems() {
                       type="button"
                       className="pos-order-item-remove"
                       onClick={() => removeFromBill(item.id)}
-                      title={t('Remove item')}
-                      aria-label={t('Remove item')}
+                      title={t('posRemoveItem')}
+                      aria-label={t('posRemoveItem')}
                     >
                       <i className="bi bi-x-lg"></i>
                     </button>
@@ -1668,7 +1662,7 @@ function SellItems() {
 
           <div className="pos-summary">
             <div className="pos-summary-row">
-              <span>{t('Shipping')}</span>
+              <span>{t('posShipping')}</span>
               <div className="pos-summary-fields">
                 <div className="pos-summary-input-wrap">
                   <span className="pos-summary-currency">{currency?.symbol}</span>
@@ -1679,7 +1673,7 @@ function SellItems() {
                     className="pos-summary-input"
                     value={shipping}
                     placeholder="0.00"
-                    aria-label={t('Shipping')}
+                    aria-label={t('posShipping')}
                     onChange={(e) => setShipping(e.target.value)}
                   />
                 </div>
@@ -1692,7 +1686,7 @@ function SellItems() {
                     className="pos-summary-input pos-summary-input-pct"
                     value={shippingPercent}
                     placeholder="0"
-                    aria-label={`${t('Shipping')} %`}
+                    aria-label={`${t('posShipping')} %`}
                     onChange={(e) => setShippingPercent(e.target.value)}
                   />
                   <span className="pos-summary-currency">%</span>
@@ -1732,7 +1726,7 @@ function SellItems() {
               </div>
             </div>
             <div className="pos-summary-total">
-              <span>{t('Total')}</span>
+              <span>{t('total')}</span>
               <span>{formatMoney(total)}</span>
             </div>
           </div>
@@ -1748,12 +1742,12 @@ function SellItems() {
             onClick={handlePaymentAction}
           >
             {processing
-              ? t('Processing...')
+              ? t('posProcessing')
               : mode === 'cash'
-                ? `💳 ${t('Complete Sale')}`
+                ? `💳 ${t('posCompleteSale')}`
                 : mode === 'installment'
-                  ? `📋 ${t('Create Installment')}`
-                  : t('Record Payment')}
+                  ? `📋 ${t('posCreateInstallment')}`
+                  : t('recordPayment')}
           </button>
         </>
       )}
@@ -1765,20 +1759,20 @@ function SellItems() {
             <div className="mt-1">
               <span className="order-id-badge">{formatOrderId(selectedPlan.order_number, selectedPlan.sale_id, selectedPlan.id)}</span>
             </div>
-            <div>{t('Remaining')}: {formatMoney(selectedPlan.total_with_interest - selectedPlan.paid_amount)}</div>
+            <div>{t('remaining')}: {formatMoney(selectedPlan.total_with_interest - selectedPlan.paid_amount)}</div>
           </div>
-          <label className="form-label">{t('Payment Amount')}</label>
+          <label className="form-label">{t('paymentAmount')}</label>
           <input type="number" className="form-control mb-2" value={paymentAmount} onChange={(e) => setPaymentAmount(e.target.value)} />
-          <label className="form-label">{t('Notes (Optional)')}</label>
+          <label className="form-label">{t('posNotesOptional')}</label>
           <textarea className="form-control mb-3" rows={2} value={paymentNotes} onChange={(e) => setPaymentNotes(e.target.value)} />
           <button type="button" className="pos-checkout-btn" disabled={!paymentAmount || processing} onClick={handleInstallmentPayment}>
-            {processing ? t('Processing...') : t('Record Payment')}
+            {processing ? t('posProcessing') : t('recordPayment')}
           </button>
         </div>
       )}
 
       {mode === 'payment' && !selectedPlan && (
-        <div className="pos-order-empty">{t('Select an installment plan to record payment')}</div>
+        <div className="pos-order-empty">{t('posSelectPlan')}</div>
       )}
     </aside>
   );
@@ -1796,7 +1790,7 @@ function SellItems() {
     <div className="pos-page">
       <div className="pos-mode-bar">
         <button type="button" className={`pos-mode-btn${mode === 'cash' ? ' active' : ''}`} onClick={() => setMode('cash')}>
-          💰 {t('Cash Sale')}
+          💰 {t('cashSale')}
         </button>
         <button
           type="button"
@@ -1806,10 +1800,10 @@ function SellItems() {
             setShowInstallmentModal(false);
           }}
         >
-          📋 {t('Installment Sale')}
+          📋 {t('installmentSale')}
         </button>
         <button type="button" className={`pos-mode-btn${mode === 'payment' ? ' active' : ''}`} onClick={() => setMode('payment')}>
-          💳 {t('Installment Payment')}
+          💳 {t('posInstallmentPayment')}
         </button>
         <button type="button" className={`pos-mode-btn${mode === 'return' ? ' active' : ''}`} onClick={() => setMode('return')}>
           ↩️ {t('Return')}
@@ -1836,7 +1830,7 @@ function SellItems() {
                 </button>
               )}
               <button type="button" className="pos-action-btn pos-action-void" onClick={clearBill}>
-                Void
+                {t('posVoid')}
               </button>
             </>
           )}
@@ -1854,7 +1848,7 @@ function SellItems() {
             <div className="pos-products-header">
               <div className="pos-welcome">
                 <h5>{t('Return bill')}</h5>
-                <p>{t('Find a sale by order number and return remaining items.')}</p>
+                <p>{t('posFindSaleToReturn')}</p>
               </div>
               <div className="pos-products-toolbar">
                 <form
@@ -1867,7 +1861,7 @@ function SellItems() {
                   <i className="bi bi-search"></i>
                   <input
                     type="text"
-                    placeholder={t('Order number e.g. ORD123456')}
+                    placeholder={t('posOrderNumberPlaceholder')}
                     value={returnSearch}
                     onChange={(e) => setReturnSearch(e.target.value)}
                   />
@@ -1887,20 +1881,20 @@ function SellItems() {
                 <div className="pos-return-meta">
                   <span className="order-id-badge">{formatOrderId(returnOrder.order_number)}</span>
                   <span className="small text-muted">
-                    {returnOrder.payment_type === 'installment' ? t('Installment') : t('Cash')}
+                    {returnOrder.payment_type === 'installment' ? t('installment') : t('cash')}
                     {returnOrder.sale_date ? ` · ${new Date(returnOrder.sale_date).toLocaleString()}` : ''}
                   </span>
                 </div>
                 <p className="pos-return-note small text-muted">
                   {returnType === 'warranty'
-                    ? t('Warranty replaces 1 for 1 from sellable stock. No cash is paid. The returned item goes to return stock.')
+                    ? t('posWarrantyHelp')
                     : returnType === 'defect'
-                      ? t('Defect returns go to return stock. No cash is paid.')
-                      : t('Cash refunds update the till. Returned items go to return stock, not the shop floor.')}
+                      ? t('posDefectHelp')
+                      : t('posCashHelp')}
                 </p>
                 {returnType === 'cash' && (
                   <p className="pos-return-note small text-muted">
-                    {t('Refunds use the charged price for each item, including that item\'s share of shipping, discount, and promotions.')}
+                    {t('posRefundPriceHelp')}
                   </p>
                 )}
                 {(returnOrder.lines || []).map((line) => (
@@ -2012,7 +2006,7 @@ function SellItems() {
               disabled={processing || selectedReturnLines.length === 0}
               onClick={handleProcessReturn}
             >
-              {processing ? t('Processing...') : t('Process return')}
+              {processing ? t('posProcessing') : t('Process return')}
             </button>
           </aside>
         </div>
@@ -2021,15 +2015,15 @@ function SellItems() {
           <div className="pos-plans-area">
             <div className="pos-products-header">
               <div className="pos-welcome">
-                <h5>{t('Installment Payment')}</h5>
-                <p>{t('Select an installment plan to record payment.')}</p>
+                <h5>{t('posInstallmentPayment')}</h5>
+                <p>{t('posSelectPlan')}</p>
               </div>
               <div className="pos-products-toolbar">
                 <div className="pos-search-wrap">
                   <i className="bi bi-search"></i>
                   <input
                     type="text"
-                    placeholder={t('Search by customer name or NIC...')}
+                    placeholder={t('posPlanSearch')}
                     value={planSearch}
                     onChange={(e) => setPlanSearch(e.target.value)}
                   />
@@ -2038,7 +2032,7 @@ function SellItems() {
             </div>
             <div className="pos-plans-grid">
               {filteredPlans.length === 0 ? (
-                <p className="text-muted">{t('No installment plans available')}</p>
+                <p className="text-muted">{t('posNoPlans')}</p>
               ) : (
                 filteredPlans.map((plan) => (
                   <button
@@ -2047,13 +2041,13 @@ function SellItems() {
                     className={`pos-plan-card${selectedPlan?.id === plan.id ? ' selected' : ''}`}
                     onClick={() => setSelectedPlan(plan)}
                   >
-                    <div className="fw-bold">{plan.customer_name}</div>
+                    <div className="fw-bold">{plan.customer_name || plan.customer_phone || '—'}</div>
                     <div className="small mt-1">
                       <span className="order-id-badge">{formatOrderId(plan.order_number, plan.sale_id, plan.id)}</span>
                     </div>
                     {plan.customer_id_card && <div className="small text-muted">NIC: {plan.customer_id_card}</div>}
                     <div className="small mt-2">
-                      {t('Remaining')}: {formatMoney(plan.total_with_interest - plan.paid_amount)}
+                      {t('remaining')}: {formatMoney(plan.total_with_interest - plan.paid_amount)}
                     </div>
                   </button>
                 ))
@@ -2106,7 +2100,7 @@ function SellItems() {
                 {displayItems.length === 0 ? (
                   <p className="text-muted py-4">
                     {mode === 'installment' && !selectedCategory
-                      ? t('Choose a category to view items.')
+                      ? t('posChooseCategory')
                       : t('No items found')}
                   </p>
                 ) : (

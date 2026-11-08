@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import AuthLayout from '../components/AuthLayout';
+import Captcha, { RECAPTCHA_SITE_KEY } from '../components/Captcha';
 import { APP_CONFIG } from '../config/app';
 import { authService } from '../services';
 import useAuthBodyClass from '../hooks/useAuthBodyClass';
@@ -32,6 +33,8 @@ const Register = () => {
   const [phoneError, setPhoneError] = useState('');
   const [phoneTouched, setPhoneTouched] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState(null);
+  const [captchaResetKey, setCaptchaResetKey] = useState(0);
 
   const selectedCountry = useMemo(() => getCountry(form.country), [form.country]);
 
@@ -90,11 +93,15 @@ const Register = () => {
         password: form.password,
         country: form.country,
         phone: toE164(form.phone, form.country),
+        captchaToken,
       });
       setSuccess(result.message);
       setTimeout(() => navigate('/login', { state: { registered: true } }), 2000);
     } catch (err) {
       setError(err.response?.data?.error || 'Registration failed.');
+      // A token works once. Make the person tick the box again.
+      setCaptchaToken(null);
+      setCaptchaResetKey((k) => k + 1);
     } finally {
       setLoading(false);
     }
@@ -279,7 +286,12 @@ const Register = () => {
         </div>
 
         <div className="auth-register-actions">
-          <button type="submit" className="btn auth-btn-primary w-100" disabled={loading}>
+          <Captcha onToken={setCaptchaToken} resetKey={captchaResetKey} />
+          <button
+            type="submit"
+            className="btn auth-btn-primary w-100"
+            disabled={loading || (Boolean(RECAPTCHA_SITE_KEY) && !captchaToken)}
+          >
             {loading ? 'Creating account...' : 'Create account'}
           </button>
         </div>

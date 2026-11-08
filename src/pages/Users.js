@@ -322,10 +322,14 @@ const Users = () => {
                         type="password"
                         inputMode="numeric"
                         maxLength={8}
+                        pattern="[0-9]{6,8}"
+                        title={t('pinHelp')}
+                        autoComplete="off"
                         className="form-control form-control-sm"
                         value={formData.pin}
                         onChange={handleInputChange}
                       />
+                      <div className="form-text">{t('pinHelp')}</div>
                     </div>
                     <div className="col-sm-6">
                       <label htmlFor="role" className="form-label fw-semibold">
