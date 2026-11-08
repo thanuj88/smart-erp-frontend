@@ -70,6 +70,8 @@ export const authService = {
       currentPassword,
       newPassword,
     });
+    // The server signs out every session on a password change and returns a fresh pair for this one.
+    persistAuth(response.data);
     return response.data;
   },
 
