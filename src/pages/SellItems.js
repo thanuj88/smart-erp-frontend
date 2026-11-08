@@ -29,6 +29,7 @@ import {
 } from '../utils/installmentValidation';
 import { generateOrderId, formatOrderId, generateCheckoutKey, billFingerprint } from '../utils/orderId';
 import { sanitizeLocalPhoneInput } from '../utils/phone';
+import { isMemberLookupPending } from '../utils/memberLookup';
 import { planMatchesSearch } from '../utils/planSearch';
 import { billToReceiptItems, mergeReceipt, getReceiptPaperSize, receiptPrintPageSize, createInstallmentReceiptPrintJob, createReturnReceiptPrintJob } from '../utils/receipt';
 import { applyPromotionPrice, roundMoney } from '../utils/promotions';
@@ -113,6 +114,8 @@ function SellItems() {
   const [memberPhone, setMemberPhone] = useState('');
   const [memberCustomer, setMemberCustomer] = useState(null);
   const [memberLookupStatus, setMemberLookupStatus] = useState('idle');
+  // The phone number the last lookup finished for (found, not found, or failed).
+  const [lookedUpPhone, setLookedUpPhone] = useState('');
 
   const [interestRates, setInterestRates] = useState({});
   const [customer, setCustomer] = useState({
@@ -228,6 +231,7 @@ function SellItems() {
       setMemberCustomer(null);
       setMemberLookupStatus('idle');
       setWalkInCustomer('Walk in Customer');
+      setLookedUpPhone('');
       return undefined;
     }
     let cancelled = false;
@@ -253,12 +257,17 @@ function SellItems() {
         setWalkInCustomer('Walk in Customer');
         setCustomer((prev) => ({ ...prev, phone }));
       }
+      if (!cancelled) setLookedUpPhone(phone);
     }, 300);
     return () => {
       cancelled = true;
       clearTimeout(timer);
     };
   }, [memberPhone]);
+
+  // A usable number was typed but its lookup has not finished (still debouncing or in flight).
+  // Checking out now would book a member's sale as walk-in, so checkout waits.
+  const memberLookupPending = isMemberLookupPending(memberPhone, lookedUpPhone);
 
   const memberOverdue = memberCustomer?.overdue;
   const hasMemberOverdue = Number(memberOverdue?.count) > 0;
@@ -1136,6 +1145,7 @@ function SellItems() {
   };
 
   const handlePaymentAction = () => {
+    if (memberLookupPending && (mode === 'cash' || mode === 'installment')) return;
     if (mode === 'cash') handleCashSaleCheckout();
     else if (mode === 'installment') openInstallmentModal();
     else if (mode === 'return') handleProcessReturn();
@@ -1588,7 +1598,7 @@ function SellItems() {
                   memberLookupStatus === 'matched' ? ' is-member' : ''
                 }`}
               >
-                {memberLookupStatus === 'loading'
+                {memberLookupStatus === 'loading' || memberLookupPending
                   ? t('lookingUpMember')
                   : memberLookupStatus === 'matched'
                     ? memberCustomer?.name || memberCustomer?.phone || t('memberCustomer')
@@ -1724,7 +1734,11 @@ function SellItems() {
           <button
             type="button"
             className="pos-checkout-btn"
-            disabled={processing || (mode !== 'payment' && bill.length === 0)}
+            disabled={
+              processing ||
+              (mode !== 'payment' && bill.length === 0) ||
+              (memberLookupPending && (mode === 'cash' || mode === 'installment'))
+            }
             onClick={handlePaymentAction}
           >
             {processing
