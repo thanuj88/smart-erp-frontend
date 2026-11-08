@@ -38,6 +38,7 @@ const Inventory = () => {
   const [success, setSuccess] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [releaseUnits, setReleaseUnits] = useState('');
 
   useEffect(() => {
     loadItems();
@@ -156,6 +157,7 @@ const Inventory = () => {
     });
     setImagePreview(resolveProductImageUrl(item.image_path) || null);
     setRemoveImage(false);
+    setReleaseUnits('');
     setShowCategoryModal(false);
     setShowModal(true);
     setError('');
@@ -186,7 +188,6 @@ const Inventory = () => {
       buyingPrice: formData.buyingPrice === '' ? 0 : Number(formData.buyingPrice),
       sellingPrice: Number(formData.sellingPrice),
       quantity: parseInt(formData.quantity, 10),
-      returnQuantity: parseInt(formData.returnQuantity, 10) || 0,
       category: formData.category || '',
       categoryId: formData.categoryId || null,
     };
@@ -203,6 +204,31 @@ const Inventory = () => {
     if (!data) return 'Failed to save item';
     const detail = data.details?.map((d) => d.msg).join(', ');
     return detail ? `${data.error}: ${detail}` : data.error || 'Failed to save item';
+  };
+
+  const handleReleaseReturns = async () => {
+    const units = parseInt(releaseUnits, 10);
+    if (!editingItem || !Number.isInteger(units) || units < 1) {
+      setError(t('releaseUnitsInvalid'));
+      return;
+    }
+    setError('');
+    try {
+      const updated = await itemService.releaseReturns(editingItem.id, units);
+      setEditingItem(updated);
+      // Keep the open form on the new counts so saving it does not write the old floor back.
+      setFormData((prev) => ({
+        ...prev,
+        quantity: updated.quantity,
+        returnQuantity: updated.return_quantity ?? 0,
+      }));
+      setReleaseUnits('');
+      setSuccess(t('releaseUnitsDone'));
+      loadItems();
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      setError(err.response?.data?.error || t('releaseUnitsFailed'));
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -543,12 +569,33 @@ const Inventory = () => {
                           name="returnQuantity"
                           className="form-control"
                           value={formData.returnQuantity}
-                          onChange={handleInputChange}
+                          readOnly
                           min="0"
                         />
                         <small className="text-muted">
                           {t('returnStockHelp')}
                         </small>
+                        <div className="input-group input-group-sm mt-2">
+                          <input
+                            type="number"
+                            className="form-control"
+                            aria-label={t('releaseUnits')}
+                            placeholder={t('releaseUnits')}
+                            value={releaseUnits}
+                            onChange={(e) => setReleaseUnits(e.target.value)}
+                            min="1"
+                            max={Number(formData.returnQuantity) || undefined}
+                            disabled={!(Number(formData.returnQuantity) > 0)}
+                          />
+                          <button
+                            type="button"
+                            className="btn btn-outline-secondary"
+                            onClick={handleReleaseReturns}
+                            disabled={!(Number(formData.returnQuantity) > 0)}
+                          >
+                            {t('releaseToSellable')}
+                          </button>
+                        </div>
                       </div>
                     )}
 
