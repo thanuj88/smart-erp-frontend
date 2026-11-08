@@ -62,6 +62,9 @@ const fr = {
   defaultCredentials: 'Identifiants par défaut',
   admin: 'Administrateur',
   forgotPassword: 'Mot de passe oublié ?',
+  resendVerification: 'Renvoyer l\'e-mail de vérification',
+  verificationResent: 'Si ce compte attend sa vérification, un nouvel e-mail a été envoyé.',
+  resendVerificationFailed: 'Impossible de renvoyer l\'e-mail. Veuillez réessayer.',
   welcomeMessage: 'Gérez efficacement l’inventaire de votre boutique',
 
   loading: 'Chargement...',

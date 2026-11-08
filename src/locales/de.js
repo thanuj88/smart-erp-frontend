@@ -62,6 +62,9 @@ const de = {
   defaultCredentials: 'Standardzugangsdaten',
   admin: 'Administrator',
   forgotPassword: 'Passwort vergessen?',
+  resendVerification: 'Bestätigungs-E-Mail erneut senden',
+  verificationResent: 'Wenn dieses Konto auf die Bestätigung wartet, wurde eine neue E-Mail gesendet.',
+  resendVerificationFailed: 'Die E-Mail konnte nicht erneut gesendet werden. Bitte versuchen Sie es erneut.',
   welcomeMessage: 'Verwalten Sie Ihren Ladenbestand effizient',
 
   loading: 'Wird geladen...',

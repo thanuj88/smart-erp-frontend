@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { authService } from '../services';
 import { useTranslation } from 'react-i18next';
 import AuthLayout, { AuthFooterLink } from '../components/AuthLayout';
 import LanguageToggle from '../components/LanguageToggle';
@@ -19,6 +20,7 @@ const Login = () => {
   const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [resendState, setResendState] = useState('idle');
   const { login, loginPin } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -51,6 +53,20 @@ const Login = () => {
       setError(err.response?.data?.error || 'PIN login failed.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const needsVerification = /verify your email/i.test(error);
+
+  const handleResendVerification = async () => {
+    if (!email) return;
+    setResendState('sending');
+    try {
+      await authService.resendVerification(email);
+      setResendState('sent');
+    } catch {
+      setResendState('idle');
+      setError(t('resendVerificationFailed'));
     }
   };
 
@@ -102,6 +118,22 @@ const Login = () => {
         <div className="alert alert-danger auth-alert" role="alert">
           <i className="bi bi-exclamation-circle me-2"></i>
           {error}
+          {needsVerification && (
+            <div className="mt-2">
+              {resendState === 'sent' ? (
+                <span>{t('verificationResent')}</span>
+              ) : (
+                <button
+                  type="button"
+                  className="btn btn-link p-0 auth-link-accent small"
+                  onClick={handleResendVerification}
+                  disabled={resendState === 'sending' || !email}
+                >
+                  {t('resendVerification')}
+                </button>
+              )}
+            </div>
+          )}
         </div>
       )}
 

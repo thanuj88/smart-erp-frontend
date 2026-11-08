@@ -62,6 +62,9 @@ const en = {
   defaultCredentials: 'Default Credentials',
   admin: 'Admin',
   forgotPassword: 'Forgot Password?',
+  resendVerification: 'Resend verification email',
+  verificationResent: 'If this account is waiting for verification, a new email has been sent.',
+  resendVerificationFailed: 'Could not resend the email. Please try again.',
   welcomeMessage: 'Manage your shop inventory efficiently',
 
   loading: 'Loading...',

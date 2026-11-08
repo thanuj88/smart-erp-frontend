@@ -62,6 +62,9 @@ const si = {
   defaultCredentials: 'පෙරනිමි අක්තපත්‍ර',
   admin: 'පරිපාලක',
   forgotPassword: 'මුරපදය අමතක ද?',
+  resendVerification: 'සත්‍යාපන ඊමේල් නැවත යවන්න',
+  verificationResent: 'මෙම ගිණුම සත්‍යාපනය බලාපොරොත්තුවෙන් සිටී නම්, නව ඊමේල් පණිවිඩයක් යවා ඇත.',
+  resendVerificationFailed: 'ඊමේල් නැවත යැවීමට නොහැකි විය. කරුණාකර නැවත උත්සාහ කරන්න.',
   welcomeMessage: 'ඔබගේ වෙළඳ ඉන්වෙන්ටරි කාර්යක්ෂමව කළමනාකරණය කරන්න',
 
   loading: 'පූරණය වෙමින්...',
