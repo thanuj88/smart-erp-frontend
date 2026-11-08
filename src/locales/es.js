@@ -231,8 +231,8 @@ const es = {
   'Enter the order number from the receipt': 'Introduce el número de pedido del recibo',
   'Enter an order number': 'Introduce un número de pedido',
   'Order not found': 'Pedido no encontrado',
-  'Refund uses the stored item price. Shipping or promotions on the original receipt are not reversed.':
-    'El reembolso usa el precio guardado del artículo. El envío o las promociones del recibo original no se revierten.',
+  'Refunds use the charged price for each item, including that item\'s share of shipping, discount, and promotions.':
+    'Los reembolsos usan el precio cobrado de cada artículo, incluida su parte de envío, descuento y promociones.',
   Sold: 'Vendido',
   Returned: 'Devuelto',
   'Return summary': 'Resumen de la devolución',

@@ -231,8 +231,8 @@ const en = {
   'Enter the order number from the receipt': 'Enter the order number from the receipt',
   'Enter an order number': 'Enter an order number',
   'Order not found': 'Order not found',
-  'Refund uses the stored item price. Shipping or promotions on the original receipt are not reversed.':
-    'Refund uses the stored item price. Shipping or promotions on the original receipt are not reversed.',
+  'Refunds use the charged price for each item, including that item\'s share of shipping, discount, and promotions.':
+    'Refunds use the charged price for each item, including that item\'s share of shipping, discount, and promotions.',
   Sold: 'Sold',
   Returned: 'Returned',
   'Return summary': 'Return summary',

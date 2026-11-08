@@ -31,7 +31,7 @@ import {
 import { generateOrderId, formatOrderId, generateCheckoutKey, billFingerprint } from '../utils/orderId';
 import { sanitizeLocalPhoneInput } from '../utils/phone';
 import { billToReceiptItems, mergeReceipt, getReceiptPaperSize, receiptPrintPageSize, createInstallmentReceiptPrintJob, createReturnReceiptPrintJob } from '../utils/receipt';
-import { applyPromotionPrice } from '../utils/promotions';
+import { applyPromotionPrice, roundMoney } from '../utils/promotions';
 import { resolveBusinessName } from '../config/app';
 import ReceiptPrintLayer from '../components/ReceiptPrintLayer';
 import './SellItems.css';
@@ -521,7 +521,9 @@ function SellItems() {
       const newBill = [...bill];
       if (newBill[existingIndex].quantity < item.quantity) {
         newBill[existingIndex].quantity += 1;
-        newBill[existingIndex].total = newBill[existingIndex].quantity * newBill[existingIndex].price;
+          newBill[existingIndex].total = roundMoney(
+            newBill[existingIndex].quantity * newBill[existingIndex].price
+          );
         setBill(newBill);
       } else {
         setError('Cannot add more than available stock!');
@@ -538,7 +540,7 @@ function SellItems() {
           promotionPercent: promotion?.percent || 0,
           quantity: 1,
           maxQuantity: item.quantity,
-          total: price,
+          total: roundMoney(price),
           categoryIcon: getItemCategoryIcon(item, categories),
           category_id: item.category_id,
           category_icon: item.category_icon,
@@ -553,7 +555,7 @@ function SellItems() {
       currentBill.map((item) => {
         if (item.id === itemId && item.quantity < item.maxQuantity) {
           const quantity = item.quantity + 1;
-          return { ...item, quantity, total: quantity * item.price };
+          return { ...item, quantity, total: roundMoney(quantity * item.price) };
         }
         return item;
       })
@@ -570,7 +572,7 @@ function SellItems() {
       return currentBill.map((item) => {
         if (item.id === itemId) {
           const quantity = item.quantity - 1;
-          return { ...item, quantity, total: quantity * item.price };
+          return { ...item, quantity, total: roundMoney(quantity * item.price) };
         }
         return item;
       });
@@ -619,19 +621,21 @@ function SellItems() {
   };
 
 
-  const calculateItemsTotal = () => bill.reduce((sum, item) => sum + Number(item.total || 0), 0);
+  const calculateItemsTotal = () =>
+    roundMoney(bill.reduce((sum, item) => sum + roundMoney(Number(item.total || 0)), 0));
 
   const calculateCharges = () => {
     const itemsTotal = calculateItemsTotal();
     const shippingPct = parseBillPercent(shippingPercent);
     const discountPct = parseBillPercent(discountPercent);
-    const shippingAmount = parseBillAmount(shipping) + itemsTotal * (shippingPct / 100);
-    const maxDiscount = itemsTotal + shippingAmount;
-    const discountAmount = Math.min(
-      parseBillAmount(discount) + itemsTotal * (discountPct / 100),
-      maxDiscount
+    const shippingAmount = roundMoney(
+      parseBillAmount(shipping) + itemsTotal * (shippingPct / 100)
     );
-    const grandTotal = Math.max(0, itemsTotal + shippingAmount - discountAmount);
+    const maxDiscount = itemsTotal + shippingAmount;
+    const discountAmount = roundMoney(
+      Math.min(parseBillAmount(discount) + itemsTotal * (discountPct / 100), maxDiscount)
+    );
+    const grandTotal = roundMoney(Math.max(0, itemsTotal + shippingAmount - discountAmount));
     return { itemsTotal, shippingAmount, shippingPct, discountAmount, discountPct, grandTotal };
   };
 
@@ -726,6 +730,13 @@ function SellItems() {
     input.click();
   };
 
+  const checkoutCharges = () => ({
+    shipping: parseBillAmount(shipping) || undefined,
+    shippingPercent: parseBillPercent(shippingPercent) || undefined,
+    discount: parseBillAmount(discount) || undefined,
+    discountPercent: parseBillPercent(discountPercent) || undefined,
+  });
+
   const handleCashSaleCheckout = async () => {
     if (bill.length === 0) {
       setError(t('Add items to bill before checkout'));
@@ -744,16 +755,19 @@ function SellItems() {
       setError('');
       // One request for the whole bill: all lines are booked together or not at all.
       const lines = bill.map((item) => ({ itemId: item.id, quantity: item.quantity }));
-      await saleService.processCashSale({
+      const chargesInput = checkoutCharges();
+      const result = await saleService.processCashSale({
         lines,
         orderNumber: orderRef,
-        idempotencyKey: `${checkoutKey}-${billFingerprint(lines)}`,
+        idempotencyKey: `${checkoutKey}-${billFingerprint(lines, chargesInput)}`,
         customerPhone: memberCustomer ? memberPhone : undefined,
+        ...chargesInput,
       });
       const charges = calculateCharges();
+      const bookedTotal = result?.total != null ? result.total : charges.grandTotal;
       printSaleReceipt(bill, {
-        total: charges.grandTotal,
-        tendered: charges.grandTotal,
+        total: bookedTotal,
+        tendered: bookedTotal,
         adjustmentLines: getAdjustmentLines(charges),
       });
       setSuccess(t('Sale completed successfully!'));
@@ -819,7 +833,8 @@ function SellItems() {
     try {
       setProcessing(true);
       setInstallmentModalError('');
-      await saleService.processInstallmentSale({
+      const chargesInput = checkoutCharges();
+      const result = await saleService.processInstallmentSale({
         lines: bill.map((item) => ({ itemId: item.id, quantity: item.quantity })),
         customer: normalizedCustomer,
         includeWitness,
@@ -827,10 +842,12 @@ function SellItems() {
         downPayment: parseFloat(downPayment),
         installmentMonths: parseInt(installmentMonths, 10),
         orderNumber: orderRef,
+        ...chargesInput,
       });
       const preview = calculateInstallmentPreview();
+      const bookedTotal = result?.total != null ? result.total : preview.total;
       printSaleReceipt(bill, {
-        total: preview.total,
+        total: bookedTotal,
         tendered: preview.downPayment,
         tenderedLabel: 'Down payment',
         showChange: false,
@@ -1869,7 +1886,7 @@ function SellItems() {
                 </p>
                 {returnType === 'cash' && (
                   <p className="pos-return-note small text-muted">
-                    {t('Refund uses the stored item price. Shipping or promotions on the original receipt are not reversed.')}
+                    {t('Refunds use the charged price for each item, including that item\'s share of shipping, discount, and promotions.')}
                   </p>
                 )}
                 {(returnOrder.lines || []).map((line) => (
