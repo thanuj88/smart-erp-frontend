@@ -239,13 +239,12 @@ function SellItems() {
         setMemberCustomer(found);
         setMemberLookupStatus('matched');
         setWalkInCustomer(found.name || 'Walk in Customer');
+        // The lookup returns only name, member id, phone and overdue. NIC, address and email are
+        // read at the till from the customer's ID, not pulled from the CRM by phone number.
         setCustomer((prev) => ({
           ...prev,
           name: found.name || prev.name,
           phone: found.phone || phone,
-          idCardNo: found.id_card_no || prev.idCardNo,
-          email: found.email || prev.email,
-          address: found.address || prev.address,
         }));
       } catch (err) {
         if (cancelled) return;
