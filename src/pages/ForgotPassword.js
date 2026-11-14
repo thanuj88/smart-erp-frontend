@@ -4,6 +4,7 @@ import AuthLayout from '../components/AuthLayout';
 import useAuthBodyClass from '../hooks/useAuthBodyClass';
 import { APP_CONFIG } from '../config/app';
 import { authService } from '../services';
+import Captcha, { RECAPTCHA_SITE_KEY } from '../components/Captcha';
 
 const ForgotPassword = () => {
   useAuthBodyClass('simple');
@@ -12,16 +13,20 @@ const ForgotPassword = () => {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [captchaToken, setCaptchaToken] = useState(null);
+  const [captchaResetKey, setCaptchaResetKey] = useState(0);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
     try {
-      await authService.forgotPassword(email);
+      await authService.forgotPassword(email, captchaToken);
       setSubmitted(true);
     } catch (err) {
       setError(err.response?.data?.error || 'Request failed. Please try again.');
+      setCaptchaToken(null);
+      setCaptchaResetKey((k) => k + 1);
     } finally {
       setLoading(false);
     }
@@ -67,7 +72,12 @@ const ForgotPassword = () => {
               <i className="bi bi-envelope auth-input-icon"></i>
             </div>
           </div>
-          <button type="submit" className="btn auth-btn-primary w-100 mb-3" disabled={loading}>
+          <Captcha onToken={setCaptchaToken} resetKey={captchaResetKey} />
+          <button
+            type="submit"
+            className="btn auth-btn-primary w-100 mb-3"
+            disabled={loading || (Boolean(RECAPTCHA_SITE_KEY) && !captchaToken)}
+          >
             {loading ? 'Sending...' : 'Send reset link'}
           </button>
         </form>

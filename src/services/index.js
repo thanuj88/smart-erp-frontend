@@ -35,8 +35,8 @@ export const authService = {
     return response.data;
   },
 
-  forgotPassword: async (email) => {
-    const response = await api.post('/auth/forgot-password', { email });
+  forgotPassword: async (email, captchaToken) => {
+    const response = await api.post('/auth/forgot-password', { email, captchaToken });
     return response.data;
   },
 
