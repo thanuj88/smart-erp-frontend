@@ -9,7 +9,7 @@
 
 POSBright is the storefront for shops that sell **cash and credit**. Cashiers stay on a fast till. Owners get stock, collections, and profit views that tellers never see.
 
-Pair this UI with [`smart-erp-backend`](https://github.com/thanuj88/smart-erp-backend).
+Pair this UI with [`smart-erp-backend`](https://github.com/thanuj88/smart-erp-backend). The phone app in the same product family talks to that same API.
 
 ---
 
@@ -28,56 +28,65 @@ Cash walk-ins stay unnamed. Named members are registered in **Customers** and ma
 
 ## Screens
 
-Typical demo path on Bright Mart:
+| Area | Routes |
+| --- | --- |
+| Sign-in | Login, register, email verify, forgot and reset password |
+| Till | `/sell` — product grid, member lookup, cash and installment checkout, receipt |
+| Shop | Dashboard, inventory, categories, promotions, sales reports |
+| People | Users, customers, installment plans, installment payments |
+| Store | Settings (branding, receipt, currency) |
+| Platform | Tenants, plans, roles, capabilities, users, reports (super admin) |
 
-1. Owner opens **Customers** and finds installment people by phone.
-2. Teller signs in to **POS**, types a local number, and sees the member name.
-3. If that member has overdue payments, a warning appears **before** checkout.
-4. Teller login has no Customers menu and no profit widgets.
+A teller lands on the till. A tenant owner lands on the dashboard. A super admin lands on the platform console.
 
 ---
 
 ## Stack
 
-- **React 18** + Create React App
+- **React 18** + Create React App (`react-scripts` 5)
+- **React Router 6**
 - **Bootstrap 5.3** and Bootstrap Icons
 - **i18next** for chrome text (names, phones, and IDs stay as entered)
 - **Axios** against `/api` on the backend
 
 ```
-frontend/src
-├── pages/          POS, dashboard, inventory, customers, reports
+src
+├── pages/          POS, dashboard, inventory, customers, reports, platform
 ├── components/     Layout, sidebar, receipts, dialogs
 ├── locales/        en, si, es, it, fr, de
 ├── services/       API client
-└── contexts/       Auth, theme, tenant settings
+├── contexts/       Auth, theme, tenant settings
+└── utils/          Money, phone, receipt, promotions
 ```
 
 ---
 
 ## Quick start
 
-You need **Node.js 18+** and a running API on port `5000`.
+You need **Node.js 18+** and a running API on port `5000`. See the backend README to start DynamoDB Local and the API first.
 
 ```bash
 git clone https://github.com/thanuj88/smart-erp-frontend.git
 cd smart-erp-frontend
 npm install
-```
-
-Create `.env` if you are not using the default API:
-
-```
-REACT_APP_API_URL=http://localhost:5000/api
-```
-
-```bash
+copy .env.example .env
 npm start
 ```
 
+On macOS or Linux, use `cp .env.example .env`.
+
 The app opens at [http://localhost:3000](http://localhost:3000).
 
-Demo store (after a fresh backend seed):
+### Environment
+
+| Variable | Purpose |
+| --- | --- |
+| `REACT_APP_API_URL` | API base, default `http://localhost:5000/api` |
+| `REACT_APP_RECAPTCHA_SITE_KEY` | reCAPTCHA v2 site key. Leave empty in local development |
+
+### Demo store
+
+After a fresh backend seed:
 
 | Role | Email | Password |
 | --- | --- | --- |
@@ -85,6 +94,16 @@ Demo store (after a fresh backend seed):
 | Teller | `teller@brightmart.local` | `teller123` |
 | Manager | `manager@brightmart.local` | `manager123` |
 | Accountant | `accountant@brightmart.local` | `accountant123` |
+
+---
+
+## Scripts
+
+| Command | Purpose |
+| --- | --- |
+| `npm start` | Development server on port 3000 |
+| `npm run build` | Production build in `build/` |
+| `npm test` | Jest via Create React App |
 
 ---
 
