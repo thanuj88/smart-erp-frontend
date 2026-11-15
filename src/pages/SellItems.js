@@ -28,6 +28,7 @@ import {
   sanitizeNicInput,
 } from '../utils/installmentValidation';
 import { generateOrderId, formatOrderId, generateCheckoutKey, billFingerprint } from '../utils/orderId';
+import { assessPosDiscount } from '../utils/discountLimit';
 import { sanitizeLocalPhoneInput } from '../utils/phone';
 import { isMemberLookupPending } from '../utils/memberLookup';
 import { planMatchesSearch } from '../utils/planSearch';
@@ -140,6 +141,8 @@ function SellItems() {
   const [shippingPercent, setShippingPercent] = useState('');
   const [discount, setDiscount] = useState('');
   const [discountPercent, setDiscountPercent] = useState('');
+  const [discountReason, setDiscountReason] = useState('');
+  const [managerPin, setManagerPin] = useState('');
   const [activePromotions, setActivePromotions] = useState([]);
 
   const [installmentPlans, setInstallmentPlans] = useState([]);
@@ -208,6 +211,7 @@ function SellItems() {
     shippingPercent,
     discount,
     discountPercent,
+    discountReason,
     orderRef,
     orderStartedAt,
     userId: user?.id,
@@ -294,6 +298,8 @@ function SellItems() {
     setShippingPercent('');
     setDiscount('');
     setDiscountPercent('');
+    setDiscountReason('');
+    setManagerPin('');
   }, []);
 
   const voidBillNow = useCallback(() => {
@@ -329,6 +335,7 @@ function SellItems() {
       shippingPercent: sale.shippingPercent,
       discount: sale.discount,
       discountPercent: sale.discountPercent,
+      discountReason: sale.discountReason,
       orderRef: sale.orderRef,
       orderStartedAt: sale.orderStartedAt,
     });
@@ -357,6 +364,8 @@ function SellItems() {
     setShippingPercent(data.shippingPercent != null ? String(data.shippingPercent) : '');
     setDiscount(data.discount != null ? String(data.discount) : '');
     setDiscountPercent(data.discountPercent != null ? String(data.discountPercent) : '');
+    setDiscountReason(data.discountReason != null ? String(data.discountReason) : '');
+    setManagerPin('');
     if (data.orderRef) setOrderRef(data.orderRef);
     if (data.orderStartedAt) {
       setOrderStartedAt(data.orderStartedAt);
@@ -642,6 +651,34 @@ function SellItems() {
     return { itemsTotal, shippingAmount, shippingPct, discountAmount, discountPct, grandTotal };
   };
 
+  const discountGate = assessPosDiscount({
+    role: user?.role,
+    limits: settings?.discountLimits,
+    itemsTotal: calculateCharges().itemsTotal,
+    discountAmount: calculateCharges().discountAmount,
+    discountPercent,
+  });
+
+  const discountApprovalFields = () => (
+    discountGate.needsApproval
+      ? { discountReason: discountReason.trim(), managerPin }
+      : {}
+  );
+
+  const rejectDiscount = () => {
+    if (discountGate.overCeiling) {
+      setError('Discount cannot exceed 5% of the bill');
+      setTimeout(() => setError(''), 4000);
+      return true;
+    }
+    if (discountGate.needsApproval && (!discountReason.trim() || !/^\d{6,8}$/.test(managerPin))) {
+      setError('Enter a reason and a manager PIN. A manager can approve up to 5%.');
+      setTimeout(() => setError(''), 4000);
+      return true;
+    }
+    return false;
+  };
+
   const getAdjustmentLines = (charges = calculateCharges()) => {
     const lines = [];
     if (charges.shippingAmount > 0) {
@@ -746,6 +783,7 @@ function SellItems() {
       setTimeout(() => setError(''), 3000);
       return;
     }
+    if (rejectDiscount()) return;
     const ok = await confirmBilling(
       t('posConfirmSale'),
       t('posConfirmSaleMessage'),
@@ -765,6 +803,7 @@ function SellItems() {
         idempotencyKey: `${checkoutKey}-${billFingerprint(lines, chargesInput)}`,
         customerPhone: memberCustomer ? memberPhone : undefined,
         ...chargesInput,
+        ...discountApprovalFields(),
       });
       const charges = calculateCharges();
       const bookedTotal = result?.total != null ? result.total : charges.grandTotal;
@@ -794,6 +833,14 @@ function SellItems() {
   const handleInstallmentSaleCheckout = async () => {
     if (bill.length === 0) {
       showInstallmentModalError('Add items to bill', 3000);
+      return;
+    }
+    if (discountGate.overCeiling) {
+      showInstallmentModalError('Discount cannot exceed 5% of the bill', 4000);
+      return;
+    }
+    if (discountGate.needsApproval && (!discountReason.trim() || !/^\d{6,8}$/.test(managerPin))) {
+      showInstallmentModalError('Enter a reason and a manager PIN. A manager can approve up to 5%.', 4000);
       return;
     }
 
@@ -846,6 +893,7 @@ function SellItems() {
         installmentMonths: parseInt(installmentMonths, 10),
         orderNumber: orderRef,
         ...chargesInput,
+        ...discountApprovalFields(),
       });
       const preview = calculateInstallmentPreview();
       const bookedTotal = result?.total != null ? result.total : preview.total;
@@ -1146,6 +1194,7 @@ function SellItems() {
 
   const handlePaymentAction = () => {
     if (memberLookupPending && (mode === 'cash' || mode === 'installment')) return;
+    if ((mode === 'cash' || mode === 'installment') && rejectDiscount()) return;
     if (mode === 'cash') handleCashSaleCheckout();
     else if (mode === 'installment') openInstallmentModal();
     else if (mode === 'return') handleProcessReturn();
@@ -1713,7 +1762,7 @@ function SellItems() {
                   <input
                     type="number"
                     min="0"
-                    max="100"
+                    max="5"
                     step="0.01"
                     className="pos-summary-input pos-summary-input-pct pos-summary-input-discount"
                     value={discountPercent}
@@ -1725,6 +1774,38 @@ function SellItems() {
                 </div>
               </div>
             </div>
+            <p className="small text-muted mb-0 px-1">
+              Maximum discount is 5%{discountGate.capAmount > 0 ? ` (${formatMoney(discountGate.capAmount)})` : ''}.
+              {discountGate.limit < 5 ? ` You can discount up to ${discountGate.limit}% without a manager.` : ''}
+            </p>
+            {discountGate.overCeiling ? (
+              <p className="small text-danger mb-0 px-1">Discount cannot exceed 5% of the bill.</p>
+            ) : null}
+            {discountGate.needsApproval ? (
+              <div className="px-1 mt-2">
+                <p className="small mb-2">This discount is above your limit. A manager must approve it.</p>
+                <input
+                  type="text"
+                  className="form-control form-control-sm mb-2"
+                  maxLength={200}
+                  placeholder="Reason"
+                  aria-label="Discount reason"
+                  value={discountReason}
+                  onChange={(e) => setDiscountReason(e.target.value)}
+                />
+                <input
+                  type="password"
+                  className="form-control form-control-sm"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  maxLength={8}
+                  placeholder="Manager PIN"
+                  aria-label="Manager PIN"
+                  value={managerPin}
+                  onChange={(e) => setManagerPin(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                />
+              </div>
+            ) : null}
             <div className="pos-summary-total">
               <span>{t('total')}</span>
               <span>{formatMoney(total)}</span>
@@ -1737,7 +1818,10 @@ function SellItems() {
             disabled={
               processing ||
               (mode !== 'payment' && bill.length === 0) ||
-              (memberLookupPending && (mode === 'cash' || mode === 'installment'))
+              (memberLookupPending && (mode === 'cash' || mode === 'installment')) ||
+              ((mode === 'cash' || mode === 'installment') &&
+                (discountGate.overCeiling ||
+                  (discountGate.needsApproval && (!discountReason.trim() || !/^\d{6,8}$/.test(managerPin)))))
             }
             onClick={handlePaymentAction}
           >

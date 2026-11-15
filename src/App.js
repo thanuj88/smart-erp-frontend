@@ -43,6 +43,8 @@ import SellItems from './pages/SellItems';
 
 import SalesReport from './pages/SalesReport';
 
+import DiscountReport from './pages/DiscountReport';
+
 import Users from './pages/Users';
 import Customers from './pages/Customers';
 
@@ -164,6 +166,8 @@ function AppRoutes() {
       <Route path="/sell" element={<ProtectedRoute requirePermission={PERMISSIONS.SALES_CREATE}><PosLayout><SellItems /></PosLayout></ProtectedRoute>} />
 
       <Route path="/sales-report" element={<ProtectedRoute requirePermission={PERMISSIONS.REPORTS_VIEW}><Layout><SalesReport /></Layout></ProtectedRoute>} />
+
+      <Route path="/discounts" element={<ProtectedRoute requirePermission={PERMISSIONS.REPORTS_VIEW}><Layout><DiscountReport /></Layout></ProtectedRoute>} />
 
       <Route path="/users" element={<ProtectedRoute requirePermission={[PERMISSIONS.USERS_MANAGE, PERMISSIONS.USERS_VIEW]}><Layout><Users /></Layout></ProtectedRoute>} />
 

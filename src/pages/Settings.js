@@ -13,10 +13,12 @@ import { DEFAULT_RECEIPT, mergeReceipt, RECEIPT_PAPER_SIZES, getReceiptPaperSize
 import { resolveProductImageUrl } from '../utils/productImage';
 import { RECEIPT_LOGO, RECEIPT_LOGO_HINT, validateReceiptLogoFile } from '../utils/receiptLogo';
 import { useTranslation } from 'react-i18next';
+import { DISCOUNT_ROLE_FIELDS, emptyDiscountLimitForm, MAX_DISCOUNT_PERCENT } from '../utils/discountLimit';
 
 const TABS = [
   { id: 'store', labelKey: 'tabStoreDetails' },
   { id: 'currency', labelKey: 'tabCurrencyTax' },
+  { id: 'discounts', labelKey: 'tabDiscounts' },
   { id: 'receipt', labelKey: 'tabReceipt' },
 ];
 
@@ -32,6 +34,7 @@ const Settings = () => {
     countryCode: DEFAULT_COUNTRY_CODE,
     taxRate: '0',
     lowStockThreshold: '15',
+    discountLimits: emptyDiscountLimitForm(),
     receipt: { ...DEFAULT_RECEIPT },
   });
   const [removeReceiptLogo, setRemoveReceiptLogo] = useState(false);
@@ -70,6 +73,15 @@ const Settings = () => {
       countryCode: settings.countryCode || DEFAULT_COUNTRY_CODE,
       taxRate: String(settings.taxRate ?? 0),
       lowStockThreshold: String(settings.lowStockThreshold ?? 15),
+      discountLimits: {
+        ...emptyDiscountLimitForm(),
+        ...Object.fromEntries(
+          DISCOUNT_ROLE_FIELDS.map(([role]) => [
+            role,
+            String(settings.discountLimits?.[role] ?? emptyDiscountLimitForm()[role]),
+          ])
+        ),
+      },
       receipt: mergeReceipt(settings.receipt, settings.receiptFooter),
     });
     setRemoveReceiptLogo(false);
@@ -157,6 +169,13 @@ const Settings = () => {
         countryCode: formData.countryCode,
         taxRate: parseFloat(formData.taxRate) || 0,
         lowStockThreshold: parseInt(formData.lowStockThreshold, 10) || 0,
+        discountLimits: Object.fromEntries(
+          DISCOUNT_ROLE_FIELDS.map(([role]) => {
+            const n = parseFloat(formData.discountLimits?.[role]);
+            const value = Number.isFinite(n) ? Math.min(MAX_DISCOUNT_PERCENT, Math.max(0, n)) : 0;
+            return [role, value];
+          })
+        ),
         receiptFooter: formData.receipt.footer,
         receipt: receiptPayload,
         removeReceiptLogo,
@@ -300,6 +319,36 @@ const Settings = () => {
                     step="0.01"
                   />
                 </div>
+              </div>
+            )}
+
+            {activeTab === 'discounts' && (
+              <div className="row g-3">
+                <div className="col-12">
+                  <p className="text-muted small mb-0">{t('discountLimitsHelp')}</p>
+                </div>
+                {DISCOUNT_ROLE_FIELDS.map(([role, label]) => (
+                  <div className="col-md-4" key={role}>
+                    <label htmlFor={`discount-limit-${role}`} className="form-label fw-semibold">
+                      {label}
+                    </label>
+                    <input
+                      id={`discount-limit-${role}`}
+                      type="number"
+                      className="form-control"
+                      min="0"
+                      max={MAX_DISCOUNT_PERCENT}
+                      step="0.01"
+                      value={formData.discountLimits?.[role] ?? ''}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          discountLimits: { ...prev.discountLimits, [role]: e.target.value },
+                        }))
+                      }
+                    />
+                  </div>
+                ))}
               </div>
             )}
 

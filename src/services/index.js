@@ -355,6 +355,11 @@ export const saleService = {
     return response.data;
   },
 
+  getDiscounts: async ({ from, to } = {}) => {
+    const response = await api.get('/sales/discounts', { params: { from, to } });
+    return response.data;
+  },
+
   getByDateRange: async (startDate, endDate) => {
     const response = await api.get(`/sales/date-range?startDate=${startDate}&endDate=${endDate}`);
     return response.data;
