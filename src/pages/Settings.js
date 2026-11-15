@@ -35,6 +35,8 @@ const Settings = () => {
     taxRate: '0',
     lowStockThreshold: '15',
     discountLimits: emptyDiscountLimitForm(),
+    refundWindowDays: '30',
+    cashRefundApprovalThreshold: '0',
     receipt: { ...DEFAULT_RECEIPT },
   });
   const [removeReceiptLogo, setRemoveReceiptLogo] = useState(false);
@@ -82,6 +84,8 @@ const Settings = () => {
           ])
         ),
       },
+      refundWindowDays: String(settings.refundWindowDays ?? 30),
+      cashRefundApprovalThreshold: String(settings.cashRefundApprovalThreshold ?? 0),
       receipt: mergeReceipt(settings.receipt, settings.receiptFooter),
     });
     setRemoveReceiptLogo(false);
@@ -176,6 +180,8 @@ const Settings = () => {
             return [role, value];
           })
         ),
+        refundWindowDays: Math.min(3650, Math.max(0, parseInt(formData.refundWindowDays, 10) || 0)),
+        cashRefundApprovalThreshold: Math.max(0, parseFloat(formData.cashRefundApprovalThreshold) || 0),
         receiptFooter: formData.receipt.footer,
         receipt: receiptPayload,
         removeReceiptLogo,
@@ -349,6 +355,39 @@ const Settings = () => {
                     />
                   </div>
                 ))}
+                <div className="col-12 mt-2">
+                  <h2 className="h6 mb-1">{t('refundControls')}</h2>
+                  <p className="text-muted small mb-0">{t('refundControlsHelp')}</p>
+                </div>
+                <div className="col-md-4">
+                  <label htmlFor="refund-window-days" className="form-label fw-semibold">
+                    {t('refundWindowDays')}
+                  </label>
+                  <input
+                    id="refund-window-days"
+                    type="number"
+                    className="form-control"
+                    min="0"
+                    max="3650"
+                    step="1"
+                    value={formData.refundWindowDays}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, refundWindowDays: e.target.value }))}
+                  />
+                </div>
+                <div className="col-md-4">
+                  <label htmlFor="cash-refund-threshold" className="form-label fw-semibold">
+                    {t('cashRefundApproval')}
+                  </label>
+                  <input
+                    id="cash-refund-threshold"
+                    type="number"
+                    className="form-control"
+                    min="0"
+                    step="0.01"
+                    value={formData.cashRefundApprovalThreshold}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, cashRefundApprovalThreshold: e.target.value }))}
+                  />
+                </div>
               </div>
             )}
 

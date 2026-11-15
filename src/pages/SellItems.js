@@ -29,6 +29,7 @@ import {
 } from '../utils/installmentValidation';
 import { generateOrderId, formatOrderId, generateCheckoutKey, billFingerprint } from '../utils/orderId';
 import { assessPosDiscount } from '../utils/discountLimit';
+import { assessReturnForm } from '../utils/refundPolicy';
 import { sanitizeLocalPhoneInput } from '../utils/phone';
 import { isMemberLookupPending } from '../utils/memberLookup';
 import { planMatchesSearch } from '../utils/planSearch';
@@ -159,6 +160,9 @@ function SellItems() {
   const [returnQtys, setReturnQtys] = useState({});
   const [returnReason, setReturnReason] = useState('');
   const [returnType, setReturnType] = useState('cash');
+  const [returnManagerPin, setReturnManagerPin] = useState('');
+  const [returnReceiptId, setReturnReceiptId] = useState('');
+  const [returnWarrantyMonths, setReturnWarrantyMonths] = useState('');
   const openedHoldRef = React.useRef(false);
   openedHoldRef.current = openedHold;
 
@@ -1070,6 +1074,10 @@ function SellItems() {
         nextQty[line.id] = 0;
       });
       setReturnQtys(nextQty);
+      setReturnReason('');
+      setReturnManagerPin('');
+      setReturnReceiptId('');
+      setReturnWarrantyMonths('');
     } catch (err) {
       setReturnOrder(null);
       setReturnQtys({});
@@ -1134,18 +1142,57 @@ function SellItems() {
     return { refundValue, refundCash: refundValue - unpaid, unpaidAfter: 0, fullReturn, replacementQty };
   }, [returnOrder, returnQtys, returnType, selectedReturnLines]);
 
+  const returnGate = useMemo(() => assessReturnForm({
+    refundValue: Math.round(selectedReturnLines.reduce((sum, line) => {
+      const qty = line.returnQty;
+      const full = qty === Number(line.quantity) && !(Number(line.returned_qty) > 0) && Number.isFinite(Number(line.total));
+      const lineTotal = full ? Number(line.total) : Number(line.unit_price || 0) * qty;
+      return sum + (Number.isFinite(lineTotal) ? lineTotal : 0);
+    }, 0) * 100) / 100,
+    returnType,
+    currencyCode: currency?.code || settings?.currencyCode,
+    refundWindowDays: settings?.refundWindowDays,
+    cashRefundApprovalThreshold: settings?.cashRefundApprovalThreshold,
+    saleDate: returnOrder?.sale_date,
+    reason: returnReason,
+    managerPin: returnManagerPin,
+    salesReceiptId: returnReceiptId,
+    warrantyMonths: returnWarrantyMonths,
+    orderNumber: returnOrder?.order_number,
+  }), [
+    selectedReturnLines,
+    returnType,
+    currency,
+    settings,
+    returnOrder,
+    returnReason,
+    returnManagerPin,
+    returnReceiptId,
+    returnWarrantyMonths,
+  ]);
+
   const handleProcessReturn = async () => {
     if (!returnOrder || selectedReturnLines.length === 0) {
       setError(t('Select items to return'));
       setTimeout(() => setError(''), 2500);
       return;
     }
-    const confirmMessage =
+    if (!returnGate.ok) {
+      setError(returnGate.message || t('Select items to return'));
+      setTimeout(() => setError(''), 4000);
+      return;
+    }
+    const confirmMessage = [
       returnType === 'warranty'
         ? t('posWarrantyConfirm')
         : returnType === 'defect'
           ? t('posDefectConfirm')
-          : t('posCashReturnConfirm');
+          : t('posCashReturnConfirm'),
+      returnGate.needsWarranty
+        ? t('returnWarrantyConfirm', { months: returnWarrantyMonths, receipt: returnReceiptId.trim() })
+        : '',
+      returnGate.needsManager ? t('returnManagerConfirm') : '',
+    ].filter(Boolean).join(' ');
     const ok = await confirm({
       title: t('Confirm return'),
       message: confirmMessage,
@@ -1161,11 +1208,15 @@ function SellItems() {
       const result = await saleService.createReturn({
         orderNumber: returnOrder.order_number,
         returnType,
-        reason: returnReason,
+        reason: returnReason.trim(),
         lines: selectedReturnLines.map((line) => ({
           saleId: line.id,
           quantity: line.returnQty,
         })),
+        ...(returnGate.needsManager ? { managerPin: returnManagerPin.trim() } : {}),
+        ...(returnGate.needsWarranty
+          ? { salesReceiptId: returnReceiptId.trim(), warrantyMonths: Number(returnWarrantyMonths) }
+          : {}),
       });
       setPrintJob(
         createReturnReceiptPrintJob({
@@ -1184,10 +1235,13 @@ function SellItems() {
       setReturnQtys(nextQty);
       setReturnReason('');
       setReturnType('cash');
+      setReturnReceiptId('');
+      setReturnWarrantyMonths('');
       setTimeout(() => setSuccess(''), 4000);
     } catch (err) {
       setError(err.response?.data?.error || t('Failed to process return'));
     } finally {
+      setReturnManagerPin('');
       setProcessing(false);
     }
   };
@@ -2076,18 +2130,63 @@ function SellItems() {
                   <strong>{formatMoney(returnPreview.unpaidAfter)}</strong>
                 </div>
               )}
-              <label className="form-label mt-3">{t('Reason (optional)')}</label>
+              <label className="form-label mt-3">{t('reason')}</label>
               <textarea
                 className="form-control"
                 rows={2}
                 value={returnReason}
                 onChange={(e) => setReturnReason(e.target.value)}
+                maxLength={200}
               />
+              {returnGate.needsWarranty && (
+                <>
+                  <label className="form-label mt-3">{t('warrantyPeriod')}</label>
+                  <div className="pos-return-types">
+                    {[12, 24].map((months) => (
+                      <label key={months} className="pos-return-type-option">
+                        <input
+                          type="radio"
+                          name="warrantyMonths"
+                          checked={Number(returnWarrantyMonths) === months}
+                          onChange={() => setReturnWarrantyMonths(String(months))}
+                        />
+                        <span>{t('warrantyMonthsLabel', { months })}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <label className="form-label mt-3" htmlFor="return-receipt-id">{t('salesReceiptId')}</label>
+                  <input
+                    id="return-receipt-id"
+                    className="form-control"
+                    value={returnReceiptId}
+                    onChange={(e) => setReturnReceiptId(e.target.value)}
+                    autoCapitalize="characters"
+                  />
+                </>
+              )}
+              {returnGate.needsManager && (
+                <>
+                  <label className="form-label mt-3" htmlFor="return-manager-pin">{t('managerPin')}</label>
+                  <input
+                    id="return-manager-pin"
+                    className="form-control"
+                    type="password"
+                    inputMode="numeric"
+                    autoComplete="off"
+                    maxLength={8}
+                    value={returnManagerPin}
+                    onChange={(e) => setReturnManagerPin(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                  />
+                </>
+              )}
+              {selectedReturnLines.length > 0 && returnGate.message ? (
+                <p className="small text-danger mt-2 mb-0">{returnGate.message}</p>
+              ) : null}
             </div>
             <button
               type="button"
               className="pos-checkout-btn"
-              disabled={processing || selectedReturnLines.length === 0}
+              disabled={processing || selectedReturnLines.length === 0 || !returnGate.ok}
               onClick={handleProcessReturn}
             >
               {processing ? t('posProcessing') : t('Process return')}

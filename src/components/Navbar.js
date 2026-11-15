@@ -116,6 +116,14 @@ const Navbar = () => {
               >
                 Discounts
               </Button>
+              <Button
+                component={Link}
+                to="/refunds"
+                startIcon={<AssessmentIcon />}
+                sx={{ textTransform: 'none', color: 'text.primary' }}
+              >
+                Refunds
+              </Button>
               <Button 
                 component={Link} 
                 to="/users" 
