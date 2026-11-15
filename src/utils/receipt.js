@@ -285,6 +285,9 @@ export function createReturnReceiptPrintJob({ settings, currency, cashierName, r
           ? { label: 'Replacement qty', value: String(result.replacement_qty) }
           : null,
         result?.reason ? { label: 'Reason', value: result.reason } : null,
+        result?.warranty_months ? { label: 'Warranty', value: `${result.warranty_months} months` } : null,
+        result?.sales_receipt_id ? { label: 'Sales receipt', value: result.sales_receipt_id } : null,
+        result?.approver_name ? { label: 'Approved by', value: result.approver_name } : null,
       ].filter(Boolean),
       subtotalLabel: 'Returned value',
     },
