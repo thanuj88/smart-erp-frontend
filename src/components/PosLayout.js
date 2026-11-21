@@ -3,6 +3,7 @@ import PropTypes from 'prop-types';
 import { useLayout } from '../contexts/LayoutContext';
 import Header from './Header';
 import Sidebar from './Sidebar';
+import TillPinGate from './TillPinGate';
 
 const PosLayout = ({ children }) => {
   const { sidebarCollapsed, mobileMenuOpen, closeMobileMenu } = useLayout();
@@ -22,7 +23,9 @@ const PosLayout = ({ children }) => {
         <Sidebar />
         <div className={`content-wrapper pos-content-wrapper${sidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
           <div className="pos-shell">
-            <main className="pos-content">{children}</main>
+            <main className="pos-content">
+              <TillPinGate>{children}</TillPinGate>
+            </main>
           </div>
         </div>
       </div>

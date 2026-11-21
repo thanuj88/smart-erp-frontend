@@ -96,7 +96,6 @@ function SellItems() {
 
   const [mode, setMode] = useState('cash');
   const [categories, setCategories] = useState([]);
-  const [items, setItems] = useState([]);
   const [allItems, setAllItems] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [bill, setBill] = useState([]);
@@ -447,7 +446,6 @@ function SellItems() {
         ]);
         setCategories(categoriesData);
         setAllItems(itemsData);
-        setItems(itemsData);
         setActivePromotions(promotionsData || []);
 
         const rates = {};
@@ -498,34 +496,38 @@ function SellItems() {
     }
   }, [installmentPeriodOptions, installmentMonths]);
 
-  const handleCategorySelect = async (category) => {
-    if (!category) {
-      setSelectedCategory(null);
-      setItems(allItems);
-      return;
-    }
+  const handleCategorySelect = (category) => {
     setSelectedCategory(category);
-    try {
-      const categoryItems = await itemService.getByCategory(category.id);
-      setItems(categoryItems);
-    } catch {
-      setItems(allItems.filter((item) => item.category_id === category.id));
-    }
   };
 
+  const categoryCounts = useMemo(() => {
+    const counts = new Map();
+    allItems.forEach((item) => {
+      const key = item.category_id == null ? 'other' : String(item.category_id);
+      counts.set(key, (counts.get(key) || 0) + 1);
+    });
+    return counts;
+  }, [allItems]);
+
   const displayItems = useMemo(() => {
-    if (mode === 'payment') return [];
-    const source =
-      mode === 'cash'
-        ? selectedCategory
-          ? allItems.filter((i) => i.category_id === selectedCategory.id)
-          : allItems
-        : items;
-    if (!itemSearch.trim()) return source;
-    return source.filter((item) =>
-      item.name.toLowerCase().includes(itemSearch.toLowerCase())
-    );
-  }, [mode, allItems, items, selectedCategory, itemSearch]);
+    if (mode === 'payment' || mode === 'return') return [];
+    const term = itemSearch.trim().toLowerCase();
+    let source = allItems;
+    if (selectedCategory) {
+      source = selectedCategory.id === 'other'
+        ? source.filter((item) => item.category_id == null || item.category_id === '')
+        : source.filter((item) => String(item.category_id) === String(selectedCategory.id));
+    }
+    if (!term && !selectedCategory) return [];
+    if (!term) return source;
+    return source.filter((item) => {
+      const name = String(item.name || '').toLowerCase();
+      const barcode = String(item.barcode || '').toLowerCase();
+      return name.includes(term) || barcode.includes(term);
+    });
+  }, [mode, allItems, selectedCategory, itemSearch]);
+
+  const showCategoryHome = (mode === 'cash' || mode === 'installment') && !selectedCategory && !itemSearch.trim();
 
   const filteredPlans = installmentPlans.filter((plan) => planMatchesSearch(plan, planSearch));
 
@@ -2248,7 +2250,7 @@ function SellItems() {
               onClick={() => handleCategorySelect(null)}
             >
               <i className="bi bi-grid"></i>
-              {t('All')}
+              {t('categories')}
             </button>
             {categories.map((cat) => (
               <button
@@ -2266,6 +2268,12 @@ function SellItems() {
           <section className="pos-products">
             <div className="pos-products-header">
               <div className="pos-products-toolbar">
+                {selectedCategory ? (
+                  <button type="button" className="pos-cat-back" onClick={() => handleCategorySelect(null)}>
+                    <i className="bi bi-arrow-left"></i>
+                    {selectedCategory.name}
+                  </button>
+                ) : null}
                 <div className="pos-search-wrap">
                   <i className="bi bi-search"></i>
                   <input
@@ -2279,13 +2287,38 @@ function SellItems() {
             </div>
 
             <div className="pos-product-grid-wrap">
+              {showCategoryHome ? (
+                <div className="pos-category-grid">
+                  {categories
+                    .filter((cat) => (categoryCounts.get(String(cat.id)) || 0) > 0)
+                    .map((cat) => (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      className="pos-category-card"
+                      onClick={() => handleCategorySelect(cat)}
+                    >
+                      <CategoryIcon name={cat.icon} size={28} />
+                      <span className="pos-category-name">{cat.name}</span>
+                      <span className="pos-category-count">{categoryCounts.get(String(cat.id)) || 0}</span>
+                    </button>
+                  ))}
+                  {(categoryCounts.get('other') || 0) > 0 ? (
+                    <button
+                      type="button"
+                      className="pos-category-card"
+                      onClick={() => handleCategorySelect({ id: 'other', name: t('other'), icon: 'BsGrid' })}
+                    >
+                      <CategoryIcon name="BsGrid" size={28} />
+                      <span className="pos-category-name">{t('other')}</span>
+                      <span className="pos-category-count">{categoryCounts.get('other')}</span>
+                    </button>
+                  ) : null}
+                </div>
+              ) : (
               <div className="pos-product-grid">
                 {displayItems.length === 0 ? (
-                  <p className="text-muted py-4">
-                    {mode === 'installment' && !selectedCategory
-                      ? t('posChooseCategory')
-                      : t('No items found')}
-                  </p>
+                  <p className="text-muted py-4">{t('No items found')}</p>
                 ) : (
                   displayItems.map((item) => {
                     const inBill = bill.find((b) => b.id === item.id);
@@ -2343,6 +2376,7 @@ function SellItems() {
                   })
                 )}
               </div>
+              )}
             </div>
           </section>
 
