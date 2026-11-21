@@ -22,7 +22,7 @@ export function applyTheme(theme) {
   root.setAttribute('data-bs-theme', theme);
   root.style.colorScheme = theme;
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute('content', theme === 'dark' ? '#12161c' : '#f5f6fa');
+  if (meta) meta.setAttribute('content', theme === 'dark' ? '#0c1222' : '#f4f6fb');
 }
 
 export const useTheme = () => {

@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLayout } from '../contexts/LayoutContext';
 import { usePosSaleGuard } from '../contexts/PosSaleGuardContext';
 import { useTranslation } from 'react-i18next';
+import { useTheme } from '../contexts/ThemeContext';
 import { PERMISSIONS } from '../services';
 
 const Sidebar = () => {
@@ -12,6 +13,8 @@ const Sidebar = () => {
   const { t } = useTranslation();
   const { sidebarCollapsed, mobileMenuOpen, closeMobileMenu } = useLayout();
   const { requestNavigation } = usePosSaleGuard();
+  const { theme, toggleTheme } = useTheme();
+  const appearanceLabel = theme === 'dark' ? 'Dark Mode' : 'Light Mode';
 
   const isActive = (path) => location.pathname === path;
 
@@ -67,6 +70,11 @@ const Sidebar = () => {
             <NavItem to="/platform/roles" icon="bi-shield-lock" label="Roles & Capabilities" />
           )}
         </nav>
+        <button type="button" className="sidebar-appearance" onClick={toggleTheme} aria-label={appearanceLabel}>
+          <i className={`bi ${theme === 'dark' ? 'bi-moon' : 'bi-sun'}`}></i>
+          <span>{appearanceLabel}</span>
+          <span className="sidebar-appearance-switch" aria-hidden="true" />
+        </button>
       </aside>
     );
   }
@@ -74,10 +82,12 @@ const Sidebar = () => {
   return (
     <aside className={`sidebar${sidebarCollapsed ? ' collapsed' : ''}${mobileMenuOpen ? ' mobile-open' : ''}`}>
       <nav className="sidebar-nav">
-        <SidebarSection title={t('sidebarPrimary') || 'Primary'}>
-          {canViewDashboard && <NavItem to="/" icon="bi-grid" label={t('dashboard')} />}
-          {showPos && <NavItem to="/sell" icon="bi-display" label={t('POS Register') || 'POS Register'} />}
-        </SidebarSection>
+        {!isAdmin && (
+          <SidebarSection title={t('sidebarPrimary') || 'Primary'}>
+            {canViewDashboard && <NavItem to="/" icon="bi-grid" label={t('dashboard')} />}
+            {showPos && <NavItem to="/sell" icon="bi-display" label={t('POS Register') || 'POS Register'} />}
+          </SidebarSection>
+        )}
 
         <SidebarSection title={t('sidebarCatalog') || 'Catalog'}>
           {showInventory && (
@@ -116,6 +126,11 @@ const Sidebar = () => {
           {showSettings && <NavItem to="/settings" icon="bi-gear" label={t('settings')} />}
         </SidebarSection>
       </nav>
+      <button type="button" className="sidebar-appearance" onClick={toggleTheme} aria-label={appearanceLabel}>
+        <i className={`bi ${theme === 'dark' ? 'bi-moon' : 'bi-sun'}`}></i>
+        <span>{appearanceLabel}</span>
+        <span className="sidebar-appearance-switch" aria-hidden="true" />
+      </button>
     </aside>
   );
 };
