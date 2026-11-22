@@ -392,6 +392,8 @@ const en = {
   flag: 'Flag',
   allItems: 'All Items',
   allTellers: 'All tellers',
+  allApprovers: 'All approvers',
+  allStatuses: 'All statuses',
   dates: 'Dates',
   sale: 'Sale',
   showingRange: 'Showing {{from}}-{{to}} of {{total}} {{label}}',

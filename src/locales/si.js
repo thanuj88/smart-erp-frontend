@@ -338,6 +338,8 @@ const si = {
   flag: 'ලකුණ',
   allItems: 'සියලු භාණ්ඩ',
   allTellers: 'සියලු අලෙවිකරුවන්',
+  allApprovers: 'සියලු අනුමත කරන්නන්',
+  allStatuses: 'සියලු තත්ව',
   dates: 'දින',
   sale: 'විකුණුම',
   showingRange: '{{from}}-{{to}} / {{total}} {{label}} පෙන්වයි',

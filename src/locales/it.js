@@ -338,6 +338,8 @@ const it = {
   flag: 'Flag',
   allItems: 'Tutti gli articoli',
   allTellers: 'Tutti i cassieri',
+  allApprovers: 'Tutti gli approvatori',
+  allStatuses: 'Tutti gli stati',
   dates: 'Date',
   sale: 'Vendita',
   showingRange: 'Da {{from}} a {{to}} di {{total}} {{label}}',

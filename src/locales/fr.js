@@ -338,6 +338,8 @@ const fr = {
   flag: 'Indicateur',
   allItems: 'Tous les articles',
   allTellers: 'Tous les caissiers',
+  allApprovers: 'Tous les approbateurs',
+  allStatuses: 'Tous les statuts',
   dates: 'Dates',
   sale: 'Vente',
   showingRange: 'Affichage {{from}}-{{to}} sur {{total}} {{label}}',

@@ -338,6 +338,8 @@ const de = {
   flag: 'Kennzeichen',
   allItems: 'Alle Artikel',
   allTellers: 'Alle Kassierer',
+  allApprovers: 'Alle Genehmiger',
+  allStatuses: 'Alle Status',
   dates: 'Daten',
   sale: 'Verkauf',
   showingRange: '{{from}}-{{to}} von {{total}} {{label}}',
