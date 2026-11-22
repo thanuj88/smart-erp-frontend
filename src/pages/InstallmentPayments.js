@@ -15,7 +15,7 @@ import { useTranslation } from 'react-i18next';
 const InstallmentPayments = () => {
   const { t } = useTranslation();
   const { formatMoney, currency, settings } = useCurrency();
-  const { user, hasPermission } = useAuth();
+  const { user, hasPermission, isAdmin, hasRole } = useAuth();
   // Same gate as POST /installment-payments/:id/pay. Accountants can read plans and dues only.
   const canRecordPayment = hasPermission([
     PERMISSIONS.SALES_CREATE,
@@ -23,6 +23,8 @@ const InstallmentPayments = () => {
     PERMISSIONS.SETTINGS_MANAGE,
     PERMISSIONS.PLATFORM_MANAGE,
   ]);
+  // The summed balance is for the books. Tellers and other staff still see each plan.
+  const canSeePaymentTotal = isAdmin || hasRole('ACCOUNTANT');
   const [payments, setPayments] = useState([]);
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -77,6 +79,11 @@ const InstallmentPayments = () => {
       ),
     }));
   }, [payments]);
+
+  const paymentsTotal = useMemo(
+    () => groupedPlans.reduce((sum, group) => sum + (Number(group.remaining) || 0), 0),
+    [groupedPlans]
+  );
 
   const {
     page: plansPage,
@@ -498,6 +505,17 @@ const InstallmentPayments = () => {
 
       {activeTab !== 'plans' && (
         <div className="card table-panel">
+          {canSeePaymentTotal && (
+            <div className="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
+              <h5 className="admin-section-title mb-0">
+                {activeTab === 'overdue' ? t('overduePayments') : t('pendingPayments')}
+              </h5>
+              <div className="text-end">
+                <div className="text-muted small">{t('total')}</div>
+                <div className="fw-semibold text-danger">{formatMoney(paymentsTotal)}</div>
+              </div>
+            </div>
+          )}
           <div className="card-body p-0">
             {groupedPlans.length === 0 ? (
               <p className="text-muted text-center py-5 mb-0">
