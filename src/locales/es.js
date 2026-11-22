@@ -338,6 +338,8 @@ const es = {
   flag: 'Marca',
   allItems: 'Todos los artículos',
   allTellers: 'Todos los cajeros',
+  allApprovers: 'Todos los aprobadores',
+  allStatuses: 'Todos los estados',
   dates: 'Fechas',
   sale: 'Venta',
   showingRange: 'Mostrando {{from}}-{{to}} de {{total}} {{label}}',

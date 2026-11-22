@@ -9,8 +9,251 @@ import { useAuth } from '../contexts/AuthContext';
 import { createInstallmentReceiptPrintJob } from '../utils/receipt';
 import { formatOrderId } from '../utils/orderId';
 import PaginationBar from '../components/PaginationBar';
+import DateRangePicker from '../components/DateRangePicker';
 import { usePagination } from '../hooks/usePagination';
 import { useTranslation } from 'react-i18next';
+
+const localDay = (value) => {
+  if (!value) return '';
+  const text = String(value);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return text;
+  const date = new Date(text);
+  if (Number.isNaN(date.getTime())) return '';
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${date.getFullYear()}-${month}-${day}`;
+};
+
+const matchesOrderQuery = (query, ...parts) => {
+  const needle = String(query || '').replace(/[#\s]/g, '').toLowerCase();
+  if (!needle) return true;
+  const hay = parts
+    .filter((part) => part != null && part !== '')
+    .join(' ')
+    .replace(/[#\s]/g, '')
+    .toLowerCase();
+  return hay.includes(needle);
+};
+
+const matchesText = (query, ...parts) => {
+  const needle = String(query || '').trim().toLowerCase();
+  if (!needle) return true;
+  return parts.some((part) => String(part || '').toLowerCase().includes(needle));
+};
+
+const matchesPhone = (query, value) => {
+  const needle = String(query || '').trim().toLowerCase();
+  if (!needle) return true;
+  const raw = String(value || '').toLowerCase();
+  if (raw.includes(needle)) return true;
+  const digits = needle.replace(/\D/g, '');
+  if (!digits) return false;
+  return raw.replace(/\D/g, '').includes(digits);
+};
+
+const isOverduePayment = (dueDate, status) => {
+  if (status === 'paid') return false;
+  return new Date(dueDate) < new Date();
+};
+
+const InstallmentsTable = ({
+  installments,
+  customerName,
+  customerPhone,
+  canRecordPayment,
+  onRecord,
+  formatMoney,
+  t,
+}) => {
+  const [filterNumber, setFilterNumber] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
+  const [filterStartDate, setFilterStartDate] = useState('');
+  const [filterEndDate, setFilterEndDate] = useState('');
+
+  const statusKey = (payment) =>
+    (isOverduePayment(payment.due_date, payment.status) ? 'overdue' : payment.status);
+
+  const statusOptions = useMemo(() => {
+    const names = [...new Set((installments || []).map(statusKey).filter(Boolean))];
+    return names.sort((a, b) => String(a).localeCompare(String(b)));
+  }, [installments]);
+
+  const filtered = useMemo(() => {
+    return (installments || []).filter((payment) => {
+      if (filterNumber) {
+        const needle = filterNumber.replace(/[#\s]/g, '').toLowerCase();
+        const hay = String(payment.payment_number ?? '').replace(/[#\s]/g, '').toLowerCase();
+        if (!hay.includes(needle)) return false;
+      }
+      if (filterStatus && statusKey(payment) !== filterStatus) return false;
+      if (filterStartDate || filterEndDate) {
+        const day = localDay(payment.due_date);
+        if (filterStartDate && day < filterStartDate) return false;
+        if (filterEndDate && day > filterEndDate) return false;
+      }
+      return true;
+    });
+  }, [installments, filterNumber, filterStatus, filterStartDate, filterEndDate]);
+
+  const hasActiveFilters = Boolean(filterNumber || filterStatus || filterStartDate || filterEndDate);
+  const colSpan = canRecordPayment ? 7 : 6;
+
+  const badgeClass = (payment) => {
+    if (isOverduePayment(payment.due_date, payment.status)) return 'bg-danger';
+    if (payment.status === 'paid') return 'bg-success';
+    return 'bg-warning text-dark';
+  };
+
+  const label = (payment) => {
+    if (isOverduePayment(payment.due_date, payment.status)) return t('overdue');
+    return t(`status_${payment.status}`, { defaultValue: payment.status });
+  };
+
+  return (
+    <table className="table table-hover admin-table mb-0">
+      <thead className="table-light">
+        <tr>
+          <th>{t('paymentNumber')}</th>
+          <th>{t('dueDate')}</th>
+          <th>{t('amountDue')}</th>
+          <th>{t('amountPaid')}</th>
+          <th>{t('remaining')}</th>
+          <th>{t('status')}</th>
+          {canRecordPayment && <th>{t('actions')}</th>}
+        </tr>
+        <tr className="report-filter-row">
+          <th>
+            <input
+              type="text"
+              className="form-control form-control-sm"
+              placeholder={t('paymentNumber')}
+              value={filterNumber}
+              onChange={(e) => setFilterNumber(e.target.value)}
+              aria-label={t('paymentNumber')}
+            />
+          </th>
+          <th>
+            <DateRangePicker
+              startDate={filterStartDate}
+              endDate={filterEndDate}
+              placeholder={t('dates')}
+              onChange={({ startDate, endDate }) => {
+                setFilterStartDate(startDate);
+                setFilterEndDate(endDate);
+              }}
+            />
+          </th>
+          <th />
+          <th />
+          <th />
+          <th>
+            <div className="report-teller-filter">
+              <select
+                className="form-select form-select-sm"
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                aria-label={t('status')}
+              >
+                <option value="">{t('allStatuses')}</option>
+                {statusOptions.map((status) => (
+                  <option key={status} value={status}>
+                    {t(`status_${status}`, { defaultValue: status })}
+                  </option>
+                ))}
+              </select>
+              {!canRecordPayment && (
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary btn-sm"
+                  onClick={() => {
+                    setFilterNumber('');
+                    setFilterStatus('');
+                    setFilterStartDate('');
+                    setFilterEndDate('');
+                  }}
+                  disabled={!hasActiveFilters}
+                >
+                  {t('clear')}
+                </button>
+              )}
+            </div>
+          </th>
+          {canRecordPayment && (
+            <th>
+              <button
+                type="button"
+                className="btn btn-outline-secondary btn-sm"
+                onClick={() => {
+                  setFilterNumber('');
+                  setFilterStatus('');
+                  setFilterStartDate('');
+                  setFilterEndDate('');
+                }}
+                disabled={!hasActiveFilters}
+              >
+                {t('clear')}
+              </button>
+            </th>
+          )}
+        </tr>
+      </thead>
+      <tbody>
+        {filtered.length === 0 ? (
+          <tr>
+            <td colSpan={colSpan} className="text-muted text-center py-3">
+              {hasActiveFilters ? t('tryAdjustFilters') : t('noInstallmentsFound')}
+            </td>
+          </tr>
+        ) : (
+          filtered.map((payment) => (
+            <tr
+              key={payment.id}
+              className={isOverduePayment(payment.due_date, payment.status) ? 'table-danger' : ''}
+            >
+              <td className="fw-semibold">#{payment.payment_number}</td>
+              <td>
+                {new Date(payment.due_date).toLocaleDateString()}
+                {isOverduePayment(payment.due_date, payment.status) && (
+                  <span className="badge bg-danger ms-2">{t('overdue')}</span>
+                )}
+              </td>
+              <td>{formatMoney(payment.amount_due)}</td>
+              <td>{formatMoney(payment.amount_paid)}</td>
+              <td className="text-danger fw-semibold">
+                {formatMoney((payment.amount_due || 0) - (payment.amount_paid || 0))}
+              </td>
+              <td>
+                <span className={`badge text-capitalize ${badgeClass(payment)}`}>
+                  {label(payment)}
+                </span>
+              </td>
+              {canRecordPayment && (
+                <td>
+                  {payment.status !== 'paid' && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onRecord({
+                          ...payment,
+                          customer_name: customerName,
+                          customer_phone: customerPhone,
+                        });
+                      }}
+                      className="btn btn-primary btn-sm"
+                    >
+                      {t('recordPayment')}
+                    </button>
+                  )}
+                </td>
+              )}
+            </tr>
+          ))
+        )}
+      </tbody>
+    </table>
+  );
+};
 
 const InstallmentPayments = () => {
   const { t } = useTranslation();
@@ -40,6 +283,13 @@ const InstallmentPayments = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [printJob, setPrintJob] = useState(null);
+  const [planOrder, setPlanOrder] = useState('');
+  const [planCustomer, setPlanCustomer] = useState('');
+  const [planPhone, setPlanPhone] = useState('');
+  const [planStatus, setPlanStatus] = useState('');
+  const [groupOrder, setGroupOrder] = useState('');
+  const [groupCustomer, setGroupCustomer] = useState('');
+  const [groupPhone, setGroupPhone] = useState('');
 
   useEffect(() => {
     setExpandedPlanId(null);
@@ -80,10 +330,59 @@ const InstallmentPayments = () => {
     }));
   }, [payments]);
 
+  const planStatusOptions = useMemo(() => {
+    const names = [...new Set((plans || []).map((plan) => plan.status).filter(Boolean))];
+    return names.sort((a, b) => String(a).localeCompare(String(b)));
+  }, [plans]);
+
+  const filteredPlans = useMemo(() => {
+    return (plans || []).filter((plan) => {
+      if (!matchesOrderQuery(planOrder, plan.order_number, plan.sale_id, plan.id, formatOrderId(plan.order_number, plan.sale_id, plan.id))) {
+        return false;
+      }
+      if (!matchesText(planCustomer, plan.customer_name)) return false;
+      if (!matchesPhone(planPhone, plan.customer_phone)) return false;
+      if (planStatus && plan.status !== planStatus) return false;
+      return true;
+    });
+  }, [plans, planOrder, planCustomer, planPhone, planStatus]);
+
+  const filteredGroups = useMemo(() => {
+    return groupedPlans.filter((group) => {
+      if (!matchesOrderQuery(groupOrder, group.order_number, group.sale_id, group.planId, formatOrderId(group.order_number, group.sale_id, group.planId))) {
+        return false;
+      }
+      if (!matchesText(groupCustomer, group.customer_name)) return false;
+      if (!matchesPhone(groupPhone, group.customer_phone)) return false;
+      return true;
+    });
+  }, [groupedPlans, groupOrder, groupCustomer, groupPhone]);
+
   const paymentsTotal = useMemo(
-    () => groupedPlans.reduce((sum, group) => sum + (Number(group.remaining) || 0), 0),
-    [groupedPlans]
+    () => filteredGroups.reduce((sum, group) => sum + (Number(group.remaining) || 0), 0),
+    [filteredGroups]
   );
+
+  const filteredPaymentCount = useMemo(
+    () => filteredGroups.reduce((sum, group) => sum + group.payments.length, 0),
+    [filteredGroups]
+  );
+
+  const plansFiltersActive = Boolean(planOrder || planCustomer || planPhone || planStatus);
+  const groupFiltersActive = Boolean(groupOrder || groupCustomer || groupPhone);
+
+  const clearPlanFilters = () => {
+    setPlanOrder('');
+    setPlanCustomer('');
+    setPlanPhone('');
+    setPlanStatus('');
+  };
+
+  const clearGroupFilters = () => {
+    setGroupOrder('');
+    setGroupCustomer('');
+    setGroupPhone('');
+  };
 
   const {
     page: plansPage,
@@ -92,7 +391,9 @@ const InstallmentPayments = () => {
     total: plansTotal,
     totalPages: plansTotalPages,
     pageSize: plansPageSize,
-  } = usePagination(plans, { resetKey: `${activeTab}|${plansTab}` });
+  } = usePagination(filteredPlans, {
+    resetKey: `${activeTab}|${plansTab}|${planOrder}|${planCustomer}|${planPhone}|${planStatus}`,
+  });
 
   const {
     page: groupsPage,
@@ -101,7 +402,9 @@ const InstallmentPayments = () => {
     total: groupsTotal,
     totalPages: groupsTotalPages,
     pageSize: groupsPageSize,
-  } = usePagination(groupedPlans, { resetKey: activeTab });
+  } = usePagination(filteredGroups, {
+    resetKey: `${activeTab}|${groupOrder}|${groupCustomer}|${groupPhone}`,
+  });
 
   const loadPlans = async () => {
     setLoading(true);
@@ -214,11 +517,6 @@ const InstallmentPayments = () => {
     }
   };
 
-  const isOverdue = (dueDate, status) => {
-    if (status === 'paid') return false;
-    return new Date(dueDate) < new Date();
-  };
-
   const getStatusBadgeClass = (status) => {
     switch (status) {
       case 'active':
@@ -235,79 +533,6 @@ const InstallmentPayments = () => {
         return 'bg-secondary';
     }
   };
-
-  const getPaymentBadge = (payment) => {
-    if (isOverdue(payment.due_date, payment.status)) return 'bg-danger';
-    if (payment.status === 'paid') return 'bg-success';
-    return 'bg-warning text-dark';
-  };
-
-  const getPaymentLabel = (payment) => {
-    if (isOverdue(payment.due_date, payment.status)) return t('overdue');
-    return t(`status_${payment.status}`, { defaultValue: payment.status });
-  };
-
-  const renderInstallmentsTable = (installments, customerName, customerPhone) => (
-    <table className="table table-hover admin-table mb-0">
-      <thead className="table-light">
-        <tr>
-          <th>{t('paymentNumber')}</th>
-          <th>{t('dueDate')}</th>
-          <th>{t('amountDue')}</th>
-          <th>{t('amountPaid')}</th>
-          <th>{t('remaining')}</th>
-          <th>{t('status')}</th>
-          {canRecordPayment && <th>{t('actions')}</th>}
-        </tr>
-      </thead>
-      <tbody>
-        {installments.map((payment) => (
-          <tr
-            key={payment.id}
-            className={isOverdue(payment.due_date, payment.status) ? 'table-danger' : ''}
-          >
-            <td className="fw-semibold">#{payment.payment_number}</td>
-            <td>
-              {new Date(payment.due_date).toLocaleDateString()}
-              {isOverdue(payment.due_date, payment.status) && (
-                <span className="badge bg-danger ms-2">{t('overdue')}</span>
-              )}
-            </td>
-            <td>{formatMoney(payment.amount_due)}</td>
-            <td>{formatMoney(payment.amount_paid)}</td>
-            <td className="text-danger fw-semibold">
-              {formatMoney((payment.amount_due || 0) - (payment.amount_paid || 0))}
-            </td>
-            <td>
-              <span className={`badge text-capitalize ${getPaymentBadge(payment)}`}>
-                {getPaymentLabel(payment)}
-              </span>
-            </td>
-            {canRecordPayment && (
-              <td>
-                {payment.status !== 'paid' && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      openPaymentModal({
-                        ...payment,
-                        customer_name: customerName,
-                        customer_phone: customerPhone,
-                      });
-                    }}
-                    className="btn btn-primary btn-sm"
-                  >
-                    {t('recordPayment')}
-                  </button>
-                )}
-              </td>
-            )}
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  );
 
   const isInitialLoading =
     loading &&
@@ -392,7 +617,7 @@ const InstallmentPayments = () => {
             <div className="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
               <div className="d-flex align-items-baseline gap-2">
                 <h5 className="admin-section-title mb-0">{t('installmentPlans')}</h5>
-                <span className="text-muted small">{plans.length}</span>
+                <span className="text-muted small">{filteredPlans.length}</span>
               </div>
             </div>
             <div className="card-body p-0">
@@ -415,9 +640,81 @@ const InstallmentPayments = () => {
                         <th className="border-0 fw-semibold">{t('monthlyPayment')}</th>
                         <th className="border-0 fw-semibold">{t('status')}</th>
                       </tr>
+                      <tr className="report-filter-row">
+                        <th />
+                        <th>
+                          <input
+                            id="planFilterOrder"
+                            type="text"
+                            className="form-control form-control-sm"
+                            placeholder={t('orderId')}
+                            value={planOrder}
+                            onChange={(e) => setPlanOrder(e.target.value)}
+                            aria-label={t('orderId')}
+                          />
+                        </th>
+                        <th>
+                          <input
+                            id="planFilterCustomer"
+                            type="text"
+                            className="form-control form-control-sm"
+                            placeholder={t('customer')}
+                            value={planCustomer}
+                            onChange={(e) => setPlanCustomer(e.target.value)}
+                            aria-label={t('customer')}
+                          />
+                        </th>
+                        <th>
+                          <input
+                            id="planFilterPhone"
+                            type="text"
+                            className="form-control form-control-sm"
+                            placeholder={t('phone')}
+                            value={planPhone}
+                            onChange={(e) => setPlanPhone(e.target.value)}
+                            aria-label={t('phone')}
+                          />
+                        </th>
+                        <th />
+                        <th />
+                        <th />
+                        <th />
+                        <th>
+                          <div className="report-teller-filter">
+                            <select
+                              id="planFilterStatus"
+                              className="form-select form-select-sm"
+                              value={planStatus}
+                              onChange={(e) => setPlanStatus(e.target.value)}
+                              aria-label={t('status')}
+                            >
+                              <option value="">{t('allStatuses')}</option>
+                              {planStatusOptions.map((status) => (
+                                <option key={status} value={status}>
+                                  {t(`status_${status}`, { defaultValue: status })}
+                                </option>
+                              ))}
+                            </select>
+                            <button
+                              type="button"
+                              className="btn btn-outline-secondary btn-sm"
+                              onClick={clearPlanFilters}
+                              disabled={!plansFiltersActive}
+                            >
+                              {t('clear')}
+                            </button>
+                          </div>
+                        </th>
+                      </tr>
                     </thead>
                     <tbody>
-                      {pagedPlans.map((plan) => {
+                      {pagedPlans.length === 0 ? (
+                        <tr>
+                          <td colSpan={9} className="text-center text-muted py-5">
+                            {t('tryAdjustFilters')}
+                          </td>
+                        </tr>
+                      ) : pagedPlans.map((plan) => {
                         const isExpanded = expandedPlanId === plan.id;
                         const details = planDetails[plan.id];
                         const installments = details?.payments || [];
@@ -473,11 +770,15 @@ const InstallmentPayments = () => {
                                     ) : installments.length === 0 ? (
                                       <p className="text-muted small mb-0 py-2">{t('noInstallmentsFound')}</p>
                                     ) : (
-                                      renderInstallmentsTable(
-                                        installments,
-                                        plan.customer_name || details?.customer_name,
-                                        plan.customer_phone || details?.customer_phone
-                                      )
+                                      <InstallmentsTable
+                                        installments={installments}
+                                        customerName={plan.customer_name || details?.customer_name}
+                                        customerPhone={plan.customer_phone || details?.customer_phone}
+                                        canRecordPayment={canRecordPayment}
+                                        onRecord={openPaymentModal}
+                                        formatMoney={formatMoney}
+                                        t={t}
+                                      />
                                     )}
                                   </div>
                                 </td>
@@ -524,10 +825,10 @@ const InstallmentPayments = () => {
               </p>
             ) : (
               <>
-                {activeTab === 'overdue' && (
+                {activeTab === 'overdue' && filteredGroups.length > 0 && (
                   <div className="alert alert-danger m-3 mb-0">
                     <i className="bi bi-exclamation-triangle-fill me-2"></i>
-                    {t('overduePaymentsAlert', { count: payments.length, plans: groupedPlans.length })}
+                    {t('overduePaymentsAlert', { count: filteredPaymentCount, plans: filteredGroups.length })}
                   </div>
                 )}
                 <div className="table-responsive">
@@ -543,9 +844,62 @@ const InstallmentPayments = () => {
                         </th>
                         <th className="border-0 fw-semibold">{t('remaining')}</th>
                       </tr>
+                      <tr className="report-filter-row">
+                        <th />
+                        <th>
+                          <input
+                            id="groupFilterOrder"
+                            type="text"
+                            className="form-control form-control-sm"
+                            placeholder={t('orderId')}
+                            value={groupOrder}
+                            onChange={(e) => setGroupOrder(e.target.value)}
+                            aria-label={t('orderId')}
+                          />
+                        </th>
+                        <th>
+                          <input
+                            id="groupFilterCustomer"
+                            type="text"
+                            className="form-control form-control-sm"
+                            placeholder={t('customer')}
+                            value={groupCustomer}
+                            onChange={(e) => setGroupCustomer(e.target.value)}
+                            aria-label={t('customer')}
+                          />
+                        </th>
+                        <th>
+                          <input
+                            id="groupFilterPhone"
+                            type="text"
+                            className="form-control form-control-sm"
+                            placeholder={t('phone')}
+                            value={groupPhone}
+                            onChange={(e) => setGroupPhone(e.target.value)}
+                            aria-label={t('phone')}
+                          />
+                        </th>
+                        <th />
+                        <th>
+                          <button
+                            type="button"
+                            className="btn btn-outline-secondary btn-sm"
+                            onClick={clearGroupFilters}
+                            disabled={!groupFiltersActive}
+                          >
+                            {t('clear')}
+                          </button>
+                        </th>
+                      </tr>
                     </thead>
                     <tbody>
-                      {pagedGroups.map((group) => {
+                      {pagedGroups.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="text-center text-muted py-5">
+                            {t('tryAdjustFilters')}
+                          </td>
+                        </tr>
+                      ) : pagedGroups.map((group) => {
                         const isExpanded = expandedPlanId === group.planId;
                         const details = planDetails[group.planId];
                         const installments = details?.payments || group.payments;
@@ -598,11 +952,15 @@ const InstallmentPayments = () => {
                                     ) : installments.length === 0 ? (
                                       <p className="text-muted small mb-0 py-2">{t('noInstallmentsFound')}</p>
                                     ) : (
-                                      renderInstallmentsTable(
-                                        installments,
-                                        group.customer_name || details?.customer_name,
-                                        group.customer_phone || details?.customer_phone
-                                      )
+                                      <InstallmentsTable
+                                        installments={installments}
+                                        customerName={group.customer_name || details?.customer_name}
+                                        customerPhone={group.customer_phone || details?.customer_phone}
+                                        canRecordPayment={canRecordPayment}
+                                        onRecord={openPaymentModal}
+                                        formatMoney={formatMoney}
+                                        t={t}
+                                      />
                                     )}
                                   </div>
                                 </td>
