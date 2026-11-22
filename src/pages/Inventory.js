@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { itemService, categoryService } from '../services';
+import { itemService, categoryService, PERMISSIONS } from '../services';
+import { useAuth } from '../contexts/AuthContext';
 import PaginationBar from '../components/PaginationBar';
 import { usePagination } from '../hooks/usePagination';
 import ProductThumbnail from '../components/ProductThumbnail';
@@ -13,6 +14,14 @@ import { useTranslation } from 'react-i18next';
 
 const Inventory = () => {
   const { t } = useTranslation();
+  const { hasPermission } = useAuth();
+  // Same gate as item create, update, and delete. View-only roles such as accountant stay read-only.
+  const canManage = hasPermission([
+    PERMISSIONS.INVENTORY_MANAGE,
+    PERMISSIONS.USERS_MANAGE,
+    PERMISSIONS.SETTINGS_MANAGE,
+    PERMISSIONS.PLATFORM_MANAGE,
+  ]);
   const { formatMoney, symbol, settings } = useCurrency();
   const { confirm } = useConfirm();
   const [items, setItems] = useState([]);
@@ -321,9 +330,11 @@ const Inventory = () => {
                   style={{ minWidth: 250 }}
                 />
               </div>
-              <button onClick={openAddModal} className="btn btn-primary">
-                <i className="bi bi-plus-circle me-2"></i>{t('addProduct')}
-              </button>
+              {canManage && (
+                <button onClick={openAddModal} className="btn btn-primary">
+                  <i className="bi bi-plus-circle me-2"></i>{t('addProduct')}
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -364,7 +375,7 @@ const Inventory = () => {
                     <th className="border-0 fw-semibold">{t('sellingPrice')}</th>
                     <th className="border-0 fw-semibold">{t('stock')}</th>
                     <th className="border-0 fw-semibold">{t('Returns')}</th>
-                    <th className="border-0 fw-semibold">{t('actions')}</th>
+                    {canManage && <th className="border-0 fw-semibold">{t('actions')}</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -402,22 +413,26 @@ const Inventory = () => {
                           <span className="text-muted">0</span>
                         )}
                       </td>
-                      <td>
-                        <div className="btn-group">
-                          <button
-                            onClick={() => openEditModal(item)}
-                            className="btn btn-outline-primary btn-sm"
-                          >
-                            <i className="bi bi-pencil"></i>
-                          </button>
-                          <button
-                            onClick={() => handleDelete(item.id)}
-                            className="btn btn-outline-danger btn-sm"
-                          >
-                            <i className="bi bi-trash"></i>
-                          </button>
-                        </div>
-                      </td>
+                      {canManage && (
+                        <td>
+                          <div className="btn-group">
+                            <button
+                              onClick={() => openEditModal(item)}
+                              className="btn btn-outline-primary btn-sm"
+                              aria-label={t('editProduct')}
+                            >
+                              <i className="bi bi-pencil"></i>
+                            </button>
+                            <button
+                              onClick={() => handleDelete(item.id)}
+                              className="btn btn-outline-danger btn-sm"
+                              aria-label={t('deleteItem')}
+                            >
+                              <i className="bi bi-trash"></i>
+                            </button>
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>

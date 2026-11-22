@@ -3,7 +3,7 @@ import PageHeader from '../components/PageHeader';
 import AdminAlerts from '../components/AdminAlerts';
 import AdminLoading from '../components/AdminLoading';
 import ReceiptPrintLayer from '../components/ReceiptPrintLayer';
-import { installmentPaymentService, installmentPlanService } from '../services';
+import { installmentPaymentService, installmentPlanService, PERMISSIONS } from '../services';
 import { useCurrency } from '../contexts/TenantSettingsContext';
 import { useAuth } from '../contexts/AuthContext';
 import { createInstallmentReceiptPrintJob } from '../utils/receipt';
@@ -15,7 +15,14 @@ import { useTranslation } from 'react-i18next';
 const InstallmentPayments = () => {
   const { t } = useTranslation();
   const { formatMoney, currency, settings } = useCurrency();
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
+  // Same gate as POST /installment-payments/:id/pay. Accountants can read plans and dues only.
+  const canRecordPayment = hasPermission([
+    PERMISSIONS.SALES_CREATE,
+    PERMISSIONS.USERS_MANAGE,
+    PERMISSIONS.SETTINGS_MANAGE,
+    PERMISSIONS.PLATFORM_MANAGE,
+  ]);
   const [payments, setPayments] = useState([]);
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -243,7 +250,7 @@ const InstallmentPayments = () => {
           <th>{t('amountPaid')}</th>
           <th>{t('remaining')}</th>
           <th>{t('status')}</th>
-          <th>{t('actions')}</th>
+          {canRecordPayment && <th>{t('actions')}</th>}
         </tr>
       </thead>
       <tbody>
@@ -269,24 +276,26 @@ const InstallmentPayments = () => {
                 {getPaymentLabel(payment)}
               </span>
             </td>
-            <td>
-              {payment.status !== 'paid' && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    openPaymentModal({
-                      ...payment,
-                      customer_name: customerName,
-                      customer_phone: customerPhone,
-                    });
-                  }}
-                  className="btn btn-primary btn-sm"
-                >
-                  {t('recordPayment')}
-                </button>
-              )}
-            </td>
+            {canRecordPayment && (
+              <td>
+                {payment.status !== 'paid' && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openPaymentModal({
+                        ...payment,
+                        customer_name: customerName,
+                        customer_phone: customerPhone,
+                      });
+                    }}
+                    className="btn btn-primary btn-sm"
+                  >
+                    {t('recordPayment')}
+                  </button>
+                )}
+              </td>
+            )}
           </tr>
         ))}
       </tbody>
