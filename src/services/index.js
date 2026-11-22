@@ -489,6 +489,15 @@ export const installmentPlanService = {
   },
 };
 
+export const activityLogService = {
+  list: async ({ from, to, action, email, cursor, limit } = {}) => {
+    const response = await api.get('/activity-logs', {
+      params: { from, to, action, email, cursor, limit },
+    });
+    return response.data;
+  },
+};
+
 export const installmentPaymentService = {
   getPending: async () => {
     const response = await api.get('/installment-payments/pending');
