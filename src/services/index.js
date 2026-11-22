@@ -70,6 +70,11 @@ export const authService = {
     return response.data;
   },
 
+  setPin: async (pin) => {
+    const response = await api.post('/auth/pin', { pin });
+    return response.data;
+  },
+
   changePassword: async (currentPassword, newPassword) => {
     const response = await api.post('/auth/change-password', {
       currentPassword,

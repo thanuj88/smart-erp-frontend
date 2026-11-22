@@ -96,9 +96,9 @@ function SellItems() {
 
   const [mode, setMode] = useState('cash');
   const [categories, setCategories] = useState([]);
-  const [items, setItems] = useState([]);
   const [allItems, setAllItems] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
+  const [browseAll, setBrowseAll] = useState(false);
   const [bill, setBill] = useState([]);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
@@ -297,6 +297,9 @@ function SellItems() {
     });
   };
 
+  const [shippingEnabled, setShippingEnabled] = useState(false);
+  const [discountEnabled, setDiscountEnabled] = useState(false);
+
   const resetBillCharges = useCallback(() => {
     setShipping('');
     setShippingPercent('');
@@ -304,6 +307,8 @@ function SellItems() {
     setDiscountPercent('');
     setDiscountReason('');
     setManagerPin('');
+    setShippingEnabled(false);
+    setDiscountEnabled(false);
   }, []);
 
   const voidBillNow = useCallback(() => {
@@ -364,11 +369,17 @@ function SellItems() {
     if (data.memberPhone != null) setMemberPhone(data.memberPhone);
     if (data.memberCustomer) setMemberCustomer(data.memberCustomer);
     else setMemberCustomer(null);
+    const heldNumber = (value) => {
+      const n = parseFloat(value);
+      return Number.isFinite(n) && n > 0;
+    };
     setShipping(data.shipping != null ? String(data.shipping) : '');
     setShippingPercent(data.shippingPercent != null ? String(data.shippingPercent) : '');
     setDiscount(data.discount != null ? String(data.discount) : '');
     setDiscountPercent(data.discountPercent != null ? String(data.discountPercent) : '');
     setDiscountReason(data.discountReason != null ? String(data.discountReason) : '');
+    setShippingEnabled(heldNumber(data.shipping) || heldNumber(data.shippingPercent));
+    setDiscountEnabled(heldNumber(data.discount) || heldNumber(data.discountPercent));
     setManagerPin('');
     if (data.orderRef) setOrderRef(data.orderRef);
     if (data.orderStartedAt) {
@@ -447,7 +458,6 @@ function SellItems() {
         ]);
         setCategories(categoriesData);
         setAllItems(itemsData);
-        setItems(itemsData);
         setActivePromotions(promotionsData || []);
 
         const rates = {};
@@ -498,34 +508,39 @@ function SellItems() {
     }
   }, [installmentPeriodOptions, installmentMonths]);
 
-  const handleCategorySelect = async (category) => {
-    if (!category) {
-      setSelectedCategory(null);
-      setItems(allItems);
-      return;
-    }
+  const handleCategorySelect = (category) => {
+    setBrowseAll(false);
     setSelectedCategory(category);
-    try {
-      const categoryItems = await itemService.getByCategory(category.id);
-      setItems(categoryItems);
-    } catch {
-      setItems(allItems.filter((item) => item.category_id === category.id));
-    }
   };
 
+  const categoryCounts = useMemo(() => {
+    const counts = new Map();
+    allItems.forEach((item) => {
+      const key = item.category_id == null ? 'other' : String(item.category_id);
+      counts.set(key, (counts.get(key) || 0) + 1);
+    });
+    return counts;
+  }, [allItems]);
+
   const displayItems = useMemo(() => {
-    if (mode === 'payment') return [];
-    const source =
-      mode === 'cash'
-        ? selectedCategory
-          ? allItems.filter((i) => i.category_id === selectedCategory.id)
-          : allItems
-        : items;
-    if (!itemSearch.trim()) return source;
-    return source.filter((item) =>
-      item.name.toLowerCase().includes(itemSearch.toLowerCase())
-    );
-  }, [mode, allItems, items, selectedCategory, itemSearch]);
+    if (mode === 'payment' || mode === 'return') return [];
+    const term = itemSearch.trim().toLowerCase();
+    let source = allItems;
+    if (selectedCategory) {
+      source = selectedCategory.id === 'other'
+        ? source.filter((item) => item.category_id == null || item.category_id === '')
+        : source.filter((item) => String(item.category_id) === String(selectedCategory.id));
+    }
+    if (!term && !selectedCategory && !browseAll) return [];
+    if (!term) return source;
+    return source.filter((item) => {
+      const name = String(item.name || '').toLowerCase();
+      const barcode = String(item.barcode || '').toLowerCase();
+      return name.includes(term) || barcode.includes(term);
+    });
+  }, [mode, allItems, selectedCategory, itemSearch, browseAll]);
+
+  const showCategoryHome = (mode === 'cash' || mode === 'installment') && !selectedCategory && !itemSearch.trim() && !browseAll;
 
   const filteredPlans = installmentPlans.filter((plan) => planMatchesSearch(plan, planSearch));
 
@@ -642,15 +657,15 @@ function SellItems() {
 
   const calculateCharges = () => {
     const itemsTotal = calculateItemsTotal();
-    const shippingPct = parseBillPercent(shippingPercent);
-    const discountPct = parseBillPercent(discountPercent);
-    const shippingAmount = roundMoney(
-      parseBillAmount(shipping) + itemsTotal * (shippingPct / 100)
-    );
+    const shippingPct = shippingEnabled ? parseBillPercent(shippingPercent) : 0;
+    const discountPct = discountEnabled ? parseBillPercent(discountPercent) : 0;
+    const shippingAmount = shippingEnabled
+      ? roundMoney(parseBillAmount(shipping) + itemsTotal * (shippingPct / 100))
+      : 0;
     const maxDiscount = itemsTotal + shippingAmount;
-    const discountAmount = roundMoney(
-      Math.min(parseBillAmount(discount) + itemsTotal * (discountPct / 100), maxDiscount)
-    );
+    const discountAmount = discountEnabled
+      ? roundMoney(Math.min(parseBillAmount(discount) + itemsTotal * (discountPct / 100), maxDiscount))
+      : 0;
     const grandTotal = roundMoney(Math.max(0, itemsTotal + shippingAmount - discountAmount));
     return { itemsTotal, shippingAmount, shippingPct, discountAmount, discountPct, grandTotal };
   };
@@ -660,7 +675,7 @@ function SellItems() {
     limits: settings?.discountLimits,
     itemsTotal: calculateCharges().itemsTotal,
     discountAmount: calculateCharges().discountAmount,
-    discountPercent,
+    discountPercent: discountEnabled ? discountPercent : '',
   });
 
   const discountApprovalFields = () => (
@@ -775,11 +790,33 @@ function SellItems() {
   };
 
   const checkoutCharges = () => ({
-    shipping: parseBillAmount(shipping) || undefined,
-    shippingPercent: parseBillPercent(shippingPercent) || undefined,
-    discount: parseBillAmount(discount) || undefined,
-    discountPercent: parseBillPercent(discountPercent) || undefined,
+    shipping: shippingEnabled ? parseBillAmount(shipping) || undefined : undefined,
+    shippingPercent: shippingEnabled ? parseBillPercent(shippingPercent) || undefined : undefined,
+    discount: discountEnabled ? parseBillAmount(discount) || undefined : undefined,
+    discountPercent: discountEnabled ? parseBillPercent(discountPercent) || undefined : undefined,
   });
+
+  const toggleShipping = () => {
+    setShippingEnabled((on) => {
+      if (on) {
+        setShipping('');
+        setShippingPercent('');
+      }
+      return !on;
+    });
+  };
+
+  const toggleDiscount = () => {
+    setDiscountEnabled((on) => {
+      if (on) {
+        setDiscount('');
+        setDiscountPercent('');
+        setDiscountReason('');
+        setManagerPin('');
+      }
+      return !on;
+    });
+  };
 
   const handleCashSaleCheckout = async () => {
     if (bill.length === 0) {
@@ -1673,11 +1710,6 @@ function SellItems() {
             <i className="bi bi-clock"></i>
             {formatTimer(elapsed)}
           </span>
-          {mode !== 'payment' && bill.length > 0 && (
-            <button type="button" className="pos-order-clear" onClick={clearBill} title={t('posClearOrder')}>
-              <i className="bi bi-trash"></i>
-            </button>
-          )}
         </div>
       </div>
 
@@ -1739,7 +1771,7 @@ function SellItems() {
                 <div key={item.id} className="pos-order-item">
                   <div className="pos-order-item-info">
                     <span className="pos-order-item-thumb">
-                      <ProductThumbnail item={item} categories={categories} size={22} />
+                      <ProductThumbnail item={item} categories={categories} size={14} />
                     </span>
                     <span className="pos-order-item-name">{item.name}</span>
                     <button
@@ -1764,6 +1796,27 @@ function SellItems() {
           </div>
 
           <div className="pos-summary">
+            <div className="pos-adjust-toggles">
+              <button
+                type="button"
+                className={`pos-adjust-toggle${shippingEnabled ? ' active' : ''}`}
+                aria-pressed={shippingEnabled}
+                onClick={toggleShipping}
+              >
+                <i className={`bi ${shippingEnabled ? 'bi-check2' : 'bi-plus-lg'}`}></i>
+                {t('posShipping')}
+              </button>
+              <button
+                type="button"
+                className={`pos-adjust-toggle discount${discountEnabled ? ' active' : ''}`}
+                aria-pressed={discountEnabled}
+                onClick={toggleDiscount}
+              >
+                <i className={`bi ${discountEnabled ? 'bi-check2' : 'bi-plus-lg'}`}></i>
+                {t('Discount')}
+              </button>
+            </div>
+            {shippingEnabled && (
             <div className="pos-summary-row">
               <span>{t('posShipping')}</span>
               <div className="pos-summary-fields">
@@ -1796,6 +1849,8 @@ function SellItems() {
                 </div>
               </div>
             </div>
+            )}
+            {discountEnabled && (
             <div className="pos-summary-row discount">
               <span>{t('Discount')}</span>
               <div className="pos-summary-fields">
@@ -1828,10 +1883,13 @@ function SellItems() {
                 </div>
               </div>
             </div>
-            <p className="small text-muted mb-0 px-1">
+            )}
+            {discountEnabled && (
+            <p className="pos-discount-note">
               Maximum discount is 5%{discountGate.capAmount > 0 ? ` (${formatMoney(discountGate.capAmount)})` : ''}.
               {discountGate.limit < 5 ? ` You can discount up to ${discountGate.limit}% without a manager.` : ''}
             </p>
+            )}
             {discountGate.overCeiling ? (
               <p className="small text-danger mb-0 px-1">Discount cannot exceed 5% of the bill.</p>
             ) : null}
@@ -2244,8 +2302,11 @@ function SellItems() {
           <aside className="pos-categories">
             <button
               type="button"
-              className={`pos-cat-item${!selectedCategory ? ' active' : ''}`}
-              onClick={() => handleCategorySelect(null)}
+              className={`pos-cat-item${browseAll && !selectedCategory ? ' active' : ''}`}
+              onClick={() => {
+                setBrowseAll(true);
+                setSelectedCategory(null);
+              }}
             >
               <i className="bi bi-grid"></i>
               {t('All')}
@@ -2266,6 +2327,12 @@ function SellItems() {
           <section className="pos-products">
             <div className="pos-products-header">
               <div className="pos-products-toolbar">
+                {selectedCategory ? (
+                  <button type="button" className="pos-cat-back" onClick={() => handleCategorySelect(null)}>
+                    <i className="bi bi-arrow-left"></i>
+                    {selectedCategory.name}
+                  </button>
+                ) : null}
                 <div className="pos-search-wrap">
                   <i className="bi bi-search"></i>
                   <input
@@ -2279,13 +2346,38 @@ function SellItems() {
             </div>
 
             <div className="pos-product-grid-wrap">
+              {showCategoryHome ? (
+                <div className="pos-category-grid">
+                  {categories
+                    .filter((cat) => (categoryCounts.get(String(cat.id)) || 0) > 0)
+                    .map((cat) => (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      className="pos-category-card"
+                      onClick={() => handleCategorySelect(cat)}
+                    >
+                      <CategoryIcon name={cat.icon} size={28} />
+                      <span className="pos-category-name">{cat.name}</span>
+                      <span className="pos-category-count">{categoryCounts.get(String(cat.id)) || 0}</span>
+                    </button>
+                  ))}
+                  {(categoryCounts.get('other') || 0) > 0 ? (
+                    <button
+                      type="button"
+                      className="pos-category-card"
+                      onClick={() => handleCategorySelect({ id: 'other', name: t('other'), icon: 'BsGrid' })}
+                    >
+                      <CategoryIcon name="BsGrid" size={28} />
+                      <span className="pos-category-name">{t('other')}</span>
+                      <span className="pos-category-count">{categoryCounts.get('other')}</span>
+                    </button>
+                  ) : null}
+                </div>
+              ) : (
               <div className="pos-product-grid">
                 {displayItems.length === 0 ? (
-                  <p className="text-muted py-4">
-                    {mode === 'installment' && !selectedCategory
-                      ? t('posChooseCategory')
-                      : t('No items found')}
-                  </p>
+                  <p className="text-muted py-4">{t('No items found')}</p>
                 ) : (
                   displayItems.map((item) => {
                     const inBill = bill.find((b) => b.id === item.id);
@@ -2343,6 +2435,7 @@ function SellItems() {
                   })
                 )}
               </div>
+              )}
             </div>
           </section>
 

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { PERMISSIONS } from '../services';
 import { useLayout } from '../contexts/LayoutContext';
 import { useBusinessName } from '../contexts/TenantSettingsContext';
 import { usePosSaleGuard } from '../contexts/PosSaleGuardContext';
@@ -11,9 +12,11 @@ import UserMenu from './UserMenu';
 
 const Header = () => {
   const { t } = useTranslation();
-  const { getHomePath } = useAuth();
+  const { getHomePath, isAdmin, isSuperAdmin, isTeller, canViewDashboard, hasPermission } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const showStoreTabs = isAdmin && !isSuperAdmin && !location.pathname.startsWith('/platform');
+  const showPos = hasPermission(PERMISSIONS.SALES_CREATE) || isTeller;
   const { sidebarCollapsed, toggleSidebar } = useLayout();
   const businessName = useBusinessName();
   const { requestNavigation } = usePosSaleGuard();
@@ -90,6 +93,35 @@ const Header = () => {
             <span className="top-navbar-brand-text" title={businessName}>{businessName}</span>
         </div>
       </div>
+
+      {showStoreTabs && (
+        <nav className="top-navbar-tabs" aria-label={t('sidebarPrimary') || 'Primary'}>
+          {canViewDashboard && (
+            <Link
+              to="/"
+              className={`top-navbar-tab${location.pathname === '/' ? ' active' : ''}`}
+              aria-current={location.pathname === '/' ? 'page' : undefined}
+              onClick={(e) => {
+                if (!requestNavigation('/')) e.preventDefault();
+              }}
+            >
+              {t('dashboard')}
+            </Link>
+          )}
+          {showPos && (
+            <Link
+              to="/sell"
+              className={`top-navbar-tab${location.pathname === '/sell' ? ' active' : ''}`}
+              aria-current={location.pathname === '/sell' ? 'page' : undefined}
+              onClick={(e) => {
+                if (!requestNavigation('/sell')) e.preventDefault();
+              }}
+            >
+              {t('POS Register') || 'POS Register'}
+            </Link>
+          )}
+        </nav>
+      )}
 
       <div className="top-navbar-right">
         {isPos && (
