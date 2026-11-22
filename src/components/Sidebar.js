@@ -41,6 +41,7 @@ const Sidebar = () => {
   const showReports = hasPermission(PERMISSIONS.REPORTS_VIEW);
   const showUsers =
     hasPermission(PERMISSIONS.USERS_MANAGE) || hasPermission(PERMISSIONS.USERS_VIEW);
+  const showActivityLog = hasPermission(PERMISSIONS.USERS_MANAGE);
   const showCustomers =
     hasPermission(PERMISSIONS.REPORTS_VIEW) ||
     hasPermission(PERMISSIONS.USERS_VIEW) ||
@@ -123,6 +124,7 @@ const Sidebar = () => {
         <SidebarSection title={t('sidebarAdministration') || 'Administration'}>
           {showCustomers && <NavItem to="/customers" icon="bi-person-vcard" label={t('customers')} />}
           {showUsers && <NavItem to="/users" icon="bi-people" label={t('users')} />}
+          {showActivityLog && <NavItem to="/activity-log" icon="bi-journal-text" label={t('activityLog')} />}
           {showSettings && <NavItem to="/settings" icon="bi-gear" label={t('settings')} />}
         </SidebarSection>
       </nav>

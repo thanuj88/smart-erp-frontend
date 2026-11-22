@@ -47,6 +47,7 @@ import DiscountReport from './pages/DiscountReport';
 import RefundReport from './pages/RefundReport';
 
 import Users from './pages/Users';
+import ActivityLog from './pages/ActivityLog';
 import Customers from './pages/Customers';
 
 import InstallmentPlans from './pages/InstallmentPlans';
@@ -173,6 +174,8 @@ function AppRoutes() {
       <Route path="/refunds" element={<ProtectedRoute requirePermission={PERMISSIONS.REPORTS_VIEW}><Layout><RefundReport /></Layout></ProtectedRoute>} />
 
       <Route path="/users" element={<ProtectedRoute requirePermission={[PERMISSIONS.USERS_MANAGE, PERMISSIONS.USERS_VIEW]}><Layout><Users /></Layout></ProtectedRoute>} />
+
+      <Route path="/activity-log" element={<ProtectedRoute requirePermission={PERMISSIONS.USERS_MANAGE}><Layout><ActivityLog /></Layout></ProtectedRoute>} />
 
       <Route path="/customers" element={<ProtectedRoute requirePermission={[PERMISSIONS.REPORTS_VIEW, PERMISSIONS.USERS_VIEW, PERMISSIONS.USERS_MANAGE]}><Layout><Customers /></Layout></ProtectedRoute>} />
 
