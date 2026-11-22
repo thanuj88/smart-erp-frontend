@@ -3,7 +3,7 @@ import PageHeader from '../components/PageHeader';
 import AdminAlerts from '../components/AdminAlerts';
 import AdminLoading from '../components/AdminLoading';
 import ReceiptPrintLayer from '../components/ReceiptPrintLayer';
-import { installmentPaymentService, installmentPlanService } from '../services';
+import { installmentPaymentService, installmentPlanService, PERMISSIONS } from '../services';
 import { useCurrency } from '../contexts/TenantSettingsContext';
 import { useAuth } from '../contexts/AuthContext';
 import { createInstallmentReceiptPrintJob } from '../utils/receipt';
@@ -15,7 +15,16 @@ import { useTranslation } from 'react-i18next';
 const InstallmentPayments = () => {
   const { t } = useTranslation();
   const { formatMoney, currency, settings } = useCurrency();
-  const { user } = useAuth();
+  const { user, hasPermission, isAdmin, hasRole } = useAuth();
+  // Same gate as POST /installment-payments/:id/pay. Accountants can read plans and dues only.
+  const canRecordPayment = hasPermission([
+    PERMISSIONS.SALES_CREATE,
+    PERMISSIONS.USERS_MANAGE,
+    PERMISSIONS.SETTINGS_MANAGE,
+    PERMISSIONS.PLATFORM_MANAGE,
+  ]);
+  // The summed balance is for the books. Tellers and other staff still see each plan.
+  const canSeePaymentTotal = isAdmin || hasRole('ACCOUNTANT');
   const [payments, setPayments] = useState([]);
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -70,6 +79,11 @@ const InstallmentPayments = () => {
       ),
     }));
   }, [payments]);
+
+  const paymentsTotal = useMemo(
+    () => groupedPlans.reduce((sum, group) => sum + (Number(group.remaining) || 0), 0),
+    [groupedPlans]
+  );
 
   const {
     page: plansPage,
@@ -243,7 +257,7 @@ const InstallmentPayments = () => {
           <th>{t('amountPaid')}</th>
           <th>{t('remaining')}</th>
           <th>{t('status')}</th>
-          <th>{t('actions')}</th>
+          {canRecordPayment && <th>{t('actions')}</th>}
         </tr>
       </thead>
       <tbody>
@@ -269,24 +283,26 @@ const InstallmentPayments = () => {
                 {getPaymentLabel(payment)}
               </span>
             </td>
-            <td>
-              {payment.status !== 'paid' && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    openPaymentModal({
-                      ...payment,
-                      customer_name: customerName,
-                      customer_phone: customerPhone,
-                    });
-                  }}
-                  className="btn btn-primary btn-sm"
-                >
-                  {t('recordPayment')}
-                </button>
-              )}
-            </td>
+            {canRecordPayment && (
+              <td>
+                {payment.status !== 'paid' && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openPaymentModal({
+                        ...payment,
+                        customer_name: customerName,
+                        customer_phone: customerPhone,
+                      });
+                    }}
+                    className="btn btn-primary btn-sm"
+                  >
+                    {t('recordPayment')}
+                  </button>
+                )}
+              </td>
+            )}
           </tr>
         ))}
       </tbody>
@@ -489,6 +505,17 @@ const InstallmentPayments = () => {
 
       {activeTab !== 'plans' && (
         <div className="card table-panel">
+          {canSeePaymentTotal && (
+            <div className="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
+              <h5 className="admin-section-title mb-0">
+                {activeTab === 'overdue' ? t('overduePayments') : t('pendingPayments')}
+              </h5>
+              <div className="text-end">
+                <div className="text-muted small">{t('total')}</div>
+                <div className="fw-semibold text-danger">{formatMoney(paymentsTotal)}</div>
+              </div>
+            </div>
+          )}
           <div className="card-body p-0">
             {groupedPlans.length === 0 ? (
               <p className="text-muted text-center py-5 mb-0">
